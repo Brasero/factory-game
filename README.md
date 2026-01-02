@@ -1,73 +1,130 @@
-# React + TypeScript + Vite
+# Jeu vidéo – Factory Type
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🎮 Présentation
 
-Currently, two official plugins are available:
+Ce projet est un **jeu de gestion / factory game** inspiré de titres comme *Factorio* ou *Satisfactory*, développé principalement en **React + TypeScript**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Le joueur exploite des ressources (fer, charbon, eau…), construit des machines, automatise des chaînes de production et optimise les flux via convoyeurs, séparateurs et groupeurs.
 
-## React Compiler
+L’objectif est de poser des bases **simples, modulaires et évolutives** pour un jeu de simulation industrielle jouable dans un navigateur.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🧠 Concepts clés
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+* Monde composé de **nœuds de ressources**
+* Extraction automatique (miners)
+* Transformation des ressources (machines)
+* Chaînes de production automatisées
+* Tick système (boucle de simulation)
+* Séparation claire entre **logique métier** et **UI**
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 🏗️ Architecture
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Le projet est organisé en monorepo, avec une séparation claire entre :
+
+- une application web (UI, rendu, interaction)
+
+- un moteur de jeu indépendant (logique métier pure)
+
+```
+factory-game/
+├── apps/
+│   └── web/
+│       └── src/
+│           ├── assets/      # Assets statiques (images, icônes, styles)
+│           ├── game/        # Adaptateurs côté app (liaison moteur ↔ UI)
+│           ├── render/      # Rendu du monde de jeu (canvas, scène, visualisation)
+│           ├── store/       # État global, tick, synchronisation React
+│           ├── ui/          # Composants UI (HUD, panels, menus)
+│           ├── App.tsx      # Composant racine
+│           ├── main.tsx     # Point d’entrée React
+│           └── *.css        # Styles globaux
+│
+├── packages/
+│   └── engine/
+│       ├── core/           # Mécaniques centrales (tick, règles globales)
+│       ├── models/         # Modèles de données (World, Node, Machine, Resource)
+│       ├── systems/        # Systèmes exécutés à chaque tick (production, flux…)
+│       └── world/          # Création et gestion de l’état du monde
+
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Principes
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+* ❌ Pas de logique métier dans les composants React
+* ✅ Les `systems` modifient le monde à chaque tick
+* ✅ Le `World` est la source de vérité
+* ✅ React sert uniquement à l’affichage et aux interactions
+
+---
+
+## ⏱️ Tick System
+
+Le jeu fonctionne sur un **tick global** (ex: 1 tick = 1 seconde).
+
+À chaque tick :
+
+1. Les systèmes sont exécutés dans un ordre défini
+2. Les ressources sont produites / consommées
+3. L’état du monde est mis à jour
+4. L’UI se re-render automatiquement
+
+---
+
+## ⚙️ Technologies utilisées
+
+* **React**
+* **TypeScript**
+* **Vite** (ou équivalent)
+* **Context API** pour l’état global
+
+---
+
+## 🚀 Lancer le projet
+
+```bash
+npm install
+npm run dev
 ```
+
+Puis ouvrir :
+
+```
+http://localhost:5173
+```
+
+---
+
+## 🧪 État du projet
+
+* [x] Création du monde
+* [x] Tick system
+* [x] Production de ressources
+* [ ] Convoyeurs
+* [ ] UI de placement des machines
+* [ ] Sauvegarde / chargement
+
+---
+
+## 📌 Objectifs à moyen terme
+
+* Visualisation graphique des flux
+* Éditeur de carte
+* Optimisation des performances
+* Système de recherche / upgrades
+
+---
+
+## 👤 Auteur
+
+Projet développé par **Brandon Ricci**.
+
+---
+
+## 📄 Licence
+
+Projet personnel – libre d’expérimentation.

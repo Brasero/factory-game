@@ -1,10 +1,9 @@
-import {createWorld} from "../../../../packages/engine/world/WorldFactory.ts";
-import {setWorld} from "../store/gameSlice.ts";
-import {GameEngine} from "../../../../packages/engine/core/GameEngine.ts";
-import {TickLoop} from "../../../../packages/engine/core/TickLoop.ts";
-import store from "../store/store.ts";
-import {render} from "../render/CanvasRenderer.ts";
-import type {World} from "../../../../packages/engine/models/World.ts";
+import {createWorld} from "@engine/world/WorldFactory.ts";
+import {setWorld} from "@web/store/gameSlice.ts";
+import {GameEngine} from "@engine/core/GameEngine.ts";
+import {TickLoop} from "@engine/core/TickLoop.ts";
+import store from "@web/store/store.ts";
+import {render} from "@web/render/CanvasRenderer.ts";
 
 const world = createWorld();
 const engine = new GameEngine(world);
@@ -16,18 +15,47 @@ export function startGame() {
 
     loop.start(() => {
         engine.tick();
-        const snapshot: World = structuredClone(engine.getWorld());
-        store.dispatch(setWorld(snapshot));
+        updateWorld();
 
         if (ctx) render(ctx, engine.getWorld());
     })
 }
 
+export function pauseGame() {
+    loop.stop()
+}
+
 export function placeIronMine(x: number, y: number) {
-    engine.getWorld().machines.push({
-        id: crypto.randomUUID(),
-        type: "iron-mine",
-        x,
-        y
-    })
+    const success = engine.placeMachine(x, y, "iron-mine");
+    
+    if (success) {
+        updateWorld()
+    }
+    
+    return success;
+}
+
+export function placeCoalMine(x: number, y: number) {
+    const success = engine.placeMachine(x, y, "coal-mine");
+    
+    if (success) {
+        updateWorld()
+    }
+    
+    return success;
+}
+
+export function placeWaterPump(x: number, y: number) {
+    const success = engine.placeMachine(x, y, "water-pump");
+    
+    if (success) {
+        updateWorld()
+    }
+    
+    return success;
+}
+
+function updateWorld(): void {
+    const snapshot = engine.getWorld();
+    store.dispatch(setWorld(snapshot))
 }

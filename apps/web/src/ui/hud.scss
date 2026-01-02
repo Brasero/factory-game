@@ -1,0 +1,156 @@
+@use "../theme/main" as c;
+
+#hud_container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  border: 1px solid c.$ui-border;
+  background: rgba(c.$ui-background, 0.85);
+  color: c.$text-primary;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  z-index: 100;
+}
+
+#hud_info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+
+  #hud_resources {
+    display: flex;
+    gap: 12px;
+
+    .hud_resource {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      &.iron { background-color: rgba(c.$resource-iron, 0.2); color: c.$resource-iron; }
+      &.coal { background-color: rgba(c.$resource-coal, 0.2); color: c.$resource-coal; }
+      &.water { background-color: rgba(c.$resource-water, 0.2); color: c.$resource-water; }
+
+      &.pulse {
+        animation: pulse 1s infinite alternate;
+      }
+    }
+  }
+
+  #hud_tick {
+    font-weight: bold;
+    font-size: 16px;
+    color: c.$state-accent;
+    animation: tickGlow 2s infinite alternate;
+  }
+}
+
+#hud_commands {
+  display: flex;
+  justify-content: flex-start;
+
+  #hud_commands_extractor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    h5 {
+      text-align: center;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: c.$machine-extractor;
+    }
+
+    button.extractor {
+      width: fit-content;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.1s, filter 0.2s;
+
+      &:hover {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+      }
+
+      &.selected {
+        box-shadow: 0 0 10px 2px c.$state-accent;
+      }
+
+      &.iron-mine { background-color: c.$resource-iron; color: #fff; }
+      &.coal-mine { background-color: c.$resource-coal; color: #fff; }
+      &.water-pump { background-color: c.$resource-water; color: #fff; }
+    }
+  }
+}
+
+#hud_tick_container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  #hud_pause_btn {
+    background-color: c.$state-primary;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.1s, filter 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover {
+      transform: scale(1.1);
+      filter: brightness(1.2);
+    }
+  }
+
+  #hud_tick {
+    font-weight: bold;
+    font-size: 16px;
+    color: c.$state-accent;
+    animation: tickGlow 2s infinite alternate;
+
+    &.paused {
+      animation: pausedBlink 1s infinite alternate;
+      color: #ff4d4d; // rouge pour pause
+      text-shadow: 0 0 8px #ff4d4d;
+    }
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes tickGlow {
+  0% { text-shadow: 0 0 2px c.$state-accent; }
+  100% { text-shadow: 0 0 10px c.$state-accent; }
+}
+
+@keyframes pausedBlink {
+  0% { opacity: 1; text-shadow: 0 0 5px #ff4d4d; }
+  50% { opacity: 0.6; text-shadow: 0 0 15px #ff4d4d; }
+  100% { opacity: 1; text-shadow: 0 0 5px #ff4d4d; }
+}
