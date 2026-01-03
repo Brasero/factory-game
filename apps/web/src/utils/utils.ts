@@ -5,9 +5,9 @@
  * @returns string formaté
  */
 export function formatTicks(ticks: number, style: 'hh:mm:ss' | 'short' | 'seconds' = 'hh:mm:ss'): string {
-  const hours = Math.floor(ticks / 3600);
-  const minutes = Math.floor((ticks % 3600) / 60);
-  const seconds = ticks % 60;
+  const hours = Math.floor((ticks / 10) / 3600);
+  const minutes = Math.floor(((ticks / 10) % 3600) / 60);
+  const seconds = ((ticks / 10) % 60).toFixed(0);
   
   switch (style) {
     case 'hh:mm:ss':

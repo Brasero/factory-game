@@ -1,6 +1,7 @@
 import type {World} from "../models/World";
 import {Grid} from "./Grid.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
+import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
 
 export function createWorld(): World {
     return {
@@ -17,13 +18,9 @@ export function createWorld(): World {
             { x: 6, y: 5, resource: "coal" },
             { x: 10, y: 4, resource: "water" }
         ],
-        conveyors: [
-            {x: 4, y: 4, direction: "down"},
-            {x: 4, y: 3, direction: "down"},
-            {x: 3, y: 3, direction:"right"}
-        ],
+        conveyors: [],
         storages: [
-            {x:4, y: 5, stored: {iron: 10} as Record<ResourcesType, number>, capacity: 100}
+            {x:4, y: 5, stored: {iron: 90} as Record<ResourcesType, number>, capacity: 100}
         ],
     }
 }

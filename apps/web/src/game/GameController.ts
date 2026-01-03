@@ -4,6 +4,8 @@ import {GameEngine} from "@engine/core/GameEngine.ts";
 import {TickLoop} from "@engine/core/TickLoop.ts";
 import store from "@web/store/store.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
+import type {DirectionType} from "@engine/models/Conveyor.ts";
+import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
 
 const world = createWorld();
 const engine = new GameEngine(world);
@@ -18,7 +20,7 @@ export function startGame() {
         updateWorld();
 
         if (ctx) render(ctx, engine.getWorld());
-    })
+    }, 100)
 }
 
 export function pauseGame() {
@@ -55,7 +57,17 @@ export function placeWaterPump(x: number, y: number) {
     return success;
 }
 
+export function placeConveyor(x: number, y: number, direction: DirectionType) {
+    const success = engine.placeConveyor(x, y, direction, MACHINE_CAPACITY["conveyor"])
+    
+    if (success) {
+        updateWorld();
+    }
+    
+    return success
+}
+
 function updateWorld(): void {
-    const snapshot = engine.getWorld();
-    store.dispatch(setWorld(snapshot))
+    const snapshot = structuredClone(engine.getWorld());
+    store.dispatch(setWorld({...snapshot, grid: engine.getWorld().grid}))
 }

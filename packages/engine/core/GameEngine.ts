@@ -3,6 +3,9 @@ import {runProduction} from "@engine/systems/ProductionSystem.ts";
 import type {Machine, MachineType} from "@engine/models/Machine.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import {runConveyors} from "@engine/systems/ConveyorSystem.ts";
+import {runOutputMachine} from "@engine/systems/MachineOutputSystem.ts";
+import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
+import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
 
 export class GameEngine {
     public world: World
@@ -12,6 +15,7 @@ export class GameEngine {
 
     tick() {
         this.world = runProduction(this.world);
+        this.world = runOutputMachine(this.world);
         runConveyors(this.world);
         this.world.tick += 1;
     }
@@ -34,7 +38,9 @@ export class GameEngine {
                 buffer: {} as Record<ResourcesType, number>,
                 type,
                 x,
-                y
+                y,
+                capacity: MACHINE_CAPACITY[type],
+                progress: 0
             }
             this.world = {
                 ...this.world,
@@ -45,5 +51,31 @@ export class GameEngine {
             return false;
         }
         return true;
+    }
+    
+    placeConveyor(x: number, y: number, direction: DirectionType, capacity: number): boolean {
+        const {grid, conveyors} = this.world;
+        if (!grid) throw new Error("Le monde n'a pas de grille définie.")
+        
+        try {
+            const success = grid.occupy({x,y})
+            if (!success) return false;
+            const conveyor: Conveyor = {
+                id: crypto.randomUUID(),
+                x,
+                y,
+                type: "conveyor",
+                direction,
+                capacity,
+                buffer: {} as Record<ResourcesType, number>
+            }
+            this.world = {
+                ...this.world,
+                conveyors: [...conveyors, conveyor]
+            }
+        } catch(e) {
+            console.error("Une erreur est survenu lors du placement du convoyeur", e)
+            return false
+        }
     }
 }

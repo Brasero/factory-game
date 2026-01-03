@@ -1,11 +1,13 @@
 import {useEffect, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
-import {render} from "@web/render/CanvasRenderer.ts";
+import {drawPreviewConveyor, render} from "@web/render/CanvasRenderer.ts";
 import type {World} from "@engine/models/World.ts";
-import {placeCoalMine, placeIronMine, placeWaterPump} from "@web/game/GameController.ts";
+import {placeCoalMine, placeConveyor, placeIronMine, placeWaterPump} from "@web/game/GameController.ts";
 import {selectGameState, selectSelectedItem} from "@web/store/selectors.ts";
 import {setSelectedItem} from "@web/store/controlSlice.ts";
 import type {Position} from "@engine/models/Position.ts";
+import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {MachineType} from "@engine/models/Machine.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -13,12 +15,36 @@ interface GameCanvasProps {
   cellSize: number;
 }
 
+interface ConveyorPreview extends Position {
+  direction: DirectionType;
+}
+
 export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const world: World = useAppSelector(selectGameState);
   const dispatch = useAppDispatch();
-  const selectedItem = useAppSelector(selectSelectedItem);
+  const selectedItem: MachineType = useAppSelector(selectSelectedItem);
   const [hoveredCell, setHoveredCell] = useState<Position & {canPlace: boolean} | null>(null);
+  const [dragStart, setDragStart] = useState<Position | null>(null)
+  const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview | null>(null);
+  
+  const calcDirection = (current: Position): DirectionType => {
+    if (!dragStart) return "right";
+    const dx = current.x - dragStart.x;
+    const dy = current.y - dragStart.y;
+    
+    let direction: DirectionType = "right";
+    if (Math.abs(dx) > Math.abs(dy)) direction = dx > 0 ? "right" : "left";
+    else if (Math.abs(dy) > 0) direction = dy > 0 ? "down" : "up";
+    return direction;
+  }
+  
+  const getCellFromMouse = (e: MouseEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / cellSize);
+    const y = Math.floor((e.clientY - rect.top) / cellSize);
+    return { x, y };
+  };
   
   // Rendu automatique du canvas à chaque update du world
   useEffect(() => {
@@ -29,6 +55,9 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!world) return;
     
     render(ctx, world, hoveredCell ?? undefined);
+    if (conveyorPreview) {
+      drawPreviewConveyor(ctx, conveyorPreview.x, conveyorPreview.y, conveyorPreview.direction);
+    }
   }, [hoveredCell, world]);
   
   
@@ -58,11 +87,20 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
         default:
           return
       }
-      dispatch(setSelectedItem(""))
+    }
+    
+    const handleRightClick = (e: MouseEvent) => {
+      e.preventDefault();
+      dispatch(setSelectedItem(""));
+      return
     }
     
     canvas.addEventListener("click", handleClick);
-    return () => canvas.removeEventListener("click", handleClick);
+    canvas.addEventListener("contextmenu", handleRightClick);
+    return () => {
+      canvas.removeEventListener("click", handleClick);
+      canvas.removeEventListener("contextmenu", handleRightClick);
+    }
   }, [world, cellSize, selectedItem])
   
   // gestion du hover sur le canvas
@@ -93,6 +131,67 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       canvas.removeEventListener("mouseleave", handleLeave);
     }
   }, [selectedItem, cellSize]);
+  
+  //Gestion du drag lors de la pose de tapis
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    
+    const handleMouseDown = (e: MouseEvent) => {
+      if (selectedItem !== "conveyor" || e.button === 2) return;
+      setDragStart(getCellFromMouse(e, canvas));
+    };
+    
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!dragStart) return;
+      const end = getCellFromMouse(e, canvas);
+      
+      const dx = end.x - dragStart.x;
+      const dy = end.y - dragStart.y;
+      
+      let direction: DirectionType = "right"; // valeur par défaut
+      if (Math.abs(dx) > Math.abs(dy)) {
+        direction = dx > 0 ? "right" : "left";
+      } else if (Math.abs(dy) > 0) {
+        direction = dy > 0 ? "down" : "up";
+      }
+      
+      if (selectedItem === "conveyor") {
+        placeConveyor(dragStart.x, dragStart.y, direction);
+      }
+      setDragStart(null);
+      setConveyorPreview(null)
+    };
+    
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragStart, cellSize, selectedItem]);
+  
+  // Gestion du preview d'ajout de convoyeur
+  useEffect(() => {
+    if (!dragStart) return
+    const canvas = canvasRef.current;
+    if (!canvas) return
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return
+    const handleMouseMove = (e: MouseEvent) => {
+      const current = getCellFromMouse(e, canvas)
+      
+      const direction: DirectionType = calcDirection(current as Position);
+      render(ctx, world);
+      setConveyorPreview({x: dragStart.x, y: dragStart.y, direction});
+    }
+    
+    canvas.addEventListener("mousemove", handleMouseMove);
+    return () => canvas.removeEventListener("mousemove", handleMouseMove);
+  }, [dragStart, world]);
+  
   
   return <canvas ref={canvasRef} width={width} height={height} style={{ border: "1px solid black"}} />
 }

@@ -2,6 +2,7 @@ import type {World} from "@engine/models/World.ts";
 import type {Position} from "@engine/models/Position.ts";
 import {colors} from "@web/theme/colors.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {ResourcesType} from "@engine/models/Resources.ts";
 
 const CELL_SIZE = 40;
 export function render(
@@ -17,6 +18,7 @@ export function render(
     drawResourceNodes(ctx, world);
     drawMachines(ctx, world);
     drawConveyors(ctx, world);
+    drawResources(ctx, world);
     drawStorages(ctx, world);
     drawHoveredCell(ctx, hoveredCell);
 }
@@ -380,6 +382,72 @@ function drawStorages(ctx: CanvasRenderingContext2D, world: World) {
     });
 }
 
+/* ========================= */
+/*  PREVIEW CONVOYEURS       */
+/* ========================= */
+
+export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, x: number, y: number, direction: DirectionType) {
+    const px = x * CELL_SIZE;
+    const py = y * CELL_SIZE;
+    ctx.fillStyle = "green";
+    ctx.fillRect(px + 10, py + 10, CELL_SIZE - 20,CELL_SIZE - 20)
+    drawPreviewArrow(ctx, px + 10, py + 10, CELL_SIZE - 20, direction);
+}
+
+function drawPreviewArrow(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, direction: DirectionType) {
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const arrowSize = 6; // Taille de la pointe
+    const tailLength = 12; // Longueur de la queue
+    console.log(x, y, centerX, centerY);
+    
+    ctx.fillStyle = "black";
+    
+    switch (direction) {
+        case "up":
+            // queue
+            ctx.fillRect(centerX - 1, centerY - tailLength / 2, 2, tailLength / 2);
+            // pointe
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - tailLength / 2 - arrowSize);
+            ctx.lineTo(centerX - arrowSize, centerY - tailLength / 2);
+            ctx.lineTo(centerX + arrowSize, centerY - tailLength / 2);
+            ctx.closePath();
+            ctx.fill();
+            break;
+        
+        case "down":
+            ctx.fillRect(centerX - 1, centerY, 2, tailLength / 2);
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY + tailLength / 2 + arrowSize);
+            ctx.lineTo(centerX - arrowSize, centerY + tailLength / 2);
+            ctx.lineTo(centerX + arrowSize, centerY + tailLength / 2);
+            ctx.closePath();
+            ctx.fill();
+            break;
+        
+        case "left":
+            ctx.fillRect(centerX - tailLength / 2, centerY - 1, tailLength / 2, 2);
+            ctx.beginPath();
+            ctx.moveTo(centerX - tailLength / 2 - arrowSize, centerY);
+            ctx.lineTo(centerX - tailLength / 2, centerY - arrowSize);
+            ctx.lineTo(centerX - tailLength / 2, centerY + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+            break;
+        
+        case "right":
+            ctx.fillRect(centerX, centerY - 1, tailLength / 2, 2);
+            ctx.beginPath();
+            ctx.moveTo(centerX + tailLength / 2 + arrowSize, centerY);
+            ctx.lineTo(centerX + tailLength / 2, centerY - arrowSize);
+            ctx.lineTo(centerX + tailLength / 2, centerY + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+            break;
+    }
+}
+
 
 /* ========================= */
 /*  UTILS POUR CONVOYEURS    */
@@ -401,4 +469,45 @@ function getNeighborDirections(x: number, y: number, world: World) {
     
     
     return neighbors;
+}
+
+
+/* ========================= */
+/* RESSOURCES SUR CONVOYEURS */
+/* ========================= */
+function drawResources(ctx: CanvasRenderingContext2D, world: World) {
+    const resourceColors: Record<ResourcesType, string> = {
+        iron: colors.resource.iron,
+        coal: colors.resource.coal,
+        water: colors.resource.water
+    }
+    
+    world.conveyors.forEach(c => {
+        if (!c.carrying) return;
+        
+        const { type, amount, progress = 0 } = c.carrying;
+        
+        // Position de base au centre de la case
+        let px = c.x * CELL_SIZE + CELL_SIZE / 2;
+        let py = c.y * CELL_SIZE + CELL_SIZE / 2;
+        
+        // Calcul du déplacement selon la direction et la progression
+        const moveDist = progress * CELL_SIZE;
+        const MAX_LEFT = c.x * CELL_SIZE + 20;
+        const MAX_RIGHT = c.x * CELL_SIZE + CELL_SIZE + 20;
+        const MAX_UP = c.y * CELL_SIZE + 20;
+        const MAX_DOWN = c.y * CELL_SIZE + CELL_SIZE + 20;
+        switch(c.direction) {
+            case "up":    py = Math.min(MAX_UP, py - moveDist); break;
+            case "down":  py = Math.min(MAX_DOWN, py + moveDist); break;
+            case "left":  px = Math.min(MAX_LEFT, px - moveDist); break;
+            case "right": px = Math.min(MAX_RIGHT, px + moveDist); break;
+        }
+        
+        // Dessin de la ressource
+        ctx.fillStyle = resourceColors[type];
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fill();
+    });
 }

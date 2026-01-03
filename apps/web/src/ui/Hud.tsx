@@ -49,9 +49,9 @@ export function Hud() {
   return (<div id="hud_container">
       <div id="hud_info">
         <div id="hud_resources">
-          <div className={`hud_resource iron ${iron > 0 ? 'pulse' : ''}`}>🪨 {iron}</div>
-          <div className={`hud_resource coal ${coal > 0 ? 'pulse' : ''}`}>🔥 {coal}</div>
-          <div className={`hud_resource water ${water > 0 ? 'pulse' : ''}`}>💧 {water}</div>
+          <div className={`hud_resource iron ${(iron > 0 && !paused) ? 'pulse' : ''}`}>🪨 {iron}</div>
+          <div className={`hud_resource coal ${(coal > 0 && !paused) ? 'pulse' : ''}`}>🔥 {coal}</div>
+          <div className={`hud_resource water ${(water > 0 && !paused) ? 'pulse' : ''}`}>💧 {water}</div>
         </div>
         <div id="hud_tick_container">
           <button id="hud_pause_btn" onClick={toggleGamePause}>
@@ -62,16 +62,20 @@ export function Hud() {
           </span>
         </div>
       </div>
-      
-      <div id="hud_commands">
-        <div id="hud_commands_extractor">
-          <h5>Extracteur de ressources</h5>
-          <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}>🪨 Fer</button>
-          <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}>🔥 Charbon
-          </button>
-          <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>💧 Pompe
-          </button>
-        </div>
+    
+    <div id="hud_commands">
+      <div id="hud_commands_extractor">
+        <h5>Extracteur</h5>
+        <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}>🪨 Fer</button>
+        <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}>🔥 Charbon
+        </button>
+        <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>💧 Pompe
+        </button>
       </div>
-    </div>);
+      <div id="hud_commands_logistique">
+        <h5>Logistique</h5>
+        <button className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>convoyeur</button>
+      </div>
+    </div>
+  </div>);
 }
