@@ -12,6 +12,8 @@ import type {SelectedItem} from "@engine/models/Controls.ts";
 import {setSelectedItem, togglePause} from "@web/store/controlSlice.ts"; // à créer dans le slice
 import {formatTicks} from "@web/utils/utils.ts";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
+import IronOre from "@web/assets/ore-nodeTiles/Materials/Iron/Ores/Ore-0005.png";
+import CoalOre from "@web/assets/ore-nodeTiles/Materials/Coal/Ores/Ore-0005.png";
 
 export function Hud() {
   const iron = useAppSelector(selectIronQuantity);
@@ -49,8 +51,8 @@ export function Hud() {
   return (<div id="hud_container">
       <div id="hud_info">
         <div id="hud_resources">
-          <div className={`hud_resource iron ${(iron > 0 && !paused) ? 'pulse' : ''}`}>🪨 {iron}</div>
-          <div className={`hud_resource coal ${(coal > 0 && !paused) ? 'pulse' : ''}`}>🔥 {coal}</div>
+          <div className={`hud_resource iron ${(iron > 0 && !paused) ? 'pulse' : ''}`}><img src={IronOre} width={16} height={16} /> {iron}</div>
+          <div className={`hud_resource coal ${(coal > 0 && !paused) ? 'pulse' : ''}`}><img src={CoalOre} width={16} height={16}/> {coal}</div>
           <div className={`hud_resource water ${(water > 0 && !paused) ? 'pulse' : ''}`}>💧 {water}</div>
         </div>
         <div id="hud_tick_container">
@@ -66,9 +68,8 @@ export function Hud() {
     <div id="hud_commands">
       <div id="hud_commands_extractor">
         <h5>Extracteur</h5>
-        <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}>🪨 Fer</button>
-        <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}>🔥 Charbon
-        </button>
+        <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}><img src={IronOre} width={20} height={20} /></button>
+        <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}><img src={CoalOre} width={20} height={20}/></button>
         <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>💧 Pompe
         </button>
       </div>

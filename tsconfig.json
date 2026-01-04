@@ -10,5 +10,6 @@
       "@engine/*": ["packages/engine/*"],
       "@web/*": ["apps/web/src/*"]
     }
-  }
+  },
+  "lib": ["WebWorker"]
 }

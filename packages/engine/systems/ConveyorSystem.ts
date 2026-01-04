@@ -1,5 +1,5 @@
 import {World} from "@engine/models/World";
-import {DirectionType} from "../models/Conveyor";
+import {Conveyor, DirectionType} from "../models/Conveyor";
 import {Position} from "../models/Position";
 import {ResourcesType} from "../models/Resources";
 
@@ -29,11 +29,9 @@ export function runConveyors(world: World) {
       const stored = targetStorage.stored[type] || 0;
       canTransfer = stored < targetStorage.capacity;
     } else if (targetConveyor) {
-      canTransfer = !targetConveyor.carrying;
+      canTransfer = canTransfertToConveyor(targetConveyor);
     }
     
-    // ❌ Bloqué → on n'avance PAS
-    if (!canTransfer) return;
     
     // ============================
     // 2. Avancer la ressource
@@ -42,6 +40,8 @@ export function runConveyors(world: World) {
       conveyor.carrying.progress + 0.1,
       1
     );
+    // ❌ Bloqué → on n'avance PAS
+    if (!canTransfer) return;
     
     if (conveyor.carrying.progress < 1) return;
     
@@ -66,10 +66,7 @@ export function runConveyors(world: World) {
       }
       
     } else if (targetConveyor) {
-      targetConveyor.carrying = {
-        ...conveyor.carrying,
-        progress: 0
-      };
+      transfertToConveyor(targetConveyor, conveyor.carrying)
       conveyor.carrying = undefined;
     }
   });
@@ -92,6 +89,16 @@ function getNextPosition(x: number, y: number, direction: DirectionType): Positi
       x -= 1;
       break
   }
-  
   return {x, y};
+}
+
+export function canTransfertToConveyor(target: Conveyor): boolean {
+  return !target.carrying;
+}
+
+export function transfertToConveyor(target: Conveyor, item: {type: ResourcesType, amount: number}) {
+  target.carrying = {
+    ...item,
+    progress: 0
+  }
 }

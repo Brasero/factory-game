@@ -3,6 +3,7 @@ import {useEffect} from "react";
 import {startGame} from "./game/GameController.ts";
 import {Hud} from "./ui/Hud.tsx";
 import {GameCanvas} from "@web/render/GameCanvas.tsx";
+import {config} from "@web/config/gridConfig.ts";
 
 function App() {
 
@@ -15,7 +16,7 @@ function App() {
   return (
     <div>
         <Hud />
-        <GameCanvas width={800} height={600} cellSize={40} />
+        <GameCanvas width={800} height={608} cellSize={config.CELL_SIZE} />
     </div>
   )
 }

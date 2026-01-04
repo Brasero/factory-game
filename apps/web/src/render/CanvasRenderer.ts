@@ -1,10 +1,13 @@
 import type {World} from "@engine/models/World.ts";
 import type {Position} from "@engine/models/Position.ts";
 import {colors} from "@web/theme/colors.ts";
-import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
+import {config} from "@web/config/gridConfig.ts";
+import {drawConveyor, getConveyorSpriteCoords} from "@web/render/SpriteSheetLoader.ts";
 
-const CELL_SIZE = 40;
+const CELL_SIZE = config.CELL_SIZE;
+
 export function render(
     ctx: CanvasRenderingContext2D,
     world: World,
@@ -13,12 +16,17 @@ export function render(
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
+    const conveyorMap = new Map<string, Conveyor>();
+    
+    for (const c of world.conveyors) {
+        conveyorMap.set(`${c.x}:${c.y}`, c);
+    }
     
     drawGrid(ctx, width, height);
     drawResourceNodes(ctx, world);
     drawMachines(ctx, world);
-    drawConveyors(ctx, world);
-    drawResources(ctx, world);
+    drawConveyors(ctx, world, conveyorMap);
+    drawResources(ctx, world, conveyorMap);
     drawStorages(ctx, world);
     drawHoveredCell(ctx, hoveredCell);
 }
@@ -120,243 +128,17 @@ function drawConveyors(ctx: CanvasRenderingContext2D, world: World) {
     world.conveyors.forEach(c => {
         const px = c.x * CELL_SIZE;
         const py = c.y * CELL_SIZE;
-        const s = CELL_SIZE;
         
-        // Trouver les voisins convoyeurs
-        const neighbors = getNeighborDirections(c.x, c.y, world)
+        const previousConveyor = findPreviousConveyor(world, c);
+        const outgoing = c.direction
+        const incoming = previousConveyor ? getIncomingDirection(previousConveyor, c) : outgoing;
+        console.log(previousConveyor)
+        console.log(`incoming : ${incoming}`, `outgoing: ${outgoing}`)
         
-        ctx.fillStyle = colors.machine.logistics;
+        const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)
+        drawConveyor(ctx, sx, sy, CELL_SIZE, px, py);
         
-        // Lignes droites ou virage
-        if (neighbors.length === 2) {
-            const pair = neighbors.sort().join("-");
-            if (pair === "left-right" || pair === "right-left") {
-                ctx.fillRect(px, py + 10, s, s-20); // horizontale
-            } else if (pair === "up-down" || pair === "down-up") {
-                ctx.fillRect(px + 10, py, s-20, s); // verticale
-            } else {
-                // Virage en L
-                ctx.beginPath();
-                const [a, b] = neighbors;
-                // Début du L au centre
-                ctx.moveTo(px + 10, py + 10);
-                
-                if ((a === "up" && b === "right") || (a === "right" && b === "up")) {
-                    ctx.lineTo(px + 10, py);      // vers haut
-                    ctx.lineTo(px + s - 10, py);  // vers droite
-                    ctx.lineTo(px + s - 10, py + 10); // vers bas
-                    ctx.lineTo(px + s, py+10) // vers la droite
-                    ctx.lineTo(px + s, py + s - 10) // vers le bas
-                    ctx.lineTo(px + 10, py + s - 10) // vers la gauche
-                } else if ((a === "up" && b === "left") || (a === "left" && b === "up")) {
-                    ctx.lineTo(px + 10, py);      // vers haut
-                    ctx.lineTo(px + s - 10, py);  // vers droite
-                    ctx.lineTo(px + s - 10, py + s - 10); // vers bas
-                    ctx.lineTo(px, py + s - 10)
-                    ctx.lineTo(px, py + 10)
-                    ctx.lineTo(px + 10, py + 10)
-                } else if ((a === "down" && b === "right") || (a === "right" && b === "down")) {
-                    ctx.lineTo(px + s, py + 10)
-                    ctx.lineTo(px+s, py + s -10)
-                    ctx.lineTo(px+s-10, py + s -10)
-                    ctx.lineTo(px+s-10, py + s)
-                    ctx.lineTo(px+10, py+s)
-                } else if ((a === "down" && b === "left") || (a === "left" && b === "down")) {
-                    ctx.lineTo(px+s-10, py+10)
-                    ctx.lineTo(px+s-10, py + s)
-                    ctx.lineTo(px+10, py+s)
-                    ctx.lineTo(px+10, py+s-10)
-                    ctx.lineTo(px, py+s-10)
-                    ctx.lineTo(px, py+10)
-                }
-                ctx.closePath();
-                ctx.fill();
-            }
-        } else if (neighbors.length === 1) {
-        if (neighbors.includes("left")) {
-            ctx.fillRect(px, py+10, s-10, s-20);
-        } else if (neighbors.includes("right")) {
-            ctx.fillRect(px+10, py+10, s-10, s-20)
-        } else if (neighbors.includes("up")) {
-            ctx.fillRect(px+10, py, s-20, s-10)
-        } else if (neighbors.includes("down")) {
-            ctx.fillRect(px+10, py+10, s-20, s-10)
-        }
-    } else {
-            // Convoyeur isolé ou en bout → simple carré
-            ctx.fillRect(px + 10, py + 10, s - 20, s - 20);
-        }
-        
-        
-        // =========================
-        // Flèche avec queue
-        // =========================
-        const arrowSize = 5;
-        const tailLength = 12;
-        ctx.fillStyle = "black";
-        
-        let fx = px;
-        let fy = py;
-        const mid = s / 2;
-        
-        if (neighbors.length === 2) {
-            const [a, b] = neighbors;
-            // L haut-droite
-            if ((a === "up" && b === "right") || (a === "right" && b === "up")) {
-                if (c.direction === "up") {
-                    fx = px + mid;
-                    fy = py + arrowSize;
-                    // queue vers bas
-                    ctx.fillRect(fx - 1, fy, 2, tailLength);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy + arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (c.direction === "right") {
-                    fx = px + s - arrowSize;
-                    fy = py + mid;
-                    ctx.fillRect(fx - tailLength, fy - 1, tailLength, 2);
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx - arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-                return
-            }
-            if ((a === "up" && b === "left") || (a === "left" && b === "up")) {
-                if (c.direction === "up") {
-                    fx = px + mid;
-                    fy = py + arrowSize;
-                    // queue vers bas
-                    ctx.fillRect(fx - 1, fy, 2, tailLength);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy + arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (c.direction === "left") {
-                    fx = px + arrowSize;
-                    fy = py + mid;
-                    // queue horizontale vers droite
-                    ctx.fillRect(fx, fy - 1, tailLength, 2);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx + arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-                return
-            }
-            if ((a === "down" && b === "right") || (a === "right" && b === "down")) {
-                if (c.direction === "down") {
-                    fx = px + mid;
-                    fy = py + s - arrowSize;
-                    // queue vers haut
-                    ctx.fillRect(fx - 1, fy - tailLength, 2, tailLength);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy - arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (c.direction === "right") {
-                    fx = px + s - arrowSize;
-                    fy = py + mid;
-                    // queue horizontale vers gauche
-                    ctx.fillRect(fx - tailLength, fy - 1, tailLength, 2);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx - arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-                return
-            }
-
-            if ((a === "down" && b === "left") || (a === "left" && b === "down")) {
-                if (c.direction === "down") {
-                    fx = px + mid;
-                    fy = py + s - arrowSize;
-                    // queue vers haut
-                    ctx.fillRect(fx - 1, fy - tailLength, 2, tailLength);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx - arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy - arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (c.direction === "left") {
-                    fx = px + arrowSize;
-                    fy = py + mid;
-                    // queue horizontale vers droite
-                    ctx.fillRect(fx, fy - 1, tailLength, 2);
-                    // pointe
-                    ctx.beginPath();
-                    ctx.moveTo(fx, fy);
-                    ctx.lineTo(fx + arrowSize, fy - arrowSize);
-                    ctx.lineTo(fx + arrowSize, fy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-                return
-            }
-        }
-            // lignes droites ou isolé
-            const cx = px + mid;
-            const cy = py + mid;
-            switch(c.direction) {
-                case "up":
-                    ctx.fillRect(cx - 1, cy, 2, tailLength);
-                    ctx.beginPath();
-                    ctx.moveTo(cx, cy - tailLength);
-                    ctx.lineTo(cx - arrowSize, cy - tailLength + arrowSize);
-                    ctx.lineTo(cx + arrowSize, cy - tailLength + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-                case "down":
-                    ctx.fillRect(cx - 1, cy - tailLength, 2, tailLength);
-                    ctx.beginPath();
-                    ctx.moveTo(cx, cy + tailLength);
-                    ctx.lineTo(cx - arrowSize, cy + tailLength - arrowSize);
-                    ctx.lineTo(cx + arrowSize, cy + tailLength - arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-                case "left":
-                    ctx.fillRect(cx, cy - 1, tailLength, 2);
-                    ctx.beginPath();
-                    ctx.moveTo(cx - tailLength, cy);
-                    ctx.lineTo(cx - tailLength + arrowSize, cy - arrowSize);
-                    ctx.lineTo(cx - tailLength + arrowSize, cy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-                case "right":
-                    ctx.fillRect(cx - tailLength, cy - 1, tailLength, 2);
-                    ctx.beginPath();
-                    ctx.moveTo(cx + tailLength, cy);
-                    ctx.lineTo(cx + tailLength - arrowSize, cy - arrowSize);
-                    ctx.lineTo(cx + tailLength - arrowSize, cy + arrowSize);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-            }
-        
-    });
+     });
 }
 
 
@@ -375,7 +157,7 @@ function drawStorages(ctx: CanvasRenderingContext2D, world: World) {
         ctx.fillStyle = colors.text.primary;
         ctx.font = "12px sans-serif";
         ctx.fillText(
-          Object.entries(s.stored).map(([type, qty]) => `${type[0] === "i" ? "🪨":type[0]}:${qty}`).join(" "),
+          Object.entries(s.stored).map(([type, qty]) => `${type[0] === "i" ? "🪨":type[0]}:${qty}`).join("\r\n"),
           s.x*CELL_SIZE+2,
           s.y*CELL_SIZE+(CELL_SIZE/2)
         );
@@ -389,88 +171,11 @@ function drawStorages(ctx: CanvasRenderingContext2D, world: World) {
 export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, x: number, y: number, direction: DirectionType) {
     const px = x * CELL_SIZE;
     const py = y * CELL_SIZE;
-    ctx.fillStyle = "green";
-    ctx.fillRect(px + 10, py + 10, CELL_SIZE - 20,CELL_SIZE - 20)
-    drawPreviewArrow(ctx, px + 10, py + 10, CELL_SIZE - 20, direction);
+    const {sx, sy} = getConveyorSpriteCoords(direction, direction);
+    ctx.globalAlpha = 0.5;
+    drawConveyor(ctx, sx, sy, CELL_SIZE, px, py)
+    ctx.globalAlpha = 1;
 }
-
-function drawPreviewArrow(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, direction: DirectionType) {
-    const centerX = x + size / 2;
-    const centerY = y + size / 2;
-    const arrowSize = 6; // Taille de la pointe
-    const tailLength = 12; // Longueur de la queue
-    console.log(x, y, centerX, centerY);
-    
-    ctx.fillStyle = "black";
-    
-    switch (direction) {
-        case "up":
-            // queue
-            ctx.fillRect(centerX - 1, centerY - tailLength / 2, 2, tailLength / 2);
-            // pointe
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY - tailLength / 2 - arrowSize);
-            ctx.lineTo(centerX - arrowSize, centerY - tailLength / 2);
-            ctx.lineTo(centerX + arrowSize, centerY - tailLength / 2);
-            ctx.closePath();
-            ctx.fill();
-            break;
-        
-        case "down":
-            ctx.fillRect(centerX - 1, centerY, 2, tailLength / 2);
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY + tailLength / 2 + arrowSize);
-            ctx.lineTo(centerX - arrowSize, centerY + tailLength / 2);
-            ctx.lineTo(centerX + arrowSize, centerY + tailLength / 2);
-            ctx.closePath();
-            ctx.fill();
-            break;
-        
-        case "left":
-            ctx.fillRect(centerX - tailLength / 2, centerY - 1, tailLength / 2, 2);
-            ctx.beginPath();
-            ctx.moveTo(centerX - tailLength / 2 - arrowSize, centerY);
-            ctx.lineTo(centerX - tailLength / 2, centerY - arrowSize);
-            ctx.lineTo(centerX - tailLength / 2, centerY + arrowSize);
-            ctx.closePath();
-            ctx.fill();
-            break;
-        
-        case "right":
-            ctx.fillRect(centerX, centerY - 1, tailLength / 2, 2);
-            ctx.beginPath();
-            ctx.moveTo(centerX + tailLength / 2 + arrowSize, centerY);
-            ctx.lineTo(centerX + tailLength / 2, centerY - arrowSize);
-            ctx.lineTo(centerX + tailLength / 2, centerY + arrowSize);
-            ctx.closePath();
-            ctx.fill();
-            break;
-    }
-}
-
-
-/* ========================= */
-/*  UTILS POUR CONVOYEURS    */
-/* ========================= */
-
-function getNeighborDirections(x: number, y: number, world: World) {
-    const neighbors: DirectionType[] = [];
-    const {conveyors, storages, machines} = world;
-    
-    const checkUp = (i) => i.x === x && i.y === y - 1;
-    const checkDown = (i) => i.x === x && i.y === y + 1;
-    const checkLeft = (i) => i.x === x-1 && i.y === y;
-    const checkRight = (i) => i.x === x+1 && i.y === y;
-    
-    if (conveyors.some(checkUp) || machines.some(checkUp) || storages.some(checkUp)) neighbors.push("up");
-    if (conveyors.some(checkDown) || machines.some(checkDown) || storages.some(checkDown)) neighbors.push("down");
-    if (conveyors.some(checkLeft) || machines.some(checkLeft) || storages.some(checkLeft)) neighbors.push("left");
-    if (conveyors.some(checkRight) || machines.some(checkRight) || storages.some(checkRight)) neighbors.push("right");
-    
-    
-    return neighbors;
-}
-
 
 /* ========================= */
 /* RESSOURCES SUR CONVOYEURS */
@@ -484,30 +189,135 @@ function drawResources(ctx: CanvasRenderingContext2D, world: World) {
     
     world.conveyors.forEach(c => {
         if (!c.carrying) return;
-        
         const { type, amount, progress = 0 } = c.carrying;
         
         // Position de base au centre de la case
-        let px = c.x * CELL_SIZE + CELL_SIZE / 2;
-        let py = c.y * CELL_SIZE + CELL_SIZE / 2;
-        
-        // Calcul du déplacement selon la direction et la progression
-        const moveDist = progress * CELL_SIZE;
-        const MAX_LEFT = c.x * CELL_SIZE + 20;
-        const MAX_RIGHT = c.x * CELL_SIZE + CELL_SIZE + 20;
-        const MAX_UP = c.y * CELL_SIZE + 20;
-        const MAX_DOWN = c.y * CELL_SIZE + CELL_SIZE + 20;
-        switch(c.direction) {
-            case "up":    py = Math.min(MAX_UP, py - moveDist); break;
-            case "down":  py = Math.min(MAX_DOWN, py + moveDist); break;
-            case "left":  px = Math.min(MAX_LEFT, px - moveDist); break;
-            case "right": px = Math.min(MAX_RIGHT, px + moveDist); break;
-        }
+        const path = buildConveyorPath(world, c, CELL_SIZE);
+        const pos = interpolateOnConveyor(path, progress)
         
         // Dessin de la ressource
         ctx.fillStyle = resourceColors[type];
         ctx.beginPath();
-        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
         ctx.fill();
     });
+}
+
+function getIncomingDirection(
+  prev: Conveyor,
+  curr: Conveyor
+): DirectionType {
+    if (prev.x < curr.x) return "right";
+    if (prev.x > curr.x) return "left";
+    if (prev.y < curr.y) return "down";
+    return "up";
+}
+
+
+export function directionToVector(dir: DirectionType): Position {
+    switch (dir) {
+        case "right": return { x: 1, y: 0 };
+        case "left": return { x: -1, y: 0 };
+        case "down": return { x: 0, y: 1 };
+        case "up": return { x: 0, y: -1 };
+    }
+}
+
+export function getNextPosition(
+  conveyor: Conveyor
+): Position {
+    const v = directionToVector(conveyor.direction);
+    return { x: conveyor.x + v.x, y: conveyor.y + v.y };
+}
+
+export function findPreviousConveyor(
+  world: World,
+  current: Conveyor
+): Conveyor | undefined {
+    return world.conveyors.find(c => {
+        const next = getNextPosition(c);
+        return next.x === current.x && next.y === current.y;
+    });
+}
+
+
+
+export function getEntryPoint(
+  center: Position,
+  dir: DirectionType,
+  size: number
+): Position {
+    const h = size / 2;
+    switch (dir) {
+        case "right": return { x: center.x - h, y: center.y };
+        case "left": return { x: center.x + h, y: center.y };
+        case "down": return { x: center.x, y: center.y - h };
+        case "up": return { x: center.x, y: center.y + h };
+    }
+}
+
+export function getExitPoint(
+  center: Position,
+  dir: DirectionType,
+  size: number
+): Position {
+    const h = size / 2;
+    switch (dir) {
+        case "right": return { x: center.x + h, y: center.y };
+        case "left": return { x: center.x - h, y: center.y };
+        case "down": return { x: center.x, y: center.y + h };
+        case "up": return { x: center.x, y: center.y - h };
+    }
+}
+
+export interface ConveyorPath {
+    entry: Position;
+    corner: Position;
+    exit: Position;
+    isTurn: boolean;
+}
+export function buildConveyorPath(
+  world: World,
+  conveyor: Conveyor,
+  cellSize: number
+): ConveyorPath {
+    const prev = findPreviousConveyor(world, conveyor);
+    
+    const center = {
+        x: conveyor.x * cellSize + cellSize / 2,
+        y: conveyor.y * cellSize + cellSize / 2
+    };
+    
+    const outgoing = conveyor.direction;
+    const incoming = prev
+      ? getIncomingDirection(prev, conveyor)
+      : outgoing;
+    
+    return {
+        entry: getEntryPoint(center, incoming, cellSize),
+        exit: getExitPoint(center, outgoing, cellSize),
+        corner: center,
+        isTurn: incoming !== outgoing
+    };
+}
+
+export function lerp(a: Position, b: Position, t: number): Position {
+    return {
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t
+    };
+}
+export function interpolateOnConveyor(
+  path: ConveyorPath,
+  progress: number
+): Position {
+    if (!path.isTurn) {
+        return lerp(path.entry, path.exit, progress);
+    }
+    
+    if (progress < 0.5) {
+        return lerp(path.entry, path.corner, progress * 2);
+    }
+    
+    return lerp(path.corner, path.exit, (progress - 0.5) * 2);
 }

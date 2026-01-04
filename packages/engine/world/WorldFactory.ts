@@ -1,12 +1,14 @@
 import type {World} from "../models/World";
 import {Grid} from "./Grid.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
-import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
+import {config} from "@web/config/gridConfig.ts";
 
 export function createWorld(): World {
+    const gridWidth = config.WIDTH / config.CELL_SIZE
+    const gridHeight = config.HEIGHT / config.CELL_SIZE
     return {
         tick: 0,
-        grid: new Grid(20, 15),
+        grid: new Grid(gridWidth, gridHeight),
         machines: [],
         resources: {
             iron: 0,
