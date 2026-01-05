@@ -8,6 +8,7 @@ import {setSelectedItem} from "@web/store/controlSlice.ts";
 import type {Position} from "@engine/models/Position.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
 import type {MachineType} from "@engine/models/Machine.ts";
+import {loadConveyorSpriteSheet} from "@web/render/SpriteSheetLoader.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -21,6 +22,7 @@ interface ConveyorPreview extends Position {
 
 export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const world: World = useAppSelector(selectGameState);
   const dispatch = useAppDispatch();
   const selectedItem: MachineType = useAppSelector(selectSelectedItem);
@@ -45,6 +47,13 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     const y = Math.floor((e.clientY - rect.top) / cellSize);
     return { x, y };
   };
+  
+  useEffect(() => {
+    setLoading(true)
+    loadConveyorSpriteSheet().then(() => {
+      setLoading(false)
+    })
+  }, []);
   
   // Rendu automatique du canvas à chaque update du world
   useEffect(() => {
@@ -192,6 +201,9 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     return () => canvas.removeEventListener("mousemove", handleMouseMove);
   }, [dragStart, world]);
   
+  if (loading) {
+    return <h2>Chargement des assets...</h2>
+  }
   
   return <canvas ref={canvasRef} width={width} height={height} style={{ border: "1px solid black"}} />
 }

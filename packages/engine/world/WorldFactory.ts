@@ -22,7 +22,7 @@ export function createWorld(): World {
         ],
         conveyors: [],
         storages: [
-            {x:4, y: 5, stored: {iron: 90} as Record<ResourcesType, number>, capacity: 100}
+            {x:4, y: 5, stored: {} as Record<ResourcesType, number>, capacity: 100}
         ],
     }
 }

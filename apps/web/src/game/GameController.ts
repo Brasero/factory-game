@@ -6,7 +6,6 @@ import store from "@web/store/store.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
 import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
-import {loadConveyorSpriteSheet} from "@web/render/SpriteSheetLoader.ts";
 
 const world = createWorld();
 const engine = new GameEngine(world);
@@ -15,7 +14,6 @@ const loop = new TickLoop();
 export function startGame() {
     const canvas = document.querySelector("canvas");
     const ctx = canvas?.getContext("2d");
-    loadConveyorSpriteSheet();
     loop.start(() => {
         engine.tick();
         updateWorld();

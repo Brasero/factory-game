@@ -4,7 +4,9 @@ import {colors} from "@web/theme/colors.ts";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import {config} from "@web/config/gridConfig.ts";
+import {config as conveyorConfig } from "@web/config/conveyorConfig.ts";
 import {drawConveyor, getConveyorSpriteCoords} from "@web/render/SpriteSheetLoader.ts";
+import {imagePath} from "@web/config/assetsConfig.ts";
 
 const CELL_SIZE = config.CELL_SIZE;
 
@@ -16,17 +18,17 @@ export function render(
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     ctx.clearRect(0, 0, width, height);
-    const conveyorMap = new Map<string, Conveyor>();
-    
-    for (const c of world.conveyors) {
-        conveyorMap.set(`${c.x}:${c.y}`, c);
-    }
+    // const conveyorMap = new Map<string, Conveyor>();
+    //
+    // for (const c of world.conveyors) {
+    //     conveyorMap.set(`${c.x}:${c.y}`, c);
+    // }
     
     drawGrid(ctx, width, height);
     drawResourceNodes(ctx, world);
     drawMachines(ctx, world);
-    drawConveyors(ctx, world, conveyorMap);
-    drawResources(ctx, world, conveyorMap);
+    drawConveyors(ctx, world);
+    drawResources(ctx, world);
     drawStorages(ctx, world);
     drawHoveredCell(ctx, hoveredCell);
 }
@@ -125,20 +127,31 @@ function drawResourceNodes(
 /* ========================= */
 
 function drawConveyors(ctx: CanvasRenderingContext2D, world: World) {
-    world.conveyors.forEach(c => {
+    return world.conveyors.forEach(async (c) => {
         const px = c.x * CELL_SIZE;
         const py = c.y * CELL_SIZE;
         
         const previousConveyor = findPreviousConveyor(world, c);
         const outgoing = c.direction
         const incoming = previousConveyor ? getIncomingDirection(previousConveyor, c) : outgoing;
-        console.log(previousConveyor)
-        console.log(`incoming : ${incoming}`, `outgoing: ${outgoing}`)
-        
         const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)
-        drawConveyor(ctx, sx, sy, CELL_SIZE, px, py);
-        
+        if ((outgoing  === incoming && incoming === "right") || (outgoing === "left" && outgoing === incoming)) {
+            const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES);
+            
+            return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, outgoing)
+        }
+        if ((outgoing  === incoming && incoming === "up") || (outgoing === "down" && outgoing === incoming)) {
+            const offset = getBeltFrame(world.tick, conveyorConfig.V_FRAMES);
+            return drawConveyor(ctx, sx, sy + offset, CELL_SIZE, px, py, outgoing)
+        }
+        const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES)
+        const direction = `${incoming}-${outgoing}` as `${DirectionType}-${DirectionType}`;
+        return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, direction);
      });
+}
+
+function getBeltFrame(tick: number, frameCount: number) {
+    return (Math.floor(tick * conveyorConfig.BELT_ANIMATION_SPEED) % CELL_SIZE ) % frameCount;
 }
 
 
@@ -157,7 +170,7 @@ function drawStorages(ctx: CanvasRenderingContext2D, world: World) {
         ctx.fillStyle = colors.text.primary;
         ctx.font = "12px sans-serif";
         ctx.fillText(
-          Object.entries(s.stored).map(([type, qty]) => `${type[0] === "i" ? "🪨":type[0]}:${qty}`).join("\r\n"),
+          Object.entries(s.stored).map(([type, qty]) => `${type[0] === "i" ? "🪨":type[0]}:${qty}`).join("</br>"),
           s.x*CELL_SIZE+2,
           s.y*CELL_SIZE+(CELL_SIZE/2)
         );
@@ -173,7 +186,7 @@ export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, x: number, y:
     const py = y * CELL_SIZE;
     const {sx, sy} = getConveyorSpriteCoords(direction, direction);
     ctx.globalAlpha = 0.5;
-    drawConveyor(ctx, sx, sy, CELL_SIZE, px, py)
+    drawConveyor(ctx, sx, sy, CELL_SIZE, px, py, direction)
     ctx.globalAlpha = 1;
 }
 
@@ -182,8 +195,8 @@ export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, x: number, y:
 /* ========================= */
 function drawResources(ctx: CanvasRenderingContext2D, world: World) {
     const resourceColors: Record<ResourcesType, string> = {
-        iron: colors.resource.iron,
-        coal: colors.resource.coal,
+        iron: imagePath.ore.ironOre,
+        coal: imagePath.ore.coalOre,
         water: colors.resource.water
     }
     
@@ -195,11 +208,22 @@ function drawResources(ctx: CanvasRenderingContext2D, world: World) {
         const path = buildConveyorPath(world, c, CELL_SIZE);
         const pos = interpolateOnConveyor(path, progress)
         
-        // Dessin de la ressource
-        ctx.fillStyle = resourceColors[type];
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
-        ctx.fill();
+        // Dessin de la ressource si aucune image
+        if (type === "water") {
+            ctx.fillStyle = resourceColors[type];
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            return
+        }
+        const image = new Image()
+        image.src = resourceColors[type];
+        ctx.drawImage(
+          image,
+          pos.x - 10, pos.y - 15,
+          CELL_SIZE - 10, CELL_SIZE - 10
+        );
+        
     });
 }
 
