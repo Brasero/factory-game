@@ -78,9 +78,26 @@
     }
   }
   #hud_commands_logistique {
-    h5 {
-      color: c.$machine-logistics;
-    }
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+   button {
+     width: 32px;
+     height: 32px;
+     background: none;
+     border: none;
+     padding: 0;
+     overflow: hidden;
+     border-radius: 0;
+
+     &.selected {
+       box-shadow: 0 0 10px 2px c.$state-accent;
+     }
+     &.destroyBtn {
+       background: c.$state-danger;
+       border-radius: 6px;
+     }
+   }
   }
   button.extractor {
     width: fit-content;

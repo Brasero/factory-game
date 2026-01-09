@@ -1,14 +1,23 @@
 import {useEffect, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
-import {drawPreviewConveyor, render} from "@web/render/CanvasRenderer.ts";
+import {render} from "@web/render/CanvasRenderer.ts";
+import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";
 import type {World} from "@engine/models/World.ts";
-import {placeCoalMine, placeConveyor, placeIronMine, placeWaterPump} from "@web/game/GameController.ts";
-import {selectGameState, selectSelectedItem} from "@web/store/selectors.ts";
-import {setSelectedItem} from "@web/store/controlSlice.ts";
+import {
+  destroyEntity,
+  placeCoalMine,
+  placeConveyorLine,
+  placeIronMine,
+  placeStorage,
+  placeWaterPump
+} from "@web/game/GameController.ts";
+import {selectCurentTool, selectGameState, selectSelectedItem} from "@web/store/selectors.ts";
+import {setSelectedItem, setToolMode} from "@web/store/controlSlice.ts";
 import type {Position} from "@engine/models/Position.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
-import type {MachineType} from "@engine/models/Machine.ts";
-import {loadConveyorSpriteSheet} from "@web/render/SpriteSheetLoader.ts";
+import type {Storage} from "@engine/models/Storage.ts";
+import type {SelectedItem} from "@engine/models/Controls.ts";
+import {buildConveyorLine, buildConveyorPlacements, getBestPath, getLineCells} from "@web/render/utils/canvas.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -22,24 +31,16 @@ interface ConveyorPreview extends Position {
 
 export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const world: World = useAppSelector(selectGameState);
   const dispatch = useAppDispatch();
-  const selectedItem: MachineType = useAppSelector(selectSelectedItem);
+  const selectedItem: SelectedItem = useAppSelector(selectSelectedItem);
+  const currentTool = useAppSelector(selectCurentTool)
   const [hoveredCell, setHoveredCell] = useState<Position & {canPlace: boolean} | null>(null);
   const [dragStart, setDragStart] = useState<Position | null>(null)
-  const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview | null>(null);
+  const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview[] | null>(null);
+  const [hoveredStorage, setHoveredStorage] = useState<Storage | null>(null)
   
-  const calcDirection = (current: Position): DirectionType => {
-    if (!dragStart) return "right";
-    const dx = current.x - dragStart.x;
-    const dy = current.y - dragStart.y;
-    
-    let direction: DirectionType = "right";
-    if (Math.abs(dx) > Math.abs(dy)) direction = dx > 0 ? "right" : "left";
-    else if (Math.abs(dy) > 0) direction = dy > 0 ? "down" : "up";
-    return direction;
-  }
+ 
   
   const getCellFromMouse = (e: MouseEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
@@ -48,12 +49,6 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     return { x, y };
   };
   
-  useEffect(() => {
-    setLoading(true)
-    loadConveyorSpriteSheet().then(() => {
-      setLoading(false)
-    })
-  }, []);
   
   // Rendu automatique du canvas à chaque update du world
   useEffect(() => {
@@ -63,11 +58,12 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!ctx) return;
     if (!world) return;
     
-    render(ctx, world, hoveredCell ?? undefined);
+    render(ctx, world, hoveredCell ?? undefined, hoveredStorage ?? undefined);
     if (conveyorPreview) {
-      drawPreviewConveyor(ctx, conveyorPreview.x, conveyorPreview.y, conveyorPreview.direction);
+      drawPreviewConveyor(ctx, conveyorPreview);
     }
-  }, [hoveredCell, world]);
+    
+  }, [hoveredCell, world.tick, hoveredStorage]);
   
   
   // Gestion du click sur le canvas
@@ -79,7 +75,10 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / cellSize);
       const y = Math.floor((e.clientY - rect.top) / cellSize);
-      
+      if (currentTool === "destroy") {
+        destroyEntity(x,y);
+        return
+      }
       switch (selectedItem) {
         case "iron-mine":
           placeIronMine(x, y);
@@ -93,6 +92,10 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
           placeWaterPump(x, y);
           break
         
+        case "storage":
+          placeStorage(x, y);
+          break
+        
         default:
           return
       }
@@ -101,6 +104,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     const handleRightClick = (e: MouseEvent) => {
       e.preventDefault();
       dispatch(setSelectedItem(""));
+      dispatch(setToolMode("build"));
       return
     }
     
@@ -110,7 +114,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       canvas.removeEventListener("click", handleClick);
       canvas.removeEventListener("contextmenu", handleRightClick);
     }
-  }, [world, cellSize, selectedItem])
+  }, [world, cellSize, selectedItem,currentTool])
   
   // gestion du hover sur le canvas
   useEffect(() => {
@@ -118,14 +122,14 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!canvas) return;
     
     const handleMove = (e: MouseEvent) => {
-      if (selectedItem === "") {
+      if (selectedItem === "" && currentTool === "build") {
         setHoveredCell(null);
         return;
       }
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / cellSize)
       const y = Math.floor((e.clientY - rect.top) / cellSize)
-      const canPlace = selectedItem ? world.grid!.canPlaceMachine({x, y}, selectedItem, world) : false;
+      const canPlace = selectedItem !== "" ? world.grid!.canPlaceMachine({x, y}, selectedItem, world) : false;
       
       setHoveredCell({x, y, canPlace});
     }
@@ -139,7 +143,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       canvas.removeEventListener("mousemove", handleMove);
       canvas.removeEventListener("mouseleave", handleLeave);
     }
-  }, [selectedItem, cellSize]);
+  }, [selectedItem, cellSize, currentTool]);
   
   //Gestion du drag lors de la pose de tapis
   useEffect(() => {
@@ -157,18 +161,10 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       if (!dragStart) return;
       const end = getCellFromMouse(e, canvas);
       
-      const dx = end.x - dragStart.x;
-      const dy = end.y - dragStart.y;
-      
-      let direction: DirectionType = "right"; // valeur par défaut
-      if (Math.abs(dx) > Math.abs(dy)) {
-        direction = dx > 0 ? "right" : "left";
-      } else if (Math.abs(dy) > 0) {
-        direction = dy > 0 ? "down" : "up";
-      }
-      
       if (selectedItem === "conveyor") {
-        placeConveyor(dragStart.x, dragStart.y, direction);
+        const cells= getBestPath(dragStart, end, world);
+        const conveyors = buildConveyorPlacements(cells);
+        placeConveyorLine(conveyors);
       }
       setDragStart(null);
       setConveyorPreview(null)
@@ -182,28 +178,31 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     };
   }, [dragStart, cellSize, selectedItem]);
   
-  // Gestion du preview d'ajout de convoyeur
+  // Gestion du preview d'ajout de convoyeur et du hover de coffre
   useEffect(() => {
-    if (!dragStart) return
     const canvas = canvasRef.current;
     if (!canvas) return
     const ctx = canvas.getContext("2d");
     if (!ctx) return
     const handleMouseMove = (e: MouseEvent) => {
       const current = getCellFromMouse(e, canvas)
+      const storage = world.storages.find(
+        s => s.x === current.x && s.y === current.y
+      )
+      setHoveredStorage(storage ?? null)
       
-      const direction: DirectionType = calcDirection(current as Position);
+      if (!dragStart) return
       render(ctx, world);
-      setConveyorPreview({x: dragStart.x, y: dragStart.y, direction});
+      const cells = getBestPath(dragStart, current, world);
+      const preview = buildConveyorPlacements(cells);
+      setConveyorPreview(preview);
     }
     
     canvas.addEventListener("mousemove", handleMouseMove);
     return () => canvas.removeEventListener("mousemove", handleMouseMove);
   }, [dragStart, world]);
   
-  if (loading) {
-    return <h2>Chargement des assets...</h2>
-  }
+  
   
   return <canvas ref={canvasRef} width={width} height={height} style={{ border: "1px solid black"}} />
 }

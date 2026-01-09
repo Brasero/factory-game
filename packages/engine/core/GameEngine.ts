@@ -4,8 +4,12 @@ import type {Machine, MachineType} from "@engine/models/Machine.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import {runConveyors} from "@engine/systems/ConveyorSystem.ts";
 import {runOutputMachine} from "@engine/systems/MachineOutputSystem.ts";
-import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
+import {MACHINE_CAPACITY, MACHINE_SPRITE_SHEET} from "@engine/config/machineConfig.ts";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
+import type {Storage} from "@engine/models/Storage.ts";
+import {isStorageType} from "@engine/models/Storage.ts";
+import {isMachineType} from "@engine/models/Machine.ts";
+import {isConveyorType} from "@engine/models/Conveyor.ts";
 
 export class GameEngine {
     public world: World
@@ -40,7 +44,9 @@ export class GameEngine {
                 x,
                 y,
                 capacity: MACHINE_CAPACITY[type],
-                progress: 0
+                progress: 0,
+                active: false,
+                spriteName: MACHINE_SPRITE_SHEET[type]
             }
             this.world = {
                 ...this.world,
@@ -67,15 +73,100 @@ export class GameEngine {
                 type: "conveyor",
                 direction,
                 capacity,
-                buffer: {} as Record<ResourcesType, number>
+                buffer: {} as Record<ResourcesType, number>,
+                active: false,
+                progress: 0
             }
             this.world = {
                 ...this.world,
                 conveyors: [...conveyors, conveyor]
             }
+            return true
         } catch(e) {
             console.error("Une erreur est survenu lors du placement du convoyeur", e)
             return false
+        }
+    }
+    
+    placeStorage(x: number, y: number) {
+        const {grid, storages} = this.world;
+        if (!grid) throw new Error("Le monde n'a pas de grille définie.");
+        
+        try {
+            const success = grid.occupy({x, y});
+            if (!success) return false;
+            const storage: Storage = {
+                x,
+                y,
+                id: crypto.randomUUID(),
+                capacity: 200,
+                stored: {} as Record<ResourcesType, number>
+            }
+            this.world = {
+                ...this.world,
+                storages: [...storages, storage]
+            }
+            return true
+        } catch (e) {
+            console.error(`Une erreur est survenu lors de l'ajout du stockage ${e.message}`)
+            return false
+        }
+    }
+
+    getEntityAt(x: number, y: number): Storage | Machine | Conveyor | null {
+        const findFn = (e) => e.x === x && e.y === y
+        const storage = this.world.storages.find(findFn)
+        if (storage) return storage;
+        const machine = this.world.machines.find(findFn)
+        if (machine) return machine
+        const conveyor = this.world.conveyors.find(findFn)
+        if (conveyor) return conveyor;
+        return null
+    }
+    destroyEntityAt(x: number, y: number) {
+        const entity = this.getEntityAt(x, y)
+        if (!entity) return;
+        if (!this.world.grid) return;
+        this.world.grid.free({x, y})
+
+        if (isStorageType(entity)) {
+            this.removeStorage(entity.id)
+            return
+        }
+        if (isMachineType(entity)){
+            this.removeMachine(entity.id)
+            return
+        }
+        if (isConveyorType(entity)) {
+            this.removeConveyor(entity.id)
+            return
+        }
+    }
+
+    removeMachine(id: string) {
+        const { machines } = this.world
+        const filteredMachine = machines.filter((m) => m.id !== id);
+        this.world = {
+            ...this.world,
+            machines: filteredMachine
+        }
+    }
+
+    removeConveyor(id: string) {
+        const { conveyors } = this.world
+        const filteredConveyor = conveyors.filter(c => c.id !== id)
+        this.world = {
+            ...this.world,
+            conveyors: filteredConveyor
+        }
+    }
+
+    removeStorage(id:string) {
+        const { storages } = this.world;
+        const filteredStorage = storages.filter(s => s.id !== id)
+        this.world = {
+            ...this.world,
+            storages: filteredStorage
         }
     }
 }

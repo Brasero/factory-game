@@ -1,4 +1,5 @@
 import {World} from "../models/World";
+import type {Resources, ResourcesType} from "@engine/models/Resources.ts";
 
 export function runProduction(world: World): World {
     const machines = world.machines.map((m) => {
@@ -19,7 +20,7 @@ export function runProduction(world: World): World {
         
         // buffer plein, on arrête la production
         if (totalStored >= m.capacity) {
-            return m;
+            return {...m, active: false};
         }
         progress += 1;
         
@@ -31,11 +32,24 @@ export function runProduction(world: World): World {
         return {
             ...m,
             buffer,
-            progress
+            progress,
+            active: true
         };
+    })
+    const resource: Resources = {
+        water: 0,
+        iron: 0,
+        coal: 0
+    }
+     world.storages.forEach((s) => {
+         const entries = Object.entries(resource) as [ResourcesType, number][]
+         entries.forEach(([key, n]) => {
+             resource[key] += s.stored[key] || 0
+         })
     })
     return {
         ...world,
-        machines: machines
+        machines: machines,
+        resources: resource
     }
 }

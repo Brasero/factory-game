@@ -6,7 +6,7 @@ export function runOutputMachine(world: World) {
   
   const machines = world.machines.map(m => {
     const conveyorIndex = world.conveyors.findIndex(c =>
-    c.x === m.x + 1 && c.y === m.y && c.direction === "right" && !c.carrying);
+    (c.x === m.x && c.y === m.y + 1 && c.direction !== "up" && !c.carrying && m.type !== "water-pump") || (c.x === m.x + 1 && c.y === m.y && c.direction !== "left" && !c.carrying && m.type === "water-pump"));
     if (conveyorIndex === -1) return m;
     
     //Trouver une ressource disponible dans le buffer de la machine

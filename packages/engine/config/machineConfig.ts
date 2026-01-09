@@ -6,3 +6,10 @@ export const MACHINE_CAPACITY: Record<MachineType, number> = {
   "water-pump": 100,
   conveyor: 1
 }
+
+export const MACHINE_SPRITE_SHEET: Record<MachineType, string> = {
+  "iron-mine": "miner2",
+  "coal-mine": "miner2",
+  "water-pump": "water",
+  conveyor: ""
+}

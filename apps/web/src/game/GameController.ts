@@ -28,42 +28,57 @@ export function pauseGame() {
 
 export function placeIronMine(x: number, y: number) {
     const success = engine.placeMachine(x, y, "iron-mine");
-    
     if (success) {
         updateWorld()
     }
-    
     return success;
 }
 
 export function placeCoalMine(x: number, y: number) {
     const success = engine.placeMachine(x, y, "coal-mine");
-    
     if (success) {
         updateWorld()
     }
-    
     return success;
 }
 
 export function placeWaterPump(x: number, y: number) {
     const success = engine.placeMachine(x, y, "water-pump");
-    
     if (success) {
         updateWorld()
     }
-    
     return success;
 }
 
 export function placeConveyor(x: number, y: number, direction: DirectionType) {
     const success = engine.placeConveyor(x, y, direction, MACHINE_CAPACITY["conveyor"])
+    if (success) {
+        updateWorld();
+    }
+    return success
+}
+
+export function placeConveyorLine(
+  line: {x: number, y: number, direction: DirectionType}[]
+) {
+    for (const c of line) {
+        const success = placeConveyor(c.x, c.y, c.direction)
+        if (!success) break
+    }
+}
+
+export function placeStorage(x: number, y: number) {
+    const success = engine.placeStorage(x, y);
     
     if (success) {
         updateWorld();
     }
-    
     return success
+}
+
+export function destroyEntity(x: number, y: number) {
+    engine.destroyEntityAt(x, y)
+    updateWorld();
 }
 
 function updateWorld(): void {

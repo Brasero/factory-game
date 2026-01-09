@@ -1,11 +1,11 @@
 import {createSlice} from '@reduxjs/toolkit'
 import type {PayloadAction} from "@reduxjs/toolkit";
-import type {RootState} from "@web/store/store.types.ts";
-import type {SelectedItem} from "@engine/models/Controls.ts";
+import type {SelectedItem, ToolMode} from "@engine/models/Controls.ts";
 import type {Controls} from "@engine/models/Controls.ts";
 
 const initialState: {paused: boolean} & Controls = {
 	selectedItem: "",
+	currentTool: "build",
 	paused: false
 }
 
@@ -18,13 +18,17 @@ const controlSlice = createSlice({
 		},
 		togglePause(state) {
 			state.paused = !state.paused
+		},
+		setToolMode(state, action: PayloadAction<ToolMode>) {
+			state.currentTool = action.payload
 		}
 	}
 })
 
 export const {
 	setSelectedItem,
-	togglePause
+	togglePause,
+	setToolMode
 } = controlSlice.actions;
 
 export default controlSlice.reducer;

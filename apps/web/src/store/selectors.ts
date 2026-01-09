@@ -20,3 +20,5 @@ export const selectSelectedItem = (state: RootState) => state.control.selectedIt
 
 // Sélecteur pour connaitre l'état du jeu (pause / lecture)
 export const selectGamePaused = (state: RootState) => state.control.paused;
+
+export const selectCurentTool = (state: RootState) => state.control.currentTool;

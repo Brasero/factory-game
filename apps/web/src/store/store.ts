@@ -7,7 +7,12 @@ const store = configureStore({
         game: gameSlice,
         control: controlSlice
     },
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat([])
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+        serializableCheck: {
+            ignoredPaths: ["game"],
+            ignoredActions: ["game/setWorld"]
+        }
+    }).concat([])
 })
 
 
