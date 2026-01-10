@@ -1,6 +1,6 @@
 /* =========================
    Import de tous les fichiers SCSS
    ========================= */
-@import 'color';
-@import 'resources';
-@import 'machines';
+@forward 'color';
+@forward 'resources';
+@forward 'machines';

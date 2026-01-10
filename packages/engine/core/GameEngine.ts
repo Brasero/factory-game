@@ -1,57 +1,42 @@
 import {World} from "@engine/models/World.ts";
 import {runProduction} from "@engine/systems/ProductionSystem.ts";
-import type {Machine, MachineType} from "@engine/models/Machine.ts";
-import type {ResourcesType} from "@engine/models/Resources.ts";
+import type {MachineType} from "@engine/models/Machine.ts";
 import {runConveyors} from "@engine/systems/ConveyorSystem.ts";
 import {runOutputMachine} from "@engine/systems/MachineOutputSystem.ts";
-import {MACHINE_CAPACITY, MACHINE_SPRITE_SHEET} from "@engine/config/machineConfig.ts";
-import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
-import type {Storage} from "@engine/models/Storage.ts";
-import {isStorageType} from "@engine/models/Storage.ts";
-import {isMachineType} from "@engine/models/Machine.ts";
-import {isConveyorType} from "@engine/models/Conveyor.ts";
+import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {EntityManagerType} from "@engine/core/manager/EntityManager.type.ts";
+import {entityManager} from "@engine/core/manager/EntityManager.ts";
 
 export class GameEngine {
     public world: World
+    private entityManager: EntityManagerType;
     constructor(world: World) {
         this.world = world
+        this.entityManager = entityManager;
     }
-
+    
     tick() {
         this.world = runProduction(this.world);
         this.world = runOutputMachine(this.world);
         runConveyors(this.world);
         this.world.tick += 1;
     }
-
+    
     getWorld() {
         return this.world;
     }
     
     placeMachine(x: number, y: number, type: MachineType) {
-        const {grid, machines} = this.world;
+        const {grid} = this.world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.");
         
         try {
-            const canPlace = grid.canPlaceMachine({x, y}, type, this.world);
-            if (!canPlace) return false;
-            const success = grid.occupy({x, y})// Marque la case comme occupée
-            if (!success) return false;
-            const newMachine: Machine = {
-                id: crypto.randomUUID(),
-                buffer: {} as Record<ResourcesType, number>,
-                type,
-                x,
-                y,
-                capacity: MACHINE_CAPACITY[type],
-                progress: 0,
-                active: false,
-                spriteName: MACHINE_SPRITE_SHEET[type],
-                entityType: 'machine'
+            const updatedWorld = this.entityManager.placeMachine(x, y, type, this.world);
+            if (!updatedWorld) {
+                return false
             }
             this.world = {
-                ...this.world,
-                machines: [...machines, newMachine]
+                ...updatedWorld,
             }
         } catch {
             console.error(`Une erreur est survenu lors du placement de la machine ${type}`)
@@ -61,23 +46,14 @@ export class GameEngine {
     }
     
     placeConveyor(x: number, y: number, direction: DirectionType): boolean {
-        const {grid, conveyors} = this.world;
+        const {grid} = this.world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.")
         
         try {
-            const success = grid.occupy({x,y})
-            if (!success) return false;
-            const conveyor: Conveyor = {
-                id: crypto.randomUUID(),
-                x,
-                y,
-                type: "conveyor",
-                direction,
-                entityType: 'conveyor'
-            }
+            const updatedWorld = this.entityManager.placeConveyor(x, y, direction, this.world);
+            if (!updatedWorld) return false;
             this.world = {
-                ...this.world,
-                conveyors: [...conveyors, conveyor]
+                ...updatedWorld
             }
             return true
         } catch(e) {
@@ -87,23 +63,14 @@ export class GameEngine {
     }
     
     placeStorage(x: number, y: number) {
-        const {grid, storages} = this.world;
+        const {grid} = this.world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.");
         
         try {
-            const success = grid.occupy({x, y});
-            if (!success) return false;
-            const storage: Storage = {
-                x,
-                y,
-                id: crypto.randomUUID(),
-                capacity: 200,
-                stored: {} as Record<ResourcesType, number>,
-                entityType: 'storage'
-            }
+            const updatedWorld = this.entityManager.placeStorage(x, y, this.world);
+            if (!updatedWorld) return false;
             this.world = {
-                ...this.world,
-                storages: [...storages, storage]
+                ...updatedWorld,
             }
             return true
         } catch (e) {
@@ -111,61 +78,11 @@ export class GameEngine {
             return false
         }
     }
-
-    getEntityAt(x: number, y: number): Storage | Machine | Conveyor | null {
-        const findFn = (e) => e.x === x && e.y === y
-        const storage = this.world.storages.find(findFn)
-        if (storage) return storage;
-        const machine = this.world.machines.find(findFn)
-        if (machine) return machine
-        const conveyor = this.world.conveyors.find(findFn)
-        if (conveyor) return conveyor;
-        return null
-    }
+    
     destroyEntityAt(x: number, y: number) {
-        const entity = this.getEntityAt(x, y)
-        if (!entity) return;
-        if (!this.world.grid) return;
-        this.world.grid.free({x, y})
-
-        if (isStorageType(entity)) {
-            this.removeStorage(entity.id)
-            return
-        }
-        if (isMachineType(entity)){
-            this.removeMachine(entity.id)
-            return
-        }
-        if (isConveyorType(entity)) {
-            this.removeConveyor(entity.id)
-            return
-        }
-    }
-
-    removeMachine(id: string) {
-        const { machines } = this.world
-        const filteredMachine = machines.filter((m) => m.id !== id);
+        const updatedWorld = this.entityManager.destroyEntityAt(x, y, this.world);
         this.world = {
-            ...this.world,
-            machines: filteredMachine
-        }
-    }
-
-    removeConveyor(id: string) {
-        const { conveyors } = this.world
-        const filteredConveyor = conveyors.filter(c => c.id !== id)
-        this.world = {
-            ...this.world,
-            conveyors: filteredConveyor
-        }
-    }
-
-    removeStorage(id:string) {
-        const { storages } = this.world;
-        const filteredStorage = storages.filter(s => s.id !== id)
-        this.world = {
-            ...this.world,
-            storages: filteredStorage
+            ...updatedWorld
         }
     }
 }
