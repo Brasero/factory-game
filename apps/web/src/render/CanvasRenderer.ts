@@ -162,7 +162,6 @@ function drawResources(ctx: CanvasRenderingContext2D, world: World) {
           pos.x - 10, pos.y - 15,
           CELL_SIZE - 10, CELL_SIZE - 10
         );
-        
     });
 }
 export function directionToVector(dir: DirectionType): Position {

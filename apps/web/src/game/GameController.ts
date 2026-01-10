@@ -51,7 +51,7 @@ export function placeWaterPump(x: number, y: number) {
 }
 
 export function placeConveyor(x: number, y: number, direction: DirectionType) {
-    const success = engine.placeConveyor(x, y, direction, MACHINE_CAPACITY["conveyor"])
+    const success = engine.placeConveyor(x, y, direction)
     if (success) {
         updateWorld();
     }

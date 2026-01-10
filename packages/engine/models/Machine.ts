@@ -1,12 +1,13 @@
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {Position} from "@engine/models/Position.ts";
 import {isPositionType} from "@engine/models/Position.ts";
+import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
 export type MachineType = "iron-mine"|"coal-mine"|"water-pump"|"conveyor";
 
-export interface Machine extends Position{
-    id: string;
+export interface Machine extends BaseEntity {
     type: MachineType;
+    entityType: "machine";
     progress: number;
     active: boolean;
     buffer: Record<ResourcesType, number>;
@@ -14,19 +15,10 @@ export interface Machine extends Position{
     spriteName?: string;
 }
 
-export function isMachineType(entity: unknown): boolean {
+export function isMachineType(entity: unknown): entity is Machine {
     return (
         typeof entity === 'object' &&
-        isPositionType(entity) &&
-        "id" in entity &&
-        "type" in entity &&
-        "progress" in entity &&
-        "active" in entity &&
-        "buffer" in entity &&
-        "capacity" in entity &&
-        (
-            Object.keys(entity).length === 6 ||
-            ("spriteName" in entity && Object.keys(entity).length === 7)
-        )
+        entity !== null &&
+        (entity as any).entityType === 'machine'
     )
 }

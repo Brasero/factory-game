@@ -46,7 +46,8 @@ export class GameEngine {
                 capacity: MACHINE_CAPACITY[type],
                 progress: 0,
                 active: false,
-                spriteName: MACHINE_SPRITE_SHEET[type]
+                spriteName: MACHINE_SPRITE_SHEET[type],
+                entityType: 'machine'
             }
             this.world = {
                 ...this.world,
@@ -59,7 +60,7 @@ export class GameEngine {
         return true;
     }
     
-    placeConveyor(x: number, y: number, direction: DirectionType, capacity: number): boolean {
+    placeConveyor(x: number, y: number, direction: DirectionType): boolean {
         const {grid, conveyors} = this.world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.")
         
@@ -72,10 +73,7 @@ export class GameEngine {
                 y,
                 type: "conveyor",
                 direction,
-                capacity,
-                buffer: {} as Record<ResourcesType, number>,
-                active: false,
-                progress: 0
+                entityType: 'conveyor'
             }
             this.world = {
                 ...this.world,
@@ -100,7 +98,8 @@ export class GameEngine {
                 y,
                 id: crypto.randomUUID(),
                 capacity: 200,
-                stored: {} as Record<ResourcesType, number>
+                stored: {} as Record<ResourcesType, number>,
+                entityType: 'storage'
             }
             this.world = {
                 ...this.world,

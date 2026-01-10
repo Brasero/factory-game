@@ -1,18 +1,17 @@
-import {isPositionType, Position} from "@engine/models/Position";
 import {ResourcesType} from "./Resources";
+import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
-export interface Storage extends Position {
+export interface Storage extends BaseEntity {
   id: string;
+  entityType: 'storage';
   capacity: number;
   stored: Record<ResourcesType, number>;
 }
 
-export function isStorageType(entity: unknown): boolean {
+export function isStorageType(entity: unknown): entity is Storage {
   return (
-      isPositionType(entity) &&
-      "id" in entity &&
-      "capacity" in entity &&
-      "stored" in entity &&
-      Object.keys(entity).length === 3
+      typeof entity === "object" &&
+      entity !== null &&
+      (entity as any).entityType === 'storage'
   )
 }
