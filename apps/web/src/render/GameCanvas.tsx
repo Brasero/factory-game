@@ -19,6 +19,7 @@ import type {Storage} from "@engine/models/Storage.ts";
 import type {SelectedItem} from "@engine/models/Controls.ts";
 import { buildConveyorPlacements, getBestPath} from "@web/render/utils/canvas.ts";
 import type {Camera} from "@web/model/Camera.ts";
+import {config} from "@web/config/gridConfig.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -40,12 +41,15 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const [dragStart, setDragStart] = useState<Position | null>(null)
   const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview[] | null>(null);
   const [hoveredStorage, setHoveredStorage] = useState<Storage | null>(null)
+  // x et y sont au centre de la carte
   const cameraRef = useRef<Camera>({
     scale: 1,
     minScale: 0.5,
     maxScale: 2.5,
+    // x: -(config.WIDTH / 2) + (width / 2),
+    // y: -(config.HEIGHT / 2) + (height / 2)
     x: 0,
-    y: 0,
+    y: 0
   })
  
   
@@ -80,7 +84,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       drawPreviewConveyor(ctx, conveyorPreview);
     }
     
-  }, [hoveredCell, world.tick, hoveredStorage]);
+  }, [cameraRef,hoveredCell, world.tick, hoveredStorage]);
   
   useEffect(() => {
     const canvas = canvasRef.current;

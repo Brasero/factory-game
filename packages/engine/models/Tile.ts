@@ -1,4 +1,4 @@
-export type BiomeType = "grass" | "desert" | "snow" | "beach";
+export type BiomeType = "sea" | "grass" | "desert" | "snow";
 
 /**
  * @interface TileData
@@ -13,4 +13,4 @@ export interface TileData {
 }
 
 export type TileMapType = TileData[][];
-export const TILE_SIZE = 32;
+export const TILE_SIZE = 16;

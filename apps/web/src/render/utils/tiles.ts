@@ -12,15 +12,28 @@ export function drawTileMap(
   tileMap: TileMap
 ) {
   const tileset = assetManager.getImage("tileset.environment")
+  const water = assetManager.getImage("tileset.water");
   if (!tileMap) return
   for (let y = 0; y < tileMap.height; y++) {
     for (let x = 0; x < tileMap.width; x++) {
       const tile = tileMap.get(x, y);
       if (!tile) continue
+      if (tile.biome === "water") {
+        drawTile(ctx,{
+            tileset: water,
+            tileX: 0,
+            tileY: 0,
+            gridX: x,
+            gridY: y,
+          }
+        )
+        continue
+      }
       const biomeDef = TILESET[tile.biome]
       if (!biomeDef) continue
       const base =
         biomeDef.base[tile.variant % biomeDef.base.length]
+      
       
       drawTile(ctx,{
         tileset,
