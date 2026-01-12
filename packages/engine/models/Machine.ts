@@ -1,6 +1,4 @@
 import type {ResourcesType} from "@engine/models/Resources.ts";
-import type {Position} from "@engine/models/Position.ts";
-import {isPositionType} from "@engine/models/Position.ts";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
 export type MachineType = "iron-mine"|"coal-mine"|"water-pump"|"conveyor";
@@ -13,6 +11,8 @@ export interface Machine extends BaseEntity {
     buffer: Record<ResourcesType, number>;
     capacity: number;
     spriteName?: string;
+    efficiency: number;
+    production: number;
 }
 
 export function isMachineType(entity: unknown): entity is Machine {

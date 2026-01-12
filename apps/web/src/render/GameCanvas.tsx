@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState, WheelEvent} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";
@@ -17,7 +17,8 @@ import type {Position} from "@engine/models/Position.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {SelectedItem} from "@engine/models/Controls.ts";
-import {buildConveyorLine, buildConveyorPlacements, getBestPath, getLineCells} from "@web/render/utils/canvas.ts";
+import { buildConveyorPlacements, getBestPath} from "@web/render/utils/canvas.ts";
+import type {Camera} from "@web/model/Camera.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -39,14 +40,30 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const [dragStart, setDragStart] = useState<Position | null>(null)
   const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview[] | null>(null);
   const [hoveredStorage, setHoveredStorage] = useState<Storage | null>(null)
-  
+  const cameraRef = useRef<Camera>({
+    scale: 1,
+    minScale: 0.5,
+    maxScale: 2.5,
+    x: 0,
+    y: 0,
+  })
  
   
   const getCellFromMouse = (e: MouseEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / cellSize);
-    const y = Math.floor((e.clientY - rect.top) / cellSize);
-    return { x, y };
+    const camera = cameraRef.current;
+    
+    // Coordonées écran -> canvas
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    
+    // Inversion exacte de la transformation canvas
+    const worldX = (screenX - camera.x) / camera.scale;
+    const worldY = (screenY - camera.y) / camera.scale;
+    return {
+      x: Math.floor(worldX / cellSize),
+      y: Math.floor(worldY / cellSize)
+    };
   };
   
   
@@ -58,13 +75,44 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!ctx) return;
     if (!world) return;
     
-    render(ctx, world, hoveredCell ?? undefined, hoveredStorage ?? undefined);
+    render(ctx, world, cameraRef.current,hoveredCell ?? undefined, hoveredStorage ?? undefined);
     if (conveyorPreview) {
       drawPreviewConveyor(ctx, conveyorPreview);
     }
     
   }, [hoveredCell, world.tick, hoveredStorage]);
   
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const camera = cameraRef.current
+      const zoomFactor = 1.1;
+      const direction = e.deltaY > 0 ? -1 : 1;
+      const oldScale = camera.scale;
+      
+      const newScale = Math.min(
+        camera.maxScale,
+        Math.max(camera.minScale, oldScale * (direction > 0 ? zoomFactor : 1 / zoomFactor))
+      );
+      
+      if (newScale === oldScale) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      camera.x = mouseX - ((mouseX - camera.x) * newScale) / oldScale;
+      camera.y = mouseY - ((mouseY - camera.y) * newScale) / oldScale;
+      camera.scale = newScale
+      render(canvas.getContext("2d"), world, camera);
+    };
+    
+    canvas.addEventListener("wheel", handleWheel, {passive: false});
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, []);
   
   // Gestion du click sur le canvas
   useEffect(() => {
@@ -72,9 +120,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!canvas) return;
     
     const handleClick = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / cellSize);
-      const y = Math.floor((e.clientY - rect.top) / cellSize);
+      const {x, y} = getCellFromMouse(e, canvas);
       if (currentTool === "destroy") {
         destroyEntity(x,y);
         return
@@ -126,9 +172,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
         setHoveredCell(null);
         return;
       }
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / cellSize)
-      const y = Math.floor((e.clientY - rect.top) / cellSize)
+      const {x, y} = getCellFromMouse(e, canvas);
       const canPlace = selectedItem !== "" ? world.grid!.canPlaceMachine({x, y}, selectedItem, world) : false;
       
       setHoveredCell({x, y, canPlace});
@@ -192,7 +236,6 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       setHoveredStorage(storage ?? null)
       
       if (!dragStart) return
-      render(ctx, world);
       const cells = getBestPath(dragStart, current, world);
       const preview = buildConveyorPlacements(cells);
       setConveyorPreview(preview);

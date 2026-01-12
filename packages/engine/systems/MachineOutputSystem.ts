@@ -6,7 +6,7 @@ export function runOutputMachine(world: World) {
   
   const machines = world.machines.map(m => {
     const conveyorIndex = world.conveyors.findIndex(c =>
-    (c.x === m.x && c.y === m.y + 1 && c.direction !== "up" && !c.carrying && m.type !== "water-pump") || (c.x === m.x + 1 && c.y === m.y && c.direction !== "left" && !c.carrying && m.type === "water-pump"));
+    (c.x === m.x && c.y === m.y + 1 && c.direction !== "up" && c.carrying.length < c.capacity && m.type !== "water-pump") || (c.x === m.x + 1 && c.y === m.y && c.direction !== "left" && !c.carrying && m.type === "water-pump"));
     if (conveyorIndex === -1) return m;
     
     //Trouver une ressource disponible dans le buffer de la machine
@@ -15,13 +15,17 @@ export function runOutputMachine(world: World) {
     if (!entry) return m;
     
     const [resources, amount] = entry as [ResourcesType, number];
+    const conveyor = conveyors[conveyorIndex]
     conveyors[conveyorIndex] = {
-      ...conveyors[conveyorIndex],
-      carrying: {
-        type: resources,
-        amount: 1,
-        progress: 0
-      }
+      ...conveyor,
+      carrying: [
+        ...conveyor.carrying,
+        {
+          type: resources,
+          amount: 1,
+          progress: 0
+        }
+      ]
     }
     
     return {

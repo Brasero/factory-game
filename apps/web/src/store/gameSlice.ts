@@ -3,7 +3,7 @@ import type {PayloadAction} from "@reduxjs/toolkit";
 import type {World} from "@engine/models/World.ts";
 import type {MachineType} from "@engine/models/Machine.ts";
 
-const initialState: World = {
+const initialState: Partial<World> = {
     tick: 0,
     machines: [],
     resources: {
@@ -13,7 +13,7 @@ const initialState: World = {
     },
     resourceNodes: [],
     conveyors: [],
-    storages: []
+    storages: [],
 }
 
 const gameSlice = createSlice({

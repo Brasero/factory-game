@@ -22,10 +22,10 @@ export function runProduction(world: World): World {
         if (totalStored >= m.capacity) {
             return {...m, active: false};
         }
-        progress += 1;
+        progress += m.efficiency;
         
         if (progress >= 10) {
-            buffer[resource] = current + 1;
+            buffer[resource] = current + m.production;
             progress = 0;
         }
         

@@ -23,7 +23,7 @@ function App() {
     }, []);
 
   const gameViewClass = (): string => {
-      let styles: string[] = [];
+      const styles: string[] = ["gameView"];
       if (currentTool === "destroy") styles.push("destroy")
 
       return styles.join(" ")
@@ -34,7 +34,7 @@ function App() {
   return (
     <div className={gameViewClass()}>
         <Hud />
-        <GameCanvas width={800} height={608} cellSize={config.CELL_SIZE} />
+        <GameCanvas width={window.innerWidth-20} height={window.innerHeight-18} cellSize={config.CELL_SIZE} />
     </div>
   )
 }

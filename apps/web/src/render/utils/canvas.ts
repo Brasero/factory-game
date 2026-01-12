@@ -1,7 +1,6 @@
 import type {Position} from "@engine/models/Position.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
 import type {World} from "@engine/models/World.ts";
-import * as path from "path";
 import type {ConveyorPlacement} from "@engine/models/ConveyorPlacement.ts";
 
 export function getLineCells(

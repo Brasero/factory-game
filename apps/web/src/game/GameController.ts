@@ -5,7 +5,7 @@ import {TickLoop} from "@engine/core/TickLoop.ts";
 import store from "@web/store/store.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import type {DirectionType} from "@engine/models/Conveyor.ts";
-import {MACHINE_CAPACITY} from "@engine/config/machineConfig.ts";
+import type {BiomeType, TileData, TileMap} from "@web/model/Tile.ts";
 
 const world = createWorld();
 const engine = new GameEngine(world);
@@ -14,6 +14,7 @@ const loop = new TickLoop();
 export function startGame() {
     const canvas = document.querySelector("canvas");
     const ctx = canvas?.getContext("2d");
+    
     loop.start(() => {
         engine.tick();
         updateWorld();
@@ -82,6 +83,7 @@ export function destroyEntity(x: number, y: number) {
 }
 
 function updateWorld(): void {
-    const snapshot = structuredClone(engine.getWorld());
-    store.dispatch(setWorld({...snapshot, grid: engine.getWorld().grid}))
+    const world = engine.getWorld()
+    const snapshot = structuredClone(world);
+    store.dispatch(setWorld({...snapshot, grid: world.grid, tileMap: world.tileMap, conveyors: world.conveyors}))
 }

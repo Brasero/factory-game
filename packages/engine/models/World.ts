@@ -4,6 +4,7 @@ import {Grid} from "@engine/world/Grid.ts";
 import type {ResourceNode} from "@engine/models/ResourceNode.ts";
 import type {Conveyor} from "@engine/models/Conveyor.ts";
 import type {Storage} from "@engine/models/Storage.ts";
+import type {TileMap} from "@engine/world/TileMap.ts";
 
 export interface World {
     tick: number;
@@ -13,4 +14,5 @@ export interface World {
     resourceNodes: ResourceNode[];
     conveyors: Conveyor[];
     storages: Storage[];
+    tileMap: TileMap;
 }

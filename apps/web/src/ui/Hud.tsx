@@ -13,6 +13,7 @@ import {setSelectedItem, setToolMode, togglePause} from "@web/store/controlSlice
 import {formatTicks} from "@web/utils/utils.ts";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
+import {useState} from "react";
 
 export function Hud() {
   const iron = useAppSelector(selectIronQuantity);
@@ -23,6 +24,7 @@ export function Hud() {
   const paused = useAppSelector(selectGamePaused);
   const dispatch = useAppDispatch();
   const currentTool = useAppSelector(selectCurentTool);
+  const [openMineOptions, setOpenMineOptions] = useState(false);
   
   const handleClick = (item: SelectedItem) => {
     if (currentTool !== "build") return
@@ -32,7 +34,12 @@ export function Hud() {
     }
     dispatch(setSelectedItem(item));
   };
-  
+  const openMineOption = () => {
+    setOpenMineOptions(true);
+  }
+  const closeMineOption = () => {
+    setOpenMineOptions(false);
+  }
   const toggleGamePause = () => {
     const isPaused = !!paused;
     dispatch(togglePause());
@@ -65,7 +72,7 @@ export function Hud() {
         <div id="hud_resources">
           <div className={`hud_resource iron ${(iron > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.ironOre").src} width={16} height={16} /> {iron}</div>
           <div className={`hud_resource coal ${(coal > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.coalOre").src} width={16} height={16}/> {coal}</div>
-          <div className={`hud_resource water ${(water > 0 && !paused) ? 'pulse' : ''}`}>💧 {water}</div>
+          <div className={`hud_resource water ${(water > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.waterOre").src} /> {water}</div>
         </div>
         <div id="hud_tick_container">
           <button id="hud_pause_btn" onClick={toggleGamePause}>
@@ -79,11 +86,19 @@ export function Hud() {
     
     <div id="hud_commands">
       <div id="hud_commands_extractor">
-        <h5>
+        <div className={"miner"} onMouseEnter={openMineOption} onMouseLeave={closeMineOption}>
+          {
+            openMineOptions ? (
+              <div className={"mine-options"}>
+                <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}><img
+                  src={assetManager.getImage("ore.ironOre").src} width={20} height={20}/></button>
+                <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}><img
+                  src={assetManager.getImage("ore.coalOre").src} width={20} height={20}/></button>
+              </div>
+            ) : ""
+          }
           <img src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>
-        </h5>
-        <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}><img src={assetManager.getImage("ore.ironOre").src} width={20} height={20} /></button>
-        <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}><img src={assetManager.getImage("ore.coalOre").src} width={20} height={20}/></button>
+        </div>
         <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
           <img src={assetManager.getImage("machine.pump.water.idle").src}/>
         </button>

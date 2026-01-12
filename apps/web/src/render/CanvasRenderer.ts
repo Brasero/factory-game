@@ -11,24 +11,27 @@ import type {Storage} from "@engine/models/Storage.ts";
 import {drawStorageTooltip, drawStorages} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
 import {drawConveyors, getIncomingDirection} from "@web/render/utils/conveyor.ts";
+import type {Camera} from "@web/model/Camera.ts";
+import {drawTileMap} from "@web/render/utils/tiles.ts";
 
 const CELL_SIZE = config.CELL_SIZE;
+const width = window.innerWidth;
+const height = window.innerHeight;
 export function render(
     ctx: CanvasRenderingContext2D,
     world: World,
+    camera?: Camera,
     hoveredCell?: Position & {canPlace: boolean},
     hoveredStorage?: Storage
 ) {
-    const width = ctx.canvas.width;
-    const height = ctx.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    // const conveyorMap = new Map<string, Conveyor>();
-    //
-    // for (const c of world.conveyors) {
-    //     conveyorMap.set(`${c.x}:${c.y}`, c);
-    // }
     
-    drawGrid(ctx, width, height);
+    if (camera) {
+        ctx.translate(camera.x, camera.y);
+        ctx.scale(camera.scale, camera.scale);
+    }
+    drawTileMap(ctx, world.tileMap);
     drawResourceNodes(ctx, world);
     drawConveyors(ctx, world);
     drawMachines(ctx, world);
@@ -37,32 +40,6 @@ export function render(
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
-    }
-}
-
-/* ========================= */
-/* ========== GRID ========= */
-/* ========================= */
-function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number
-) {
-    ctx.strokeStyle = "#ddd";
-    ctx.lineWidth = .1;
-    
-    for (let x = 0; x <= width; x += CELL_SIZE) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-    }
-    
-    for (let y = 0; y <= height; y += CELL_SIZE) {
-        ctx.beginPath()
-        ctx.moveTo(0, y)
-        ctx.lineTo(width, y);
-        ctx.stroke();
     }
 }
 
@@ -124,7 +101,6 @@ function drawHoveredCell(
   cell?: Position & {canPlace: boolean}
 ) {
     if (!cell) return
-    
     ctx.fillStyle = cell.canPlace ? colors.state.success : colors.state.danger;
     ctx.fillRect(
       cell.x * CELL_SIZE,
@@ -148,20 +124,22 @@ function drawResources(ctx: CanvasRenderingContext2D, world: World) {
     }
     
     world.conveyors.forEach(c => {
-        if (!c.carrying) return;
-        const { type, amount, progress = 0 } = c.carrying;
-        
-        // Position de base au centre de la case
-        const path = buildConveyorPath(world, c, CELL_SIZE);
-        const pos = interpolateOnConveyor(path, progress)
-        
-        const image = new Image()
-        image.src = resourceColors[type];
-        ctx.drawImage(
-          image,
-          pos.x - 10, pos.y - 15,
-          CELL_SIZE - 10, CELL_SIZE - 10
-        );
+        if (!c.carrying.length) return;
+        c.carrying.forEach(r => {
+            const { type, progress = 0 } = r;
+            
+            // Position de base au centre de la case
+            const path = buildConveyorPath(world, c, CELL_SIZE);
+            const pos = interpolateOnConveyor(path, progress)
+            
+            const image = new Image()
+            image.src = resourceColors[type];
+            ctx.drawImage(
+              image,
+              pos.x - 10, pos.y - 15,
+              CELL_SIZE - 10, CELL_SIZE - 10
+            );
+        })
     });
 }
 export function directionToVector(dir: DirectionType): Position {

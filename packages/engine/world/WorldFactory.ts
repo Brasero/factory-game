@@ -1,12 +1,13 @@
 import type {World} from "../models/World";
 import {Grid} from "./Grid.ts";
-import type {ResourcesType} from "@engine/models/Resources.ts";
 import {config} from "@web/config/gridConfig.ts";
 import {resourceNodes} from "@engine/world/resourceNode.ts";
+import {MapGenerator} from "@engine/world/MapGenerator.ts";
 
 export function createWorld(): World {
     const gridWidth = config.WIDTH / config.CELL_SIZE
     const gridHeight = config.HEIGHT / config.CELL_SIZE
+    const tileMap = MapGenerator.generate({width: gridWidth, height: gridHeight})
     return {
         tick: 0,
         grid: new Grid(gridWidth, gridHeight),
@@ -19,5 +20,6 @@ export function createWorld(): World {
         resourceNodes: resourceNodes,
         conveyors: [],
         storages: [],
+        tileMap: tileMap
     }
 }

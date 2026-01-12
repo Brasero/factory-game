@@ -48,5 +48,9 @@ export const imagePath = {
     water: materialBasePath + "/Water/Tiles/Water_Tileset.png",
     iron: materialBasePath + "/Iron/Tiles/Tile-0003.png",
     coal: materialBasePath + "/Coal/Tiles/Tile-0003.png"
+  },
+  tileset: {
+    environment: materialBasePath + "/Tiles/Environment_Tileset.png",
+    trees: materialBasePath + "/Tiles/Trees.png"
   }
 } as const;

@@ -11,7 +11,8 @@ const store = configureStore({
         serializableCheck: {
             ignoredPaths: ["game"],
             ignoredActions: ["game/setWorld"]
-        }
+        },
+        serialize: true
     }).concat([])
 })
 

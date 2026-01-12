@@ -29,7 +29,9 @@ class EntityManager implements EntityManagerType {
         progress: 0,
         active: false,
         spriteName: MACHINE_SPRITE_SHEET[type],
-        entityType: 'machine'
+        entityType: 'machine',
+        efficiency: 1,
+        production: 1
       }
       world = {
         ...world,
@@ -54,7 +56,10 @@ class EntityManager implements EntityManagerType {
         y,
         type: "conveyor",
         direction,
-        entityType: 'conveyor'
+        entityType: 'conveyor',
+        speed: 0.2,
+        carrying: [],
+        capacity: 3
       }
       world = {
         ...world,
