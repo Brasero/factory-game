@@ -11,53 +11,90 @@ export function drawTileMap(
   ctx: CanvasRenderingContext2D,
   tileMap: TileMap
 ) {
-  const tileset = assetManager.getImage("tileset.environment")
+  if (!tileMap) return;
+  
+  const tileset = assetManager.getImage("tileset.environment");
   const water = assetManager.getImage("tileset.water");
-  if (!tileMap) return
+  const trees = assetManager.getImage("tileset.trees");
+  const tilesPerRow = Math.floor(tileset.width / TILE_SIZE);
+  
   for (let y = 0; y < tileMap.height; y++) {
     for (let x = 0; x < tileMap.width; x++) {
       const tile = tileMap.get(x, y);
-      if (!tile) continue
-      if (tile.biome === "water") {
-        drawTile(ctx,{
-            tileset: water,
-            tileX: 0,
-            tileY: 0,
-            gridX: x,
-            gridY: y,
-          }
-        )
-        continue
-      }
-      const biomeDef = TILESET[tile.biome]
-      if (!biomeDef) continue
-      const base =
-        biomeDef.base[tile.variant % biomeDef.base.length]
+      if (!tile) continue;
       
-      
-      drawTile(ctx,{
-        tileset,
-        tileX: base.x,
-        tileY: base.y,
-        gridX: x,
-        gridY: y,
-        }
-      )
-      
-      if (tile.decoration !== undefined && biomeDef.deco) {
-        const deco =
-          biomeDef.deco[tile.decoration % biomeDef.deco.length]
-        
-        drawTile(ctx,{
-          tileset,
-          tileX: deco.x,
-          tileY: deco.y,
+      // 🌊 SEA
+      if (tile.biome === "sea") {
+        drawTileByIndex(ctx, {
+          tileset: water,
+          index: 0,
           gridX: x,
           gridY: y,
-        })
+          tilesPerRow: 1
+        });
+        continue;
+      }
+      
+      // 🌍 BIOME TILE
+      drawTileByIndex(ctx, {
+        tileset,
+        index: tile.variant,
+        gridX: x,
+        gridY: y,
+        tilesPerRow
+      });
+      
+      // 🌲 DECORATION
+      if (tile.decoration !== undefined) {
+        ctx.drawImage(
+          trees,
+          tile.decoration * 32, 0,
+          32,
+          48,
+          x * CELL_SIZE,
+          y * CELL_SIZE - (48 - CELL_SIZE),
+          CELL_SIZE,
+          48
+        );
       }
     }
   }
+}
+
+/* ============================================================
+  DRAW BY TILE INDEX
+============================================================ */
+
+function drawTileByIndex(
+  ctx: CanvasRenderingContext2D,
+  {
+    tileset,
+    index,
+    gridX,
+    gridY,
+    tilesPerRow
+  }: {
+    tileset: HTMLImageElement;
+    index: number;
+    gridX: number;
+    gridY: number;
+    tilesPerRow: number;
+  }
+) {
+  const tileX = index % tilesPerRow;
+  const tileY = Math.floor(index / tilesPerRow);
+  
+  ctx.drawImage(
+    tileset,
+    tileX * TILE_SIZE,
+    tileY * TILE_SIZE,
+    TILE_SIZE,
+    TILE_SIZE,
+    gridX * CELL_SIZE,
+    gridY * CELL_SIZE,
+    CELL_SIZE,
+    CELL_SIZE
+  );
 }
 
 function drawTile(

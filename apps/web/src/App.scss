@@ -9,6 +9,11 @@
   place-items: center;
 }
 
+canvas {
+  height: 100%;
+  width: 100%;
+}
+
 .gameView {
   display: flex;
   align-items: center;
