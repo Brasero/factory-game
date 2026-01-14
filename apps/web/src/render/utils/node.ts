@@ -1,13 +1,13 @@
-import type {World} from "@engine/models/World.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {config as gridConfig} from "@web/config/gridConfig.ts";
+import type {Grid} from "@engine/world/Grid.ts";
 
 const CELL_SIZE = gridConfig.CELL_SIZE
 export function drawResourceNodes(
   ctx: CanvasRenderingContext2D,
-  world: World
+  grid: Grid
 ) {
-  world.resourceNodes.forEach(node => {
+  grid.getResourceMap().forEach(node => {
     let img: HTMLImageElement;
     switch (node.resource) {
       case "iron":

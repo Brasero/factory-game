@@ -12,7 +12,7 @@ import {drawStorageTooltip, drawStorages} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
 import {drawConveyors, getIncomingDirection} from "@web/render/utils/conveyor.ts";
 import type {Camera} from "@web/model/Camera.ts";
-import {drawTileMap} from "@web/render/utils/tiles.ts";
+import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 
 const CELL_SIZE = config.CELL_SIZE;
 const width = window.innerWidth;
@@ -31,12 +31,14 @@ export function render(
         ctx.translate(camera.x, camera.y);
         ctx.scale(camera.scale, camera.scale);
     }
-    drawTileMap(ctx, world.tileMap);
-    drawResourceNodes(ctx, world);
+    if (!world.grid) return;
+    drawTileMap(ctx, world.grid);
+    drawResourceNodes(ctx, world.grid);
     drawConveyors(ctx, world);
     drawMachines(ctx, world);
     drawResources(ctx, world);
     drawStorages(ctx, world);
+    drawDecorationTiles(ctx, world.grid);
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);

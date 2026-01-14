@@ -1,6 +1,5 @@
 import { TileMap } from "./TileMap";
 import { TileMapType } from "@engine/models/Tile";
-import type { BiomeType } from "@engine/models/Tile";
 import {BIOME_TILES} from "@web/config/tileset.registry.ts";
 
 export interface MapGeneratorOptions {
@@ -8,14 +7,13 @@ export interface MapGeneratorOptions {
   height: number;
   islandCount: number;
   islandSize: number;
-  mainBiome: BiomeType;
 }
 
 /* ============================================================
   TYPES
 ============================================================ */
 
-type LogicalBiome = "sea" | "grass" | "desert" | "snow" | "grass-beach" | "desert-beach" | "snow-beach";
+export type LogicalBiome = "sea" | "grass" | "desert" | "snow" | "grass-beach" | "desert-beach" | "snow-beach";
 
 /* ============================================================
   UTILS
@@ -211,21 +209,15 @@ function carveIsland(
   biome: LogicalBiome
 ) {
   const range = Math.floor(size * 1.3);
-  
   for (let y = -range; y <= range; y++) {
+    const n = 1 + Math.floor(Math.random() * 5); // exponent for smoothing
     for (let x = -range; x <= range; x++) {
       const px = cx + x;
       const py = cy + y;
       
       if (!map[py]?.[px]) continue;
       
-      const d = smoothSquareDistance(
-        px,
-        py,
-        cx,
-        cy,
-        size
-      );
+      const d = smoothSquareDistance(px, py, cx, cy, size, n);
       
       if (d < size) {
         map[py][px] = biome;
@@ -234,13 +226,7 @@ function carveIsland(
   }
   
   applyBeachLayer(map, biome);
-  placeBeachClearings(
-    map,
-    cx,
-    cy,
-    size,
-    biome
-  );
+  placeBeachClearings(map, cx, cy, size, biome);
 }
 
 function applyBeachLayer(
@@ -327,21 +313,22 @@ function smoothSquareDistance(
   y: number,
   cx: number,
   cy: number,
-  size: number
+  size: number,
+  n: number
 ): number {
   const dx = Math.abs(x - cx) / size;
   const dy = Math.abs(y - cy) / size;
   
-  const n = 3; // exponent for smoothing
+  const randN = n + pseudoNoise(x * 0.5, y * 0.5) * 4;
   const squareDist = Math.pow(
-    Math.pow(dx, n) + Math.pow(dy, n),
+    Math.pow(dx, randN) + Math.pow(dy, randN),
     1 / n
   ) * size;
   
   const localNoise =
     pseudoNoise(x * 0.9, y * 0.9) * size * 0.05;
   
-  return squareDist + localNoise;
+  return squareDist;
 }
 
 /* ============================================================
@@ -610,11 +597,14 @@ export class MapGenerator {
           offset = 2;
         }
         tiles[y][x] = {
-          biome: logical[y][x] as BiomeType,
+          biome: logical[y][x] as LogicalBiome,
           variant: pickTile(logical, x, y),
           decoration:
             logical[y][x] !== "sea" && !logical[y][x].includes("-beach") && Math.random() > 0.9
-              ? Math.floor(Math.random() * 2) + offset
+              ? {
+                  type: rand(["tree", "rock"]),
+                  variant: offset + Math.floor(Math.random() * 2)
+              }
               : undefined
         };
       }

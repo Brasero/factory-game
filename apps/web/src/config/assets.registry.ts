@@ -52,6 +52,7 @@ export const imagePath = {
   tileset: {
     environment: materialBasePath + "/Tiles/Environment_Tileset.png",
     trees: materialBasePath + "/Tiles/Trees.png",
-    water: materialBasePath + "/Tiles/Water_Tileset.png"
+    water: materialBasePath + "/Tiles/Water_Tileset.png",
+    rock: materialBasePath + "/Tiles/Rock_Tile.png"
   }
 } as const;

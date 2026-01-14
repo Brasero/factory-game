@@ -2,6 +2,9 @@ import {Position} from "@engine/models/Position";
 import {GridCell} from "@engine/models/GridCell";
 import type {MachineType} from "@engine/models/Machine.ts";
 import type {World} from "@engine/models/World.ts";
+import type {TileMap} from "@engine/world/TileMap.ts";
+import {resourceNodes} from "@engine/world/resourceNode.ts";
+import type {TileData} from "@engine/models/Tile.ts";
 
 // Classe représentant une grille 2D pour la gestion des positions occupées
 // et libres
@@ -34,23 +37,87 @@ export class Grid {
   readonly width: number;
   readonly height: number;
   
-  private cells: GridCell[][];
+  private readonly cells: GridCell[][];
   
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, tileMap: TileMap) {
     this.width = width;
     this.height = height;
     
-    this.cells = Array.from({ length: height }, () =>
-      Array.from({ length: width }, () => ({ occupied: false }))
+    this.cells = Array.from({ length: height }, (_, y) =>
+      Array.from({ length: width }, (_, x) => ({
+        occupied: false,
+        tile: tileMap.get(x, y)?.biome ?? "grass",
+        variant: tileMap.get(x, y)?.variant ?? 0,
+        resource: null,
+        decoration: tileMap.get(x, y)?.decoration ? {
+          ...tileMap.get(x, y)!.decoration!,
+          destructible: tileMap.get(x, y)!.decoration!.type === "tree"
+        } : undefined
+      }))
     );
   }
   
-  // Verifie si une position est à l'intérieur de la grille
+  /**
+   * Renvoie les données de la tuile à la position spécifiée si elle existe dans la grille.
+   * @param {number} x - La coordonnée x de la tuile.
+   * @param {number} y - La coordonnée y de la tuile.
+   * @returns {TileData | null} Les données de la tuile ou null si la position est en dehors de la grille.
+   */
+  getTile(x: number, y: number): TileData | null {
+    if (!this.isInside({x, y})) return null;
+    const cell = this.cells[y][x];
+    return {
+      biome: cell.tile,
+      variant: cell.variant,
+      decoration: cell.decoration ?? undefined
+    };
+  }
+  /**
+   * Renvoie une carte des ressources présentes dans la grille.
+   * @returns {(TileData & { resource: GridCell["resource"] })[]} Une liste des cellules contenant des ressources avec leurs données de tuile.
+   */
+  getResourceMap(): (TileData & { resource: GridCell["resource"] })[] {
+    const map: (TileData & {resource: GridCell["resource"]})[] = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const cell = this.cells[y][x];
+        if (cell.resource) {
+          map.push({
+            biome: cell.tile,
+            variant: cell.variant,
+            decoration: cell.decoration ?? undefined,
+            resource: cell.resource
+          });
+        }
+      }
+    }
+    return map;
+  }
+  
+  /**
+   * Vérifie si une position est à l'intérieur de la grille.
+   * @param {number} x - La coordonnée x.
+   * @param {number} y - La coordonnée y.
+   */
   isInside({x, y}: Position): boolean {
     return x >= 0 && y >= 0 && x < this.width && y < this.height;
   }
   
-  // Verifie si une position est occupée
+  /**
+   * Définit la ressource à la position spécifiée dans la grille.
+   * @param {number} x - La coordonnée x de la cellule.
+   * @param {number} y - La coordonnée y de la cellule.
+   * @param {GridCell["resource"]} resource - La ressource à définir parmis les ressource possible.
+   */
+  setResource(x: number, y: number, resource: GridCell["resource"]) {
+    if (!this.isInside({x, y})) return;
+    this.cells[y][x].resource = resource;
+  }
+  
+  /**
+   * Vérifie si une position est occupée.
+   * @param {Position} pos - La position a vérifié
+   */
   isOccupied(pos: Position): boolean {
     if (!this.isInside(pos)) return true;
     return this.cells[pos.y][pos.x].occupied;
@@ -66,22 +133,24 @@ export class Grid {
   
   canPlaceMachine(
     pos: Position,
-    machineType: MachineType | string,
-    world: World
+    machineType: MachineType | string
   ): boolean {
     if (this.isOccupied(pos)) return false;
     if (!this.isInside(pos)) return false;
     
-    const node = world.resourceNodes.find(n => n.x === pos.x && n.y === pos.y)
+    const cell = this.cells[pos.y][pos.x];
+    
+    // interdit sur la mer
+    if (cell.tile === "sea") return false;
+    if (cell.decoration) return false;
     
     switch(machineType) {
-      
       case "iron-mine":
-        return node?.resource === "iron";
+        return cell.resource === "iron";
       case "coal-mine":
-        return node?.resource === "coal";
+        return cell.resource === "coal";
       case "water-pump":
-        return node?.resource === "water";
+        return cell.resource === "water";
       
       default:
         return true;

@@ -1,4 +1,4 @@
-export type BiomeType = "sea" | "grass" | "desert" | "snow";
+import type {LogicalBiome} from "@engine/world/MapGenerator.ts";
 
 /**
  * @interface TileData
@@ -7,9 +7,12 @@ export type BiomeType = "sea" | "grass" | "desert" | "snow";
  * @property decoration number
  */
 export interface TileData {
-  biome: BiomeType;
+  biome: LogicalBiome;
   variant: number;
-  decoration?: number;
+  decoration?: {
+    type: string;
+    variant: number;
+  };
 }
 
 export type TileMapType = TileData[][];

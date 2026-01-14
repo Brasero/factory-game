@@ -7,19 +7,26 @@ import {MapGenerator} from "@engine/world/MapGenerator.ts";
 export function createWorld(): World {
     const gridWidth = config.WIDTH / config.CELL_SIZE
     const gridHeight = config.HEIGHT / config.CELL_SIZE
-    const tileMap = MapGenerator.generate({width: gridWidth, height: gridHeight, islandSize: 37, islandCount: 6, mainBiome: "grass"})
+    const tileMap = MapGenerator.generate({
+        width: gridWidth,
+        height: gridHeight,
+        islandSize: 20,
+        islandCount: 10
+    })
+    const grid = new Grid(gridWidth, gridHeight, tileMap)
+    for (const node of resourceNodes) {
+        grid.setResource(node.x, node.y, node.resource);
+    }
     return {
         tick: 0,
-        grid: new Grid(gridWidth, gridHeight),
+        grid: new Grid(gridWidth, gridHeight, tileMap),
         machines: [],
         resources: {
             iron: 0,
             coal: 0,
             water: 0
         },
-        resourceNodes: resourceNodes,
         conveyors: [],
         storages: [],
-        tileMap: tileMap
     }
 }
