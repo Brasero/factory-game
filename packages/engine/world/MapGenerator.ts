@@ -1,12 +1,20 @@
 import { TileMap } from "./TileMap";
 import { TileMapType } from "@engine/models/Tile";
 import {BIOME_TILES} from "@web/config/tileset.registry.ts";
+import type {IslandDefinition} from "@engine/models/IslandDefinition.ts";
 
+
+/**
+ * Options for generating a map.
+ * @typedef {Object} MapGeneratorOptions
+ * @property {number} width - The width of the map in tiles.
+ * @property {number} height - The height of the map in tiles.
+ * @property {IslandDefinition[]} islands - An array of island definitions to be placed on the map.
+ */
 export interface MapGeneratorOptions {
   width: number;
   height: number;
-  islandCount: number;
-  islandSize: number;
+  islands: IslandDefinition[];
 }
 
 /* ============================================================
@@ -206,7 +214,8 @@ function carveIsland(
   cx: number,
   cy: number,
   size: number,
-  biome: LogicalBiome
+  biome: LogicalBiome,
+  clearings: IslandDefinition["clearings"]
 ) {
   const range = Math.floor(size * 1.3);
   for (let y = -range; y <= range; y++) {
@@ -226,7 +235,7 @@ function carveIsland(
   }
   
   applyBeachLayer(map, biome);
-  placeBeachClearings(map, cx, cy, size, biome);
+  placeBeachClearings(map, cx, cy, size, biome, clearings);
 }
 
 function applyBeachLayer(
@@ -324,9 +333,6 @@ function smoothSquareDistance(
     Math.pow(dx, randN) + Math.pow(dy, randN),
     1 / n
   ) * size;
-  
-  const localNoise =
-    pseudoNoise(x * 0.9, y * 0.9) * size * 0.05;
   
   return squareDist;
 }
@@ -480,29 +486,22 @@ function placeBeachClearings(
   cx: number,
   cy: number,
   islandSize: number,
-  biome: LogicalBiome
+  biome: LogicalBiome,
+  clearings: IslandDefinition["clearings"]
 ) {
-  const clearingCount =
-    Math.floor(islandSize / 4) + Math.floor(Math.random() * 2);
   
   const used: { x: number; y: number }[] = [];
   
-  for (let i = 0; i < clearingCount; i++) {
+  for (const clearing of clearings) {
     let tries = 0;
     
     while (tries++ < 20) {
-      const r = Math.floor(
-        BEACH_CLEARING_RADIUS_MIN +
-        Math.random() *
-        (BEACH_CLEARING_RADIUS_MAX - BEACH_CLEARING_RADIUS_MIN + 1)
-      );
+      const r = clearing.radius
       
       const x =
-        cx +
-        Math.floor((Math.random() * 2 - 1) * (islandSize - r - 3));
+        cx + clearing.x;
       const y =
-        cy +
-        Math.floor((Math.random() * 2 - 1) * (islandSize - r - 3));
+        cy + clearing.y;
       
       if (map[y]?.[x] !== biome) continue;
       
@@ -527,7 +526,7 @@ function distanceToSea(
   map: LogicalBiome[][],
   x: number,
   y: number,
-  max: number
+  max: number,
 ): number {
   for (let d = 1; d <= max; d++) {
     for (let dy = -d; dy <= d; dy++) {
@@ -553,39 +552,26 @@ function distanceToSea(
 
 export class MapGenerator {
   static generate(options: MapGeneratorOptions): TileMap {
-    const {width, height,islandSize} = options
+    const {width, height,islands} = options
     const logical: LogicalBiome[][] = Array.from(
       { length: options.height },
       () => Array(options.width).fill("sea")
     );
     
-    const islandBiomes: LogicalBiome[] = [
-      "grass",
-      "desert",
-      "snow",
-      "grass",
-      "desert",
-      "snow",
-      "grass",
-      "desert",
-      "snow",
-      "grass",
-      "desert",
-      "snow",
-    ];
-    const margin = 0;
+    let cursorX = 0;
+    let cursorY = 0;
     
-    let cursorX = islandSize + margin;
-    let cursorY = islandSize + margin;
     
-    for (const biome of islandBiomes) {
-      carveIsland(logical, cursorX, cursorY, islandSize, biome);
-      cursorX += (islandSize * 2) + margin;
-      if (cursorX > width - (islandSize + margin)) {
-        cursorX = islandSize + margin;
-        cursorY += (islandSize * 2) + margin;
+    for (const island of islands) {
+      carveIsland(logical, cursorX, cursorY, island.shape.size, island.biome, island.clearings);
+      cursorX += island.shape.size * 2 + 10;
+      if (cursorX + island.shape.size >= width) {
+        cursorX = 0;
+        cursorY += island.shape.size * 2 + 10;
       }
     }
+    
+    
     
     const tiles: TileMapType = [];
     
