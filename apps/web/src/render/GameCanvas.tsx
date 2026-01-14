@@ -53,13 +53,13 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   })
  
   
-  const getCellFromMouse = (e: MouseEvent, canvas: HTMLCanvasElement) => {
+  const getCellFromMouse = (position: Position, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     const camera = cameraRef.current;
     
     // Coordonées écran -> canvas
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
+    const screenX = position.x - rect.left;
+    const screenY = position.y - rect.top;
     
     // Inversion exacte de la transformation canvas
     const worldX = (screenX - camera.x) / camera.scale;
@@ -124,7 +124,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     if (!canvas) return;
     
     const handleClick = (e: MouseEvent) => {
-      const {x, y} = getCellFromMouse(e, canvas);
+      const {x, y} = getCellFromMouse({x: e.clientX, y: e.clientY}, canvas);
       if (currentTool === "destroy") {
         destroyEntity(x,y);
         return
@@ -176,7 +176,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
         setHoveredCell(null);
         return;
       }
-      const {x, y} = getCellFromMouse(e, canvas);
+      const {x, y} = getCellFromMouse({x: e.clientX, y: e.clientY}, canvas);
       const canPlace = selectedItem !== "" ? world.grid!.canPlaceMachine({x, y}, selectedItem, world) : false;
       
       setHoveredCell({x, y, canPlace});
@@ -200,14 +200,16 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     
     
     const handleMouseDown = (e: MouseEvent) => {
+      const {clientX: x, clientY: y} = e;
       if (selectedItem !== "conveyor" || e.button === 2) return;
-      setDragStart(getCellFromMouse(e, canvas));
+      setDragStart(getCellFromMouse({x, y}, canvas));
     };
     
     
     const handleMouseUp = (e: MouseEvent) => {
       if (!dragStart) return;
-      const end = getCellFromMouse(e, canvas);
+      const {clientX: x, clientY: y} = e;
+      const end = getCellFromMouse({x,y}, canvas);
       
       if (selectedItem === "conveyor") {
         const cells= getBestPath(dragStart, end, world);
@@ -233,7 +235,8 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return
     const handleMouseMove = (e: MouseEvent) => {
-      const current = getCellFromMouse(e, canvas)
+      const {clientX: x, clientY: y} = e;
+      const current = getCellFromMouse({x, y}, canvas)
       const storage = world.storages.find(
         s => s.x === current.x && s.y === current.y
       )
