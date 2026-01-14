@@ -19,7 +19,7 @@ import type {Storage} from "@engine/models/Storage.ts";
 import type {SelectedItem} from "@engine/models/Controls.ts";
 import { buildConveyorPlacements, getBestPath} from "@web/render/utils/canvas.ts";
 import type {Camera} from "@web/model/Camera.ts";
-import {config} from "@web/config/gridConfig.ts";
+import type {MachineType} from "@engine/models/Machine.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -35,7 +35,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const world: World = useAppSelector(selectGameState);
   const dispatch = useAppDispatch();
-  const selectedItem: SelectedItem = useAppSelector(selectSelectedItem);
+  const selectedItem: SelectedItem = useAppSelector(selectSelectedItem) as MachineType | "storage";
   const currentTool = useAppSelector(selectCurentTool)
   const [hoveredCell, setHoveredCell] = useState<Position & {canPlace: boolean} | null>(null);
   const [dragStart, setDragStart] = useState<Position | null>(null)
@@ -46,8 +46,6 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     scale: 1,
     minScale: 0.5,
     maxScale: 2.5,
-    // x: -(config.WIDTH / 2) + (width / 2),
-    // y: -(config.HEIGHT / 2) + (height / 2)
     x: 0,
     y: 0
   })
@@ -86,11 +84,12 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     
   }, [cameraRef,hoveredCell, world.tick, hoveredStorage]);
   
+  // Gestion du zoom sur le canvas et du déplacement de la caméra
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const handleWheel = (e: WheelEvent) => {
+    const handleWheel = (e: HTMLElementEventMap["Wheel"]) => {
       e.preventDefault();
       const camera = cameraRef.current
       const zoomFactor = 1.1;
@@ -113,10 +112,27 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       camera.scale = newScale
       render(canvas.getContext("2d"), world, camera);
     };
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.buttons !== 1) return;
+      const camera = cameraRef.current;
+      if (!camera) return;
+      if (!dragStart) return;
+      if (selectedItem !== "") return;
+      const lastMouse = dragStart;
+      const dx = (e.clientX - lastMouse.x) / camera.scale;
+      const dy = (e.clientY - lastMouse.y) / camera.scale;
+      camera.x += dx * camera.scale;
+      camera.y += dy * camera.scale;
+      setDragStart({x: e.clientX, y: e.clientY});
+    }
     
     canvas.addEventListener("wheel", handleWheel, {passive: false});
-    return () => canvas.removeEventListener("wheel", handleWheel);
-  }, []);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [dragStart, world]);
   
   // Gestion du click sur le canvas
   useEffect(() => {
@@ -201,8 +217,8 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     
     const handleMouseDown = (e: MouseEvent) => {
       const {clientX: x, clientY: y} = e;
-      if (selectedItem !== "conveyor" || e.button === 2) return;
-      setDragStart(getCellFromMouse({x, y}, canvas));
+      if (e.button === 2) return;
+      setDragStart({x, y});
     };
     
     
@@ -210,12 +226,13 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       if (!dragStart) return;
       const {clientX: x, clientY: y} = e;
       const end = getCellFromMouse({x,y}, canvas);
-      
+      const start = getCellFromMouse(dragStart, canvas);
       if (selectedItem === "conveyor") {
-        const cells= getBestPath(dragStart, end, world);
+        const cells= getBestPath(start, end, world);
         const conveyors = buildConveyorPlacements(cells);
         placeConveyorLine(conveyors);
       }
+      
       setDragStart(null);
       setConveyorPreview(null)
     };
@@ -242,8 +259,9 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       )
       setHoveredStorage(storage ?? null)
       
-      if (!dragStart) return
-      const cells = getBestPath(dragStart, current, world);
+      if (!dragStart || selectedItem !== "conveyor") return
+      const start = getCellFromMouse(dragStart, canvas);
+      const cells = getBestPath(start, current, world);
       const preview = buildConveyorPlacements(cells);
       setConveyorPreview(preview);
     }

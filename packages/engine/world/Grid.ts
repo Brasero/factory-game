@@ -66,7 +66,7 @@ export class Grid {
   
   canPlaceMachine(
     pos: Position,
-    machineType: MachineType,
+    machineType: MachineType | string,
     world: World
   ): boolean {
     if (this.isOccupied(pos)) return false;
