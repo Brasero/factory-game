@@ -1,5 +1,3 @@
-
-import {TILESET} from "@web/config/tileset.registry.ts";
 import {TILE_SIZE} from "@engine/models/Tile.ts";
 import {config as gridConfig} from "@web/config/gridConfig.ts";
 import type {TileMap} from "@engine/world/TileMap.ts";
@@ -7,6 +5,11 @@ import {assetManager} from "@web/render/manager/AssetManager.ts";
 
 const CELL_SIZE = gridConfig.CELL_SIZE;
 
+/**
+ * DRAW TILE MAP (only the base tiles and decorations)
+ * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+ * @param {TileMap} tileMap - The tile map to draw
+ */
 export function drawTileMap(
   ctx: CanvasRenderingContext2D,
   tileMap: TileMap
@@ -64,7 +67,15 @@ export function drawTileMap(
 /* ============================================================
   DRAW BY TILE INDEX
 ============================================================ */
-
+/**
+ * Draw a tile from a tileset by its index
+ * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+ * @param {HTMLImageElement} tileset - The tileset image
+ * @param {number} index - The index of the tile in the tileset
+ * @param {number} gridX - The x position in the grid
+ * @param {number} gridY - The y position in the grid
+ * @param {number} tilesPerRow - The number of tiles per row in the tileset
+ */
 function drawTileByIndex(
   ctx: CanvasRenderingContext2D,
   {
