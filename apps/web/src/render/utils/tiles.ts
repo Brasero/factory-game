@@ -90,28 +90,9 @@ function drawTileByIndex(
     tileY * TILE_SIZE,
     TILE_SIZE,
     TILE_SIZE,
-    gridX * CELL_SIZE,
-    gridY * CELL_SIZE,
-    CELL_SIZE,
-    CELL_SIZE
+    (gridX * CELL_SIZE) - 1,
+    (gridY * CELL_SIZE) - 1,
+    CELL_SIZE + 2,
+    CELL_SIZE + 2
   );
-}
-
-function drawTile(
-  ctx: CanvasRenderingContext2D,
-  {
-    tileset, tileX, tileY, gridX, gridY
-  }: {tileset: HTMLImageElement, tileX: number, tileY: number, gridX: number, gridY: number}
-) {
-  ctx.drawImage(
-    tileset,
-    tileX * TILE_SIZE,
-    tileY * TILE_SIZE,
-    TILE_SIZE,
-    TILE_SIZE,
-    gridX * CELL_SIZE,
-    gridY * CELL_SIZE,
-    CELL_SIZE,
-    CELL_SIZE
-  )
 }
