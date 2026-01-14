@@ -209,7 +209,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
     }
   }, [selectedItem, cellSize, currentTool]);
   
-  //Gestion du drag lors de la pose de tapis
+  //Gestion du mouseDown et mouseUp et de la pose de tapis
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
