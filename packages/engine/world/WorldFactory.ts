@@ -7,7 +7,7 @@ import {MapGenerator} from "@engine/world/MapGenerator.ts";
 export function createWorld(): World {
     const gridWidth = config.WIDTH / config.CELL_SIZE
     const gridHeight = config.HEIGHT / config.CELL_SIZE
-    const tileMap = MapGenerator.generate({width: gridWidth, height: gridHeight, islandSize: 15, islandCount: 6, mainBiome: "grass"})
+    const tileMap = MapGenerator.generate({width: gridWidth, height: gridHeight, islandSize: 37, islandCount: 6, mainBiome: "grass"})
     return {
         tick: 0,
         grid: new Grid(gridWidth, gridHeight),
