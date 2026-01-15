@@ -558,17 +558,12 @@ export class MapGenerator {
       () => Array(options.width).fill("sea")
     );
     
-    let cursorX = 0;
-    let cursorY = 0;
     
     
     for (const island of islands) {
+      const cursorX = island.center.x;
+      const cursorY = island.center.y;
       carveIsland(logical, cursorX, cursorY, island.shape.size, island.biome, island.clearings);
-      cursorX += island.shape.size * 2 + 10;
-      if (cursorX + island.shape.size >= width) {
-        cursorX = 0;
-        cursorY += island.shape.size * 2 + 10;
-      }
     }
     
     

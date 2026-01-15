@@ -12,6 +12,10 @@ export const levels: LevelDefinition[] = [
     islands: [
       {
         biome: "grass",
+        center:{
+          x: 35,
+          y: 35,
+        },
         shape: {
           type: "organique",
           size: 30,
@@ -22,15 +26,18 @@ export const levels: LevelDefinition[] = [
             y: -10,
             radius: 4,
             resources: [
-              { type: "iron" as ResourcesType },
+              { type: "iron" },
+              { type: "iron" },
+              { type: "iron" },
+              { type: "iron" }
             ],
           },
           {
-            x: 0,
-            y: 0,
+            x: 10,
+            y: 10,
             radius: 5,
             resources: [
-              { type: "iron" as ResourcesType },
+              { type: "iron" },
             ],
           },
         ],

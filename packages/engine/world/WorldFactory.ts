@@ -3,8 +3,6 @@ import {Grid} from "./Grid.ts";
 import {config} from "@web/config/gridConfig.ts";
 import {resourceNodes} from "@engine/world/resourceNode.ts";
 import {MapGenerator} from "@engine/world/MapGenerator.ts";
-import type {LevelDefinition} from "@engine/models/LevelDefinition.ts";
-import type {IslandPlacement} from "@engine/models/IslandPlacement.ts";
 import {levels} from "@engine/config/LevelConfig.ts";
 
 export function createWorld(): World {
@@ -21,7 +19,7 @@ export function createWorld(): World {
     }
     return {
         tick: 0,
-        grid: new Grid(gridWidth, gridHeight, tileMap),
+        grid,
         machines: [],
         resources: {
             iron: 0,

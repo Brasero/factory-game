@@ -74,10 +74,10 @@ export class Grid {
   }
   /**
    * Renvoie une carte des ressources présentes dans la grille.
-   * @returns {(TileData & { resource: GridCell["resource"] })[]} Une liste des cellules contenant des ressources avec leurs données de tuile.
+   * @returns (TileData & {resource : GridCell["resource"], pos : {x : number, y : number}})[] Une liste des cellules contenant des ressources avec leurs données de tuile.
    */
-  getResourceMap(): (TileData & { resource: GridCell["resource"] })[] {
-    const map: (TileData & {resource: GridCell["resource"]})[] = [];
+  getResourceMap(): (TileData & {resource: GridCell["resource"], pos: {x: number, y: number}})[] {
+    const map: (TileData & {resource: GridCell["resource"], pos: {x: number, y: number}})[] = [];
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const cell = this.cells[y][x];
@@ -86,7 +86,8 @@ export class Grid {
             biome: cell.tile,
             variant: cell.variant,
             decoration: cell.decoration ?? undefined,
-            resource: cell.resource
+            resource: cell.resource,
+            pos: {x, y}
           });
         }
       }
@@ -111,7 +112,9 @@ export class Grid {
    */
   setResource(x: number, y: number, resource: GridCell["resource"]) {
     if (!this.isInside({x, y})) return;
+    if (this.cells[y][x].tile === "sea" ) return;
     this.cells[y][x].resource = resource;
+    console.log(`Resource ${resource} set at (${x}, ${y})`);
   }
   
   /**

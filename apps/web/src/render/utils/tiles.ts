@@ -18,8 +18,6 @@ export function drawTileMap(
   
   const tileset = assetManager.getImage("tileset.environment");
   const water = assetManager.getImage("tileset.water");
-  const trees = assetManager.getImage("tileset.trees");
-  const rock = assetManager.getImage("tileset.rock");
   const tilesPerRow = Math.floor(tileset.width / TILE_SIZE);
   
   for (let y = 0; y < grid.height; y++) {
