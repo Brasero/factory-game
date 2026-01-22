@@ -10,7 +10,6 @@ export function drawResourceNodes(
   if (!grid) return;
   const resourceMap = grid.getResourceMap();
   resourceMap.forEach(node => {
-    console.log("Rendering resource node:", node);
     let img: HTMLImageElement;
     switch (node.resource) {
       case "iron":
@@ -23,7 +22,6 @@ export function drawResourceNodes(
         img = assetManager.getImage("node.water");
         break;
     }
-    console.log("Drawing resource node:", node.resource, "at", node.pos);
     ctx.drawImage(
       img,
       node.pos.x * CELL_SIZE,

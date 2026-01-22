@@ -8,10 +8,10 @@ import store from "./store/store.ts";
 import type {ReactNode} from "react";
 
 createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  //<React.StrictMode>
     <Provider store={store}>
         <App />
     </Provider>
-  </React.StrictMode> as ReactNode
+  //</React.StrictMode>
   ,
 )
