@@ -1,7 +1,8 @@
-import type {Position} from "@engine/models/Position.ts";
-import type {DirectionType} from "@engine/models/Conveyor.ts";
-import type {World} from "@engine/models/World.ts";
-import type {ConveyorPlacement} from "@engine/models/ConveyorPlacement.ts";
+import type {
+  Position,
+  DirectionType,
+  ConveyorPlacement
+} from "@engine/api/types.ts";
 
 export function getLineCells(
   start: Position,
@@ -89,23 +90,23 @@ function buildLPath(
 
 function isPathValid(
     path: Position[],
-    world: World
+    canPlace: (pos: Position) => boolean
 ): boolean {
   return path.every(p =>
-    world.grid!.canPlaceMachine(p, "conveyor", world)
+    canPlace(p)
   )
 }
 
 export function getBestPath(
     start: Position,
     end: Position,
-    world: World
+    canPlace: (pos: Position) => boolean
 ): Position[] {
   const pathA = buildLPath(start, end, true)
   const pathB = buildLPath(start, end, false)
 
-  const isValidA = isPathValid(pathA, world)
-  const isValidB = isPathValid(pathB, world)
+  const isValidA = isPathValid(pathA, canPlace)
+  const isValidB = isPathValid(pathB, canPlace)
 
   if (isValidA && !isValidB) return pathA;
   if (!isValidA && isValidB) return pathB;

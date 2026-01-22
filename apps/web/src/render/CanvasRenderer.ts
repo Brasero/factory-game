@@ -1,13 +1,15 @@
-import type {World} from "@engine/models/World.ts";
-import type {Position} from "@engine/models/Position.ts";
+import type {
+  WorldSnapshot,
+  Position,
+  Conveyor,
+  DirectionType,
+  ResourcesType,
+  Storage
+} from "@engine/api/types.ts";
 import {colors} from "@web/theme/colors.ts";
-import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
-import type {ResourcesType} from "@engine/models/Resources.ts";
 import {config} from "@web/config/gridConfig.ts";
-import {imagePath} from "@web/config/assets.registry.ts";
 import {machineConfig} from "@web/config/machineConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
-import type {Storage} from "@engine/models/Storage.ts";
 import {drawStorageTooltip, drawStorages} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
 import {drawConveyors, getIncomingDirection} from "@web/render/utils/conveyor.ts";
@@ -19,7 +21,7 @@ const width = window.innerWidth;
 const height = window.innerHeight;
 export function render(
     ctx: CanvasRenderingContext2D,
-    world: World,
+    world: WorldSnapshot,
     camera?: Camera,
     hoveredCell?: Position & {canPlace: boolean},
     hoveredStorage?: Storage
@@ -31,6 +33,7 @@ export function render(
         ctx.translate(camera.x, camera.y);
         ctx.scale(camera.scale, camera.scale);
     }
+    
     if (!world.grid) return;
     drawTileMap(ctx, world.grid);
     drawResourceNodes(ctx, world.grid);
@@ -52,7 +55,7 @@ const SPRITE_SIZE = 48;
 const OFFSET = (SPRITE_SIZE - CELL_SIZE) / 2;
 function drawMachines(
   ctx: CanvasRenderingContext2D,
-  world: World
+  world: WorldSnapshot
 ) {
     world.machines.forEach(m => {
         const isWorking = m.active;
@@ -118,12 +121,12 @@ function drawHoveredCell(
 /* ========================= */
 /* RESSOURCES SUR CONVOYEURS */
 /* ========================= */
-function drawResources(ctx: CanvasRenderingContext2D, world: World) {
-    const resourceColors: Record<ResourcesType, string> = {
-        iron: imagePath.ore.ironOre,
-        coal: imagePath.ore.coalOre,
-        water: imagePath.ore.waterOre
-    }
+function drawResources(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
+    const resourceSprites: Record<ResourcesType, string> = {
+        iron: "ore.ironOre",
+        coal: "ore.coalOre",
+        water: "ore.waterOre"
+    };
     
     world.conveyors.forEach(c => {
         if (!c.carrying.length) return;
@@ -134,10 +137,10 @@ function drawResources(ctx: CanvasRenderingContext2D, world: World) {
             const path = buildConveyorPath(world, c, CELL_SIZE);
             const pos = interpolateOnConveyor(path, progress)
             
-            const image = new Image()
-            image.src = resourceColors[type];
+            const sprite = assetManager.getImage(resourceSprites[type]);
+            if (!sprite) return;
             ctx.drawImage(
-              image,
+              sprite,
               pos.x - 10, pos.y - 15,
               CELL_SIZE - 10, CELL_SIZE - 10
             );
@@ -159,7 +162,7 @@ export function getNextPosition(
     return { x: conveyor.x + v.x, y: conveyor.y + v.y };
 }
 export function findPreviousConveyor(
-  world: World,
+  world: WorldSnapshot,
   current: Conveyor
 ): Conveyor | undefined {
     return world.conveyors.find(c => {
@@ -200,7 +203,7 @@ export interface ConveyorPath {
     isTurn: boolean;
 }
 export function buildConveyorPath(
-  world: World,
+  world: WorldSnapshot,
   conveyor: Conveyor,
   cellSize: number
 ): ConveyorPath {

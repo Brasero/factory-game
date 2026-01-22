@@ -1,7 +1,6 @@
 import {createSlice} from '@reduxjs/toolkit'
 import type {PayloadAction} from "@reduxjs/toolkit";
-import type {SelectedItem, ToolMode} from "@engine/models/Controls.ts";
-import type {Controls} from "@engine/models/Controls.ts";
+import type {SelectedItem, ToolMode, Controls} from "@engine/api/types.ts";
 
 const initialState: {paused: boolean} & Controls = {
 	selectedItem: "",

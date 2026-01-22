@@ -2,24 +2,26 @@ import {useEffect, useRef, useState, WheelEvent} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";
-import type {World} from "@engine/models/World.ts";
+import type {WorldSnapshot} from "@engine/api/types.ts";
 import {
   destroyEntity,
   placeCoalMine,
   placeConveyorLine,
   placeIronMine,
   placeStorage,
-  placeWaterPump
+  placeWaterPump,
+  canPlaceAt
 } from "@web/game/GameController.ts";
 import {selectCurentTool, selectGameState, selectSelectedItem} from "@web/store/selectors.ts";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice.ts";
-import type {Position} from "@engine/models/Position.ts";
-import type {DirectionType} from "@engine/models/Conveyor.ts";
-import type {Storage} from "@engine/models/Storage.ts";
-import type {SelectedItem} from "@engine/models/Controls.ts";
+import type {
+  Position,
+  DirectionType,
+  Storage,
+  SelectedItem
+} from "@engine/api/types.ts";
 import { buildConveyorPlacements, getBestPath} from "@web/render/utils/canvas.ts";
 import type {Camera} from "@web/model/Camera.ts";
-import type {MachineType} from "@engine/models/Machine.ts";
 
 interface GameCanvasProps {
   width: number;
@@ -33,9 +35,9 @@ interface ConveyorPreview extends Position {
 
 export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const world: World = useAppSelector(selectGameState);
+  const world: WorldSnapshot = useAppSelector(selectGameState);
   const dispatch = useAppDispatch();
-  const selectedItem: SelectedItem = useAppSelector(selectSelectedItem) as MachineType | "storage";
+  const selectedItem = useAppSelector(selectSelectedItem) as SelectedItem | "";
   const currentTool = useAppSelector(selectCurentTool)
   const [hoveredCell, setHoveredCell] = useState<Position & {canPlace: boolean} | null>(null);
   const [dragStart, setDragStart] = useState<Position | null>(null)
@@ -193,7 +195,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
         return;
       }
       const {x, y} = getCellFromMouse({x: e.clientX, y: e.clientY}, canvas);
-      const canPlace = selectedItem !== "" ? world.grid!.canPlaceMachine({x, y}, selectedItem, world) : false;
+      const canPlace = canPlaceAt(x, y, selectedItem);
       
       setHoveredCell({x, y, canPlace});
     }
@@ -228,7 +230,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       const end = getCellFromMouse({x,y}, canvas);
       const start = getCellFromMouse(dragStart, canvas);
       if (selectedItem === "conveyor") {
-        const cells= getBestPath(start, end, world);
+        const cells= getBestPath(start, end, pos => canPlaceAt(pos.x, pos.y, "conveyor"));
         const conveyors = buildConveyorPlacements(cells);
         placeConveyorLine(conveyors);
       }
@@ -261,7 +263,7 @@ export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
       
       if (!dragStart || selectedItem !== "conveyor") return
       const start = getCellFromMouse(dragStart, canvas);
-      const cells = getBestPath(start, current, world);
+      const cells = getBestPath(start, current, pos => canPlaceAt(pos.x, pos.y, "conveyor"));
       const preview = buildConveyorPlacements(cells);
       setConveyorPreview(preview);
     }

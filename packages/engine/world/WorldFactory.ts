@@ -1,6 +1,6 @@
 import type {World} from "../models/World";
 import {Grid} from "./Grid.ts";
-import {config} from "@web/config/gridConfig.ts";
+import {config} from "@engine/config/gridConfig.ts";
 import {extractResourceNodeFromLevel} from "@engine/world/resourceNode.ts";
 import {MapGenerator} from "@engine/world/MapGenerator.ts";
 import {levels} from "@engine/config/LevelConfig.ts";

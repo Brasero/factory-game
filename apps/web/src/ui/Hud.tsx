@@ -8,7 +8,7 @@ import {
   selectSelectedItem,
   selectWaterQuantity
 } from "@web/store/selectors.ts";
-import type {SelectedItem} from "@engine/models/Controls.ts";
+import type {SelectedItem} from "@engine/api/types.ts";
 import {setSelectedItem, setToolMode, togglePause} from "@web/store/controlSlice.ts"; // à créer dans le slice
 import {formatTicks} from "@web/utils/utils.ts";
 import {pauseGame, startGame} from "@web/game/GameController.ts";

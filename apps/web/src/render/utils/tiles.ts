@@ -1,7 +1,7 @@
-import {TILE_SIZE} from "@engine/models/Tile.ts";
+import {TILE_SIZE} from "@engine/api/constants.ts";
 import {config as gridConfig} from "@web/config/gridConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
-import type {Grid} from "@engine/world/Grid.ts";
+import type {GridSnapshot} from "@engine/api/types.ts";
 
 const CELL_SIZE = gridConfig.CELL_SIZE;
 
@@ -12,7 +12,7 @@ const CELL_SIZE = gridConfig.CELL_SIZE;
  */
 export function drawTileMap(
   ctx: CanvasRenderingContext2D,
-  grid: Grid
+  grid: GridSnapshot
 ) {
   if (!grid) return;
   
@@ -22,7 +22,7 @@ export function drawTileMap(
   
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
-      const tile = grid.getTile(x, y);
+      const tile = grid.tiles[y][x];
       if (!tile) continue;
       
       // 🌊 SEA
@@ -100,7 +100,7 @@ function drawTileByIndex(
  */
 export function drawDecorationTiles(
   ctx: CanvasRenderingContext2D,
-  grid: Grid
+  grid: GridSnapshot
 ) {
   if (!grid) return;
   
@@ -109,7 +109,7 @@ export function drawDecorationTiles(
   
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
-      const tile = grid.getTile(x, y);
+      const tile = grid.tiles[y][x];
       if (!tile) continue;
       
       // 🌊 SEA

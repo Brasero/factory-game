@@ -1,9 +1,8 @@
 import {createSlice} from "@reduxjs/toolkit";
 import type {PayloadAction} from "@reduxjs/toolkit";
-import type {World} from "@engine/models/World.ts";
-import type {MachineType} from "@engine/models/Machine.ts";
+import type {WorldSnapshot, MachineType} from "@engine/api/types.ts";
 
-const initialState: Partial<World> = {
+const initialState: Partial<WorldSnapshot> = {
     tick: 0,
     machines: [],
     resources: {
@@ -20,7 +19,7 @@ const gameSlice = createSlice({
     name: "game",
     initialState,
     reducers: {
-        setWorld(_, action: PayloadAction<World>) {
+        setWorld(_, action: PayloadAction<WorldSnapshot>) {
             return action.payload;
         },
         addMachine(state, action: PayloadAction<MachineType>) {

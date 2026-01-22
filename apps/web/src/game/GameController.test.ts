@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import * as GameController from "./GameController";
-import {createWorld} from "@engine/world/WorldFactory.ts";
+import {config} from "@engine/config/gridConfig.ts";
 
 describe("GameController", () => {
   it("Placement d'une mine de fer", () => {
@@ -12,9 +12,8 @@ describe("GameController", () => {
     expect(success, "La mine de fer ne devrait pas être placée sur une position occupée").toBe(false);
   })
   it("Ne doit pas placer une mine de fer en dehors des limites", () => {
-    const world = createWorld();
-    const width = world.grid.width;
-    const height = world.grid.height;
+    const width = config.WIDTH / config.CELL_SIZE;
+    const height = config.HEIGHT / config.CELL_SIZE;
     const success = GameController.placeIronMine(width + 1, height + 1);
     expect(success, "La mine de fer ne devrait pas être placée en dehors des limites").toBe(false);
   })
@@ -27,9 +26,8 @@ describe("GameController", () => {
     expect(success, "La mine de charbon ne devrait pas être placée sur une position occupée").toBe(false);
   })
   it("Ne doit pas placer une mine de charbon en dehors des limites", () => {
-    const world = createWorld();
-    const width = world.grid.width;
-    const height = world.grid.height;
+    const width = config.WIDTH / config.CELL_SIZE;
+    const height = config.HEIGHT / config.CELL_SIZE;
     const success = GameController.placeCoalMine(width + 1, height + 1);
     expect(success, "La mine de charbon ne devrait pas être placée en dehors des limites").toBe(false);
   })
@@ -42,9 +40,8 @@ describe("GameController", () => {
     expect(success, "La pompe à eau ne devrait pas être placée sur une position occupée").toBe(false);
   })
   it("Ne doit pas placer une pompe à eau en dehors des limites", () => {
-    const world = createWorld();
-    const width = world.grid.width;
-    const height = world.grid.height;
+    const width = config.WIDTH / config.CELL_SIZE;
+    const height = config.HEIGHT / config.CELL_SIZE;
     const success = GameController.placeWaterPump(width + 1, height + 1);
     expect(success, "La pompe à eau ne devrait pas être placée en dehors des limites").toBe(false);
   })

@@ -1,9 +1,7 @@
 import {config as GridConfig} from "@web/config/gridConfig.ts";
 import {colors} from "@web/theme/colors.ts";
-import type {Storage} from "@engine/models/Storage.ts";
-import type {ResourcesType} from "@engine/models/Resources.ts";
+import type {Storage, ResourcesType, WorldSnapshot} from "@engine/api/types.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
-import type {World} from "@engine/models/World.ts";
 
 
 const resourceIcon: Record<ResourcesType, string> = {
@@ -59,7 +57,7 @@ export function drawStorageTooltip(
 }
 
 const CRATE_SPRITE_SIZE = 16
-export function drawStorages(ctx: CanvasRenderingContext2D, world: World) {
+export function drawStorages(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
   world.storages.forEach(s => {
     const spriteKey = "storage.crate";
     const sprite = assetManager.getImage(spriteKey);

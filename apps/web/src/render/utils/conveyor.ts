@@ -1,9 +1,7 @@
-import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {DirectionType, Conveyor, WorldSnapshot} from "@engine/api/types.ts";
 import {config, config as gridConfig} from "@web/config/gridConfig.ts";
-import type {World} from "@engine/models/World.ts";
 import {config as conveyorConfig} from "@web/config/conveyorConfig.ts";
 import {findPreviousConveyor} from "@web/render/CanvasRenderer.ts";
-import type {Conveyor} from "@engine/models/Conveyor.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 
 const CELL_SIZE = gridConfig.CELL_SIZE;
@@ -18,7 +16,7 @@ export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, conveyors: {x
   })
 }
 
-export function drawConveyors(ctx: CanvasRenderingContext2D, world: World) {
+export function drawConveyors(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
   return world.conveyors.forEach(async (c) => {
     const px = c.x * CELL_SIZE;
     const py = c.y * CELL_SIZE;

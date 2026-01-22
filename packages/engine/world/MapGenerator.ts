@@ -1,6 +1,6 @@
 import { TileMap } from "./TileMap";
 import { TileMapType } from "@engine/models/Tile";
-import {BIOME_TILES} from "@web/config/tileset.registry.ts";
+import {BIOME_TILES} from "@engine/config/tileset.ts";
 import type {IslandDefinition} from "@engine/models/IslandDefinition.ts";
 
 
