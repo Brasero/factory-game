@@ -17,27 +17,32 @@ export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, conveyors: {x
 }
 
 export function drawConveyors(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
-  return world.conveyors.forEach(async (c) => {
-    const px = c.x * CELL_SIZE;
-    const py = c.y * CELL_SIZE;
+  return world.conveyors.forEach(c => drawConveyorAt(ctx, world, c));
+}
 
-    const previousConveyor = findPreviousConveyor(world, c);
-    const outgoing = c.direction
-    const incoming = previousConveyor ? getIncomingDirection(previousConveyor, c) : outgoing;
-    const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)
-    if ((outgoing  === incoming && incoming === "right") || (outgoing === "left" && outgoing === incoming)) {
-      const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES);
+export function drawConveyorAt(
+  ctx: CanvasRenderingContext2D,
+  world: WorldSnapshot,
+  conveyor: Conveyor
+) {
+  const px = conveyor.x * CELL_SIZE;
+  const py = conveyor.y * CELL_SIZE;
 
-      return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, outgoing)
-    }
-    if ((outgoing  === incoming && incoming === "up") || (outgoing === "down" && outgoing === incoming)) {
-      const offset = getBeltFrame(world.tick, conveyorConfig.V_FRAMES);
-      return drawConveyor(ctx, sx, sy + offset, CELL_SIZE, px, py, outgoing)
-    }
-    const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES)
-    const direction = `${incoming}-${outgoing}` as `${DirectionType}-${DirectionType}`;
-    return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, direction);
-  });
+  const previousConveyor = findPreviousConveyor(world, conveyor);
+  const outgoing = conveyor.direction
+  const incoming = previousConveyor ? getIncomingDirection(previousConveyor, conveyor) : outgoing;
+  const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)
+  if ((outgoing  === incoming && incoming === "right") || (outgoing === "left" && outgoing === incoming)) {
+    const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES);
+    return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, outgoing)
+  }
+  if ((outgoing  === incoming && incoming === "up") || (outgoing === "down" && outgoing === incoming)) {
+    const offset = getBeltFrame(world.tick, conveyorConfig.V_FRAMES);
+    return drawConveyor(ctx, sx, sy + offset, CELL_SIZE, px, py, outgoing)
+  }
+  const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES)
+  const direction = `${incoming}-${outgoing}` as `${DirectionType}-${DirectionType}`;
+  return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, direction);
 }
 
 

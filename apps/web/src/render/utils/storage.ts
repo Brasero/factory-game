@@ -58,19 +58,21 @@ export function drawStorageTooltip(
 
 const CRATE_SPRITE_SIZE = 16
 export function drawStorages(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
-  world.storages.forEach(s => {
-    const spriteKey = "storage.crate";
-    const sprite = assetManager.getImage(spriteKey);
-    if (!sprite) return;
-    const x = s.x * CELL_SIZE;
-    const y = s.y * CELL_SIZE;
-    
-    ctx.drawImage(
-      sprite,
-      0, 0,
-      CRATE_SPRITE_SIZE, CRATE_SPRITE_SIZE,
-      x, y,
-      CELL_SIZE, CELL_SIZE
-    )
-  });
+  world.storages.forEach(s => drawStorageAt(ctx, s));
+}
+
+export function drawStorageAt(ctx: CanvasRenderingContext2D, storage: Storage) {
+  const spriteKey = "storage.crate";
+  const sprite = assetManager.getImage(spriteKey);
+  if (!sprite) return;
+  const x = storage.x * CELL_SIZE;
+  const y = storage.y * CELL_SIZE;
+  
+  ctx.drawImage(
+    sprite,
+    0, 0,
+    CRATE_SPRITE_SIZE, CRATE_SPRITE_SIZE,
+    x, y,
+    CELL_SIZE, CELL_SIZE
+  )
 }

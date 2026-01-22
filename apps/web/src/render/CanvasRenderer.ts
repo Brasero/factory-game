@@ -10,9 +10,9 @@ import {colors} from "@web/theme/colors.ts";
 import {config} from "@web/config/gridConfig.ts";
 import {machineConfig} from "@web/config/machineConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
-import {drawStorageTooltip, drawStorages} from "@web/render/utils/storage.ts"
+import {drawStorageTooltip, drawStorageAt} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
-import {drawConveyors, getIncomingDirection} from "@web/render/utils/conveyor.ts";
+import {drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
 import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 
@@ -37,10 +37,7 @@ export function render(
     if (!world.grid) return;
     drawTileMap(ctx, world.grid);
     drawResourceNodes(ctx, world.grid);
-    drawConveyors(ctx, world);
-    drawMachines(ctx, world);
-    drawResources(ctx, world);
-    drawStorages(ctx, world);
+    drawDynamicEntities(ctx, world);
     drawDecorationTiles(ctx, world.grid);
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
@@ -53,46 +50,98 @@ export function render(
 /* ========================= */
 const SPRITE_SIZE = 48;
 const OFFSET = (SPRITE_SIZE - CELL_SIZE) / 2;
-function drawMachines(
+type DrawCall = {
+  y: number;
+  x: number;
+  layer: number;
+  draw: () => void;
+};
+
+function drawDynamicEntities(
   ctx: CanvasRenderingContext2D,
   world: WorldSnapshot
 ) {
-    world.machines.forEach(m => {
-        const isWorking = m.active;
-        const spritePrefix = m.spriteName!
-        const state = isWorking ? "running": "idle";
-        const type = m.type === "water-pump" ? "pump" : "miner"
-        const spriteKey = `machine.${type}.${spritePrefix}.${state}`
-        const sprite = assetManager.getImage(spriteKey);
-        if (!sprite) return;
-        const baseX = m.x * CELL_SIZE;
-        const baseY = m.y * CELL_SIZE;
-        
-        const drawX = m.type === "water-pump" ? baseX : baseX - OFFSET;
-        const drawY = baseY - OFFSET;
-        
-        if (!isWorking) {
-            ctx.drawImage(
-              sprite,
-              0, 0,
-              SPRITE_SIZE, SPRITE_SIZE,
-              drawX, drawY,
-              SPRITE_SIZE, SPRITE_SIZE
-            )
-            return;
-        }
-        const frameCount = m.type === "water-pump" ? machineConfig.PUMP_FRAME_COUNT : machineConfig.MINER_FRAME_COUNT
-        const frameIndex = (Math.floor(machineConfig.ANIMATION_SPEED * world.tick)% SPRITE_SIZE) % frameCount;
-        const sx = frameIndex * SPRITE_SIZE;
-        
+  const drawCalls: DrawCall[] = [];
+
+  world.conveyors.forEach(conveyor => {
+    drawCalls.push({
+      x: conveyor.x,
+      y: conveyor.y,
+      layer: 0,
+      draw: () => drawConveyorAt(ctx, world, conveyor)
+    });
+    if (conveyor.carrying.length) {
+      drawCalls.push({
+        x: conveyor.x,
+        y: conveyor.y,
+        layer: 1,
+        draw: () => drawResourcesForConveyor(ctx, world, conveyor)
+      });
+    }
+  });
+
+  world.machines.forEach(machine => {
+    drawCalls.push({
+      x: machine.x,
+      y: machine.y,
+      layer: 2,
+      draw: () => drawMachineAt(ctx, world, machine)
+    });
+  });
+
+  world.storages.forEach(storage => {
+    drawCalls.push({
+      x: storage.x,
+      y: storage.y,
+      layer: 2,
+      draw: () => drawStorageAt(ctx, storage)
+    });
+  });
+
+  drawCalls
+    .sort((a, b) => (a.y - b.y) || (a.layer - b.layer) || (a.x - b.x))
+    .forEach(call => call.draw());
+}
+
+function drawMachineAt(
+  ctx: CanvasRenderingContext2D,
+  world: WorldSnapshot,
+  machine: WorldSnapshot["machines"][number]
+) {
+    const isWorking = machine.active;
+    const spritePrefix = machine.spriteName!
+    const state = isWorking ? "running": "idle";
+    const type = machine.type === "water-pump" ? "pump" : "miner"
+    const spriteKey = `machine.${type}.${spritePrefix}.${state}`
+    const sprite = assetManager.getImage(spriteKey);
+    if (!sprite) return;
+    const baseX = machine.x * CELL_SIZE;
+    const baseY = machine.y * CELL_SIZE;
+    
+    const drawX = machine.type === "water-pump" ? baseX : baseX - OFFSET;
+    const drawY = baseY - OFFSET;
+    
+    if (!isWorking) {
         ctx.drawImage(
           sprite,
-          sx, 0,
+          0, 0,
           SPRITE_SIZE, SPRITE_SIZE,
           drawX, drawY,
           SPRITE_SIZE, SPRITE_SIZE
         )
-    })
+        return;
+    }
+    const frameCount = machine.type === "water-pump" ? machineConfig.PUMP_FRAME_COUNT : machineConfig.MINER_FRAME_COUNT
+    const frameIndex = (Math.floor(machineConfig.ANIMATION_SPEED * world.tick)% SPRITE_SIZE) % frameCount;
+    const sx = frameIndex * SPRITE_SIZE;
+    
+    ctx.drawImage(
+      sprite,
+      sx, 0,
+      SPRITE_SIZE, SPRITE_SIZE,
+      drawX, drawY,
+      SPRITE_SIZE, SPRITE_SIZE
+    )
 }
 
 
@@ -121,31 +170,33 @@ function drawHoveredCell(
 /* ========================= */
 /* RESSOURCES SUR CONVOYEURS */
 /* ========================= */
-function drawResources(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
+function drawResourcesForConveyor(
+  ctx: CanvasRenderingContext2D,
+  world: WorldSnapshot,
+  conveyor: Conveyor
+) {
     const resourceSprites: Record<ResourcesType, string> = {
         iron: "ore.ironOre",
         coal: "ore.coalOre",
         water: "ore.waterOre"
     };
     
-    world.conveyors.forEach(c => {
-        if (!c.carrying.length) return;
-        c.carrying.forEach(r => {
-            const { type, progress = 0 } = r;
-            
-            // Position de base au centre de la case
-            const path = buildConveyorPath(world, c, CELL_SIZE);
-            const pos = interpolateOnConveyor(path, progress)
-            
-            const sprite = assetManager.getImage(resourceSprites[type]);
-            if (!sprite) return;
-            ctx.drawImage(
-              sprite,
-              pos.x - 10, pos.y - 15,
-              CELL_SIZE - 10, CELL_SIZE - 10
-            );
-        })
-    });
+    if (!conveyor.carrying.length) return;
+    conveyor.carrying.forEach(r => {
+        const { type, progress = 0 } = r;
+        
+        // Position de base au centre de la case
+        const path = buildConveyorPath(world, conveyor, CELL_SIZE);
+        const pos = interpolateOnConveyor(path, progress)
+        
+        const sprite = assetManager.getImage(resourceSprites[type]);
+        if (!sprite) return;
+        ctx.drawImage(
+          sprite,
+          pos.x - 10, pos.y - 15,
+          CELL_SIZE - 10, CELL_SIZE - 10
+        );
+    })
 }
 export function directionToVector(dir: DirectionType): Position {
     switch (dir) {

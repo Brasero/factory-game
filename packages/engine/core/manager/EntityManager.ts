@@ -48,6 +48,25 @@ class EntityManager implements EntityManagerType {
     if (!grid) throw new Error("Le monde n'a pas de grille définie.")
     
     try {
+      const hasBlockingEntity =
+        world.machines.some(m => m.x === x && m.y === y) ||
+        world.storages.some(s => s.x === x && s.y === y);
+      if (hasBlockingEntity) return false;
+
+      const existingConveyor = conveyors.find(c => c.x === x && c.y === y);
+
+      if (existingConveyor) {
+        const otherConveyors = conveyors.filter(c => c !== existingConveyor);
+        const updated: Conveyor = {
+          ...existingConveyor,
+          direction
+        };
+        return {
+          ...world,
+          conveyors: [...otherConveyors, updated]
+        };
+      }
+
       const success = grid.occupy({x,y})
       if (!success) return false;
       const conveyor: Conveyor = {

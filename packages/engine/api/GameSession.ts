@@ -40,6 +40,13 @@ export class GameSession {
 
   canPlaceMachine(x: number, y: number, machineType: SelectedItem): boolean {
     const world = this.engine.getWorld();
+    if (machineType === "conveyor") {
+      const blocked =
+        world.machines.some(m => m.x === x && m.y === y) ||
+        world.storages.some(s => s.x === x && s.y === y);
+      if (blocked) return false;
+      if (world.conveyors.some(c => c.x === x && c.y === y)) return true;
+    }
     if (!world.grid) return false;
     return world.grid.canPlaceMachine({x, y}, machineType, world);
   }

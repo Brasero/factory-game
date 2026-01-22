@@ -28,7 +28,7 @@ export function runConveyors(world: World) {
         const stored = targetStorage.stored[item.type] || 0;
         canTransfer = stored < targetStorage.capacity;
       } else if (targetConveyor) {
-        canTransfer = canTransfertToConveyor(targetConveyor);
+        canTransfer = canTransfertToConveyor(targetConveyor, world, targetPos);
       }
       
       // 1️⃣ Avancer tant qu’on n’est pas à la fin
@@ -103,7 +103,20 @@ function getNextPosition(x: number, y: number, direction: DirectionType): Positi
   return {x, y};
 }
 
-export function canTransfertToConveyor(target: Conveyor): boolean {
+function countIncomingConveyors(world: World, x: number, y: number): number {
+  return world.conveyors.reduce((count, conveyor) => {
+    const next = getNextPosition(conveyor.x, conveyor.y, conveyor.direction);
+    return count + (next.x === x && next.y === y ? 1 : 0);
+  }, 0);
+}
+
+export function canTransfertToConveyor(
+  target: Conveyor,
+  world: World,
+  targetPos: Position
+): boolean {
+  const incoming = countIncomingConveyors(world, targetPos.x, targetPos.y);
+  if (incoming > 1) return false;
   return target.carrying.length < target.capacity;
 }
 
