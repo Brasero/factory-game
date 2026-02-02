@@ -1,13 +1,7 @@
 import "./hud.scss";
 import {useAppDispatch, useAppSelector} from "@web/store/hooks.ts";
-import {
-  selectCoalQuantity, selectCurentTool,
-  selectGamePaused,
-  selectGameTick,
-  selectIronQuantity,
-  selectSelectedItem,
-  selectWaterQuantity
-} from "@web/store/selectors.ts";
+import {useWorldSelector} from "@web/game/worldStore.ts";
+import {selectCurentTool, selectGamePaused, selectSelectedItem} from "@web/store/selectors.ts";
 import type {SelectedItem} from "@engine/api/types.ts";
 import {setSelectedItem, setToolMode, togglePause} from "@web/store/controlSlice.ts"; // à créer dans le slice
 import {formatTicks} from "@web/utils/utils.ts";
@@ -16,10 +10,10 @@ import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {useState} from "react";
 
 export function Hud() {
-  const iron = useAppSelector(selectIronQuantity);
-  const water = useAppSelector(selectWaterQuantity);
-  const coal = useAppSelector(selectCoalQuantity);
-  const tick = useAppSelector(selectGameTick);
+  const iron = useWorldSelector((world) => world.resources.iron);
+  const water = useWorldSelector((world) => world.resources.water);
+  const coal = useWorldSelector((world) => world.resources.coal);
+  const tick = useWorldSelector((world) => world.tick);
   const selectedItem = useAppSelector(selectSelectedItem);
   const paused = useAppSelector(selectGamePaused);
   const dispatch = useAppDispatch();

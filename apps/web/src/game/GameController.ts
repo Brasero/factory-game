@@ -1,11 +1,11 @@
-import {setWorld} from "@web/store/gameSlice.ts";
 import {createSession, TickLoop} from "@engine/api/index.ts";
-import store from "@web/store/store.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import type {DirectionType, WorldSnapshot, SelectedItem} from "@engine/api/types.ts";
+import {setWorldSnapshot} from "@web/game/worldStore.ts";
 
 const session = createSession();
 const loop = new TickLoop();
+setWorldSnapshot(session.getSnapshot());
 
 export function startGame() {
     const canvas = document.querySelector("canvas");
@@ -112,6 +112,6 @@ export function destroyEntity(x: number, y: number) {
 
 function updateWorld(): WorldSnapshot {
     const snapshot = session.getSnapshot();
-    store.dispatch(setWorld(snapshot))
+    setWorldSnapshot(snapshot);
     return snapshot;
 }

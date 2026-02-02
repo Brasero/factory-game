@@ -2,7 +2,7 @@ import {useEffect, useRef, useState, WheelEvent} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";
-import type {WorldSnapshot} from "@engine/api/types.ts";
+import {useWorldSnapshot} from "@web/game/worldStore.ts";
 import {
   destroyEntity,
   placeCoalMine,
@@ -12,7 +12,7 @@ import {
   placeWaterPump,
   canPlaceAt
 } from "@web/game/GameController.ts";
-import {selectCurentTool, selectGameState, selectSelectedItem} from "@web/store/selectors.ts";
+import {selectCurentTool, selectSelectedItem} from "@web/store/selectors.ts";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice.ts";
 import type {
   Position,
@@ -35,7 +35,7 @@ interface ConveyorPreview extends Position {
 
 export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const world: WorldSnapshot = useAppSelector(selectGameState);
+  const world = useWorldSnapshot();
   const dispatch = useAppDispatch();
   const selectedItem = useAppSelector(selectSelectedItem) as SelectedItem | "";
   const currentTool = useAppSelector(selectCurentTool)

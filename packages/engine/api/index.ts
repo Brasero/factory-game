@@ -1,5 +1,4 @@
 export {GameSession, createSession} from "@engine/api/GameSession.ts";
-export {snapshotWorld} from "@engine/core/snapshot.ts";
 export {TickLoop} from "@engine/core/TickLoop.ts";
 export type {
   WorldSnapshot,
