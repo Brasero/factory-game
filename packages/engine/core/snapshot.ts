@@ -23,6 +23,8 @@ function snapshotGrid(world: World): GridSnapshot {
     resources: grid.getResourceMap().map(node => ({
       biome: node.biome,
       variant: node.variant,
+      baseVariant: node.baseVariant,
+      subTiles: node.subTiles,
       decoration: node.decoration,
       resource: node.resource,
       pos: node.pos

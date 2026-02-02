@@ -50,6 +50,12 @@ export function render(
 /* ========================= */
 const SPRITE_SIZE = 48;
 const OFFSET = (SPRITE_SIZE - CELL_SIZE) / 2;
+const LAYERS = 3;
+const ROWS = Math.ceil(config.HEIGHT / CELL_SIZE);
+const COLS = Math.ceil(config.WIDTH / CELL_SIZE);
+const KEY_COUNT = ROWS * LAYERS * COLS;
+const countByKey = new Uint32Array(KEY_COUNT);
+const positionByKey = new Uint32Array(KEY_COUNT);
 type DrawCall = {
   y: number;
   x: number;
@@ -62,8 +68,16 @@ function drawDynamicEntities(
   world: WorldSnapshot
 ) {
   const drawCalls: DrawCall[] = [];
+  const previousByPos = new Map<string, Conveyor>();
 
   world.conveyors.forEach(conveyor => {
+    const next = getNextPosition(conveyor);
+    previousByPos.set(`${next.x},${next.y}`, conveyor);
+  });
+
+  world.conveyors.forEach(conveyor => {
+    const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`);
+    const path = buildConveyorPath(world, conveyor, CELL_SIZE, prev);
     drawCalls.push({
       x: conveyor.x,
       y: conveyor.y,
@@ -75,7 +89,7 @@ function drawDynamicEntities(
         x: conveyor.x,
         y: conveyor.y,
         layer: 1,
-        draw: () => drawResourcesForConveyor(ctx, world, conveyor)
+        draw: () => drawResourcesForConveyor(ctx, conveyor, path)
       });
     }
   });
@@ -98,9 +112,37 @@ function drawDynamicEntities(
     });
   });
 
-  drawCalls
-    .sort((a, b) => (a.y - b.y) || (a.layer - b.layer) || (a.x - b.x))
-    .forEach(call => call.draw());
+  drawCallsSorted(drawCalls);
+}
+
+function drawCallsSorted(drawCalls: DrawCall[]) {
+  const count = countByKey;
+  const positions = positionByKey;
+  count.fill(0);
+
+  const keys = new Uint32Array(drawCalls.length);
+  for (let i = 0; i < drawCalls.length; i++) {
+    const call = drawCalls[i];
+    const key = ((call.y * LAYERS + call.layer) * COLS + call.x) >>> 0;
+    keys[i] = key;
+    count[key] += 1;
+  }
+
+  let total = 0;
+  for (let i = 0; i < KEY_COUNT; i++) {
+    const c = count[i];
+    positions[i] = total;
+    total += c;
+  }
+
+  const ordered = new Array<DrawCall>(drawCalls.length);
+  for (let i = 0; i < drawCalls.length; i++) {
+    const key = keys[i];
+    const pos = positions[key]++;
+    ordered[pos] = drawCalls[i];
+  }
+
+  ordered.forEach(call => call.draw());
 }
 
 function drawMachineAt(
@@ -170,23 +212,22 @@ function drawHoveredCell(
 /* ========================= */
 /* RESSOURCES SUR CONVOYEURS */
 /* ========================= */
+const resourceSprites: Record<ResourcesType, string> = {
+  iron: "ore.ironOre",
+  coal: "ore.coalOre",
+  water: "ore.waterOre"
+};
+
 function drawResourcesForConveyor(
   ctx: CanvasRenderingContext2D,
-  world: WorldSnapshot,
-  conveyor: Conveyor
+  conveyor: Conveyor,
+  path: ConveyorPath
 ) {
-    const resourceSprites: Record<ResourcesType, string> = {
-        iron: "ore.ironOre",
-        coal: "ore.coalOre",
-        water: "ore.waterOre"
-    };
-    
     if (!conveyor.carrying.length) return;
     conveyor.carrying.forEach(r => {
         const { type, progress = 0 } = r;
         
         // Position de base au centre de la case
-        const path = buildConveyorPath(world, conveyor, CELL_SIZE);
         const pos = interpolateOnConveyor(path, progress)
         
         const sprite = assetManager.getImage(resourceSprites[type]);
@@ -256,9 +297,10 @@ export interface ConveyorPath {
 export function buildConveyorPath(
   world: WorldSnapshot,
   conveyor: Conveyor,
-  cellSize: number
+  cellSize: number,
+  prevOverride?: Conveyor
 ): ConveyorPath {
-    const prev = findPreviousConveyor(world, conveyor);
+    const prev = prevOverride ?? findPreviousConveyor(world, conveyor);
     
     const center = {
         x: conveyor.x * cellSize + cellSize / 2,

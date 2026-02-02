@@ -21,7 +21,17 @@ export interface MapGeneratorOptions {
   TYPES
 ============================================================ */
 
-export type LogicalBiome = "sea" | "grass" | "desert" | "snow" | "grass-beach" | "desert-beach" | "snow-beach";
+export type LogicalBiome =
+  | "sea"
+  | "grass"
+  | "desert"
+  | "snow"
+  | "grass-beach"
+  | "desert-beach"
+  | "snow-beach"
+  | "grass-shore"
+  | "desert-shore"
+  | "snow-shore";
 
 /* ============================================================
   UTILS
@@ -41,17 +51,383 @@ const CORNERS = [
   { key: "SW", a: "S", b: "W" }
 ] as const;
 
-const BEACH_MIN = 4;
-const BEACH_MAX = 4;
+const BEACH_MIN = 3;
+const BEACH_MAX = 5;
 
 const BEACH_CLEARING_RADIUS_MIN = 2;
 const BEACH_CLEARING_RADIUS_MAX = 4;
+const SHORE_MIN = 1;
+const SHORE_MAX = 2;
 function rand<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function pickVariant<T>(value: T | T[]): T {
+  return Array.isArray(value) ? rand(value) : value;
+}
+
 function biomeAt(map: LogicalBiome[][], x: number, y: number): LogicalBiome {
   return map[y]?.[x] ?? "sea";
+}
+
+function baseBiomeOf(value: LogicalBiome): "grass" | "desert" | "snow" | null {
+  if (value === "sea") return null;
+  return value
+    .replace("-beach", "")
+    .replace("-shore", "") as "grass" | "desert" | "snow";
+}
+
+function findNearestLandBiome(
+  map: LogicalBiome[][],
+  x: number,
+  y: number,
+  maxDist = 2
+): "grass" | "desert" | "snow" | null {
+  for (let d = 1; d <= maxDist; d++) {
+    for (let dy = -d; dy <= d; dy++) {
+      for (let dx = -d; dx <= d; dx++) {
+        if (Math.abs(dx) !== d && Math.abs(dy) !== d) continue;
+        const biome = baseBiomeOf(biomeAt(map, x + dx, y + dy));
+        if (biome) return biome;
+      }
+    }
+  }
+  return null;
+}
+
+function isSea(value: LogicalBiome): boolean {
+  return value === "sea";
+}
+
+function isSeaLike(value: LogicalBiome): boolean {
+  return value === "sea" || value.includes("-shore");
+}
+
+function scaleIslandDefinition(
+  island: IslandDefinition,
+  scale: number
+): IslandDefinition {
+  return {
+    ...island,
+    center: {
+      x: island.center.x * scale,
+      y: island.center.y * scale
+    },
+    shape: {
+      ...island.shape,
+      size: island.shape.size * scale
+    },
+    clearings: island.clearings.map(clearing => ({
+      ...clearing,
+      x: clearing.x * scale,
+      y: clearing.y * scale,
+      radius: clearing.radius * scale
+    }))
+  };
+}
+
+function fillEnclosedSeas(map: LogicalBiome[][]) {
+  const height = map.length;
+  const width = map[0].length;
+  const openSea: boolean[][] = Array.from({length: height}, () =>
+    Array(width).fill(false)
+  );
+  const queue: Array<{x: number; y: number}> = [];
+  
+  for (let x = 0; x < width; x++) {
+    if (isSea(map[0]?.[x])) {
+      openSea[0][x] = true;
+      queue.push({x, y: 0});
+    }
+    if (isSea(map[height - 1]?.[x])) {
+      openSea[height - 1][x] = true;
+      queue.push({x, y: height - 1});
+    }
+  }
+  for (let y = 0; y < height; y++) {
+    if (isSea(map[y]?.[0])) {
+      openSea[y][0] = true;
+      queue.push({x: 0, y});
+    }
+    if (isSea(map[y]?.[width - 1])) {
+      openSea[y][width - 1] = true;
+      queue.push({x: width - 1, y});
+    }
+  }
+  
+  let head = 0;
+  while (head < queue.length) {
+    const {x, y} = queue[head++];
+    for (const {dx, dy} of Object.values(DIRS)) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!map[ny]?.[nx]) continue;
+      if (!isSea(map[ny][nx])) continue;
+      if (openSea[ny][nx]) continue;
+      openSea[ny][nx] = true;
+      queue.push({x: nx, y: ny});
+    }
+  }
+  
+  const visited: boolean[][] = Array.from({length: height}, () =>
+    Array(width).fill(false)
+  );
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!isSea(map[y][x]) || openSea[y][x] || visited[y][x]) continue;
+      
+      const region: Array<{x: number; y: number}> = [];
+      const biomeCounts: Record<"grass" | "desert" | "snow", number> = {
+        grass: 0,
+        desert: 0,
+        snow: 0
+      };
+      const q: Array<{x: number; y: number}> = [{x, y}];
+      visited[y][x] = true;
+      
+      let qi = 0;
+      while (qi < q.length) {
+        const cell = q[qi++];
+        region.push(cell);
+        
+        for (const {dx, dy} of Object.values(DIRS)) {
+          const nx = cell.x + dx;
+          const ny = cell.y + dy;
+          if (!map[ny]?.[nx]) continue;
+          
+          if (isSea(map[ny][nx]) && !openSea[ny][nx] && !visited[ny][nx]) {
+            visited[ny][nx] = true;
+            q.push({x: nx, y: ny});
+            continue;
+          }
+          
+          const neighborBiome = baseBiomeOf(map[ny][nx]);
+          if (neighborBiome) {
+            biomeCounts[neighborBiome]++;
+          }
+        }
+      }
+      
+      const fillBiome =
+        biomeCounts.desert > biomeCounts.grass && biomeCounts.desert >= biomeCounts.snow
+          ? "desert"
+          : biomeCounts.snow > biomeCounts.grass
+            ? "snow"
+            : "grass";
+      
+      for (const cell of region) {
+        map[cell.y][cell.x] = fillBiome as LogicalBiome;
+      }
+    }
+  }
+}
+
+function removeIsolatedBeaches(
+  map: LogicalBiome[][],
+  preserved: Set<string>
+) {
+  const height = map.length;
+  const width = map[0].length;
+  const visited: boolean[][] = Array.from({length: height}, () =>
+    Array(width).fill(false)
+  );
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const biome = map[y][x];
+      if (!biome.includes("-beach") || visited[y][x]) continue;
+      
+      const region: Array<{x: number; y: number}> = [];
+      let touchesSea = false;
+      let hasPreserved = false;
+      const q: Array<{x: number; y: number}> = [{x, y}];
+      visited[y][x] = true;
+      
+      let qi = 0;
+      while (qi < q.length) {
+        const cell = q[qi++];
+        region.push(cell);
+        if (preserved.has(`${cell.x},${cell.y}`)) {
+          hasPreserved = true;
+        }
+        
+        for (const {dx, dy} of Object.values(DIRS)) {
+          const nx = cell.x + dx;
+          const ny = cell.y + dy;
+          if (!map[ny]?.[nx]) continue;
+          const neighbor = map[ny][nx];
+          
+          if (isSeaLike(neighbor)) {
+            touchesSea = true;
+          } else if (neighbor.includes("-beach") && !visited[ny][nx]) {
+            visited[ny][nx] = true;
+            q.push({x: nx, y: ny});
+          }
+        }
+      }
+      
+      if (!touchesSea && !hasPreserved) {
+        for (const cell of region) {
+          const base = baseBiomeOf(map[cell.y][cell.x]);
+          map[cell.y][cell.x] = (base ?? "grass") as LogicalBiome;
+        }
+      }
+    }
+  }
+}
+
+function stripInlandWaterTiles(
+  map: LogicalBiome[][],
+  preserved: Set<string>
+) {
+  const height = map.length;
+  const width = map[0].length;
+  const distToSea = computeDistanceToSea(map);
+  const coastBand = BEACH_MAX + SHORE_MAX;
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const biome = map[y][x];
+      if (biome === "sea") continue;
+      if (!biome.includes("-beach") && !biome.includes("-shore")) continue;
+      if (distToSea[y][x] <= coastBand) continue;
+      if (preserved.has(`${x},${y}`)) continue;
+      
+      const base = baseBiomeOf(biome);
+      map[y][x] = (base ?? "grass") as LogicalBiome;
+    }
+  }
+}
+
+function restorePreservedBeaches(
+  map: LogicalBiome[][],
+  preserved: Set<string>
+) {
+  for (const key of preserved) {
+    const [xStr, yStr] = key.split(",");
+    const x = Number(xStr);
+    const y = Number(yStr);
+    if (!map[y]?.[x]) continue;
+    
+    let base = baseBiomeOf(map[y][x]);
+    if (!base) {
+      base = findNearestLandBiome(map, x, y, 3);
+    }
+    if (base) {
+      map[y][x] = `${base}-beach` as LogicalBiome;
+    }
+  }
+}
+
+function buildTileData(
+  map: LogicalBiome[][],
+  x: number,
+  y: number
+): {biome: LogicalBiome; variant: number; baseVariant?: number} {
+  const biome = biomeAt(map, x, y);
+  if (biome === "sea") {
+    const nearLand = findNearestLandBiome(map, x, y, 2);
+    const baseVariant =
+      nearLand && Math.random() > 0.9
+        ? pickVariant(BIOME_TILES[nearLand].littoral)
+        : undefined;
+    return {biome, variant: 0, baseVariant};
+  }
+  
+  const variant = pickTile(map, x, y);
+  let baseVariant: number | undefined;
+  const baseBiome = baseBiomeOf(biome);
+  if (baseBiome && !biome.includes("-shore")) {
+    baseVariant = pickVariant(BIOME_TILES[baseBiome].center.beach);
+  }
+  
+  return {biome, variant, baseVariant};
+}
+
+function collapseBiome(subTiles: Array<{biome: LogicalBiome}>): LogicalBiome {
+  const counts = {
+    grass: 0,
+    desert: 0,
+    snow: 0
+  };
+  
+  for (const tile of subTiles) {
+    const base = baseBiomeOf(tile.biome);
+    if (base) counts[base]++;
+  }
+  
+  if (counts.grass === 0 && counts.desert === 0 && counts.snow === 0) {
+    return "sea";
+  }
+  
+  if (counts.desert > counts.grass && counts.desert >= counts.snow) {
+    return "desert";
+  }
+  if (counts.snow > counts.grass) {
+    return "snow";
+  }
+  return "grass";
+}
+
+function closeBeachEdges(
+  map: LogicalBiome[][],
+  baseBiome: "grass" | "desert" | "snow"
+) {
+  const height = map.length;
+  const width = map[0].length;
+  const distToSea = computeDistanceToSea(map);
+  const maxDist = BEACH_MAX + 1;
+  const beachTag = `${baseBiome}-beach`;
+  
+  const isBeach = (x: number, y: number) => map[y]?.[x] === beachTag;
+  const isLand = (x: number, y: number) =>
+    baseBiomeOf(map[y][x]) === baseBiome &&
+    !map[y][x].includes("-shore");
+  
+  const dilated: boolean[][] = Array.from({length: height}, () =>
+    Array(width).fill(false)
+  );
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!isLand(x, y) || distToSea[y][x] > maxDist) continue;
+      if (isBeach(x, y)) {
+        dilated[y][x] = true;
+        continue;
+      }
+      let neighborBeach = false;
+      for (const {dx, dy} of Object.values(DIRS)) {
+        if (isBeach(x + dx, y + dy)) {
+          neighborBeach = true;
+          break;
+        }
+      }
+      if (neighborBeach) dilated[y][x] = true;
+    }
+  }
+  
+  const closed: boolean[][] = Array.from({length: height}, () =>
+    Array(width).fill(false)
+  );
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!dilated[y][x]) continue;
+      let count = 0;
+      for (const {dx, dy} of Object.values(DIRS)) {
+        if (dilated[y + dy]?.[x + dx]) count++;
+      }
+      if (count >= 2) closed[y][x] = true;
+    }
+  }
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!isLand(x, y) || distToSea[y][x] > maxDist) continue;
+      map[y][x] = closed[y][x] ? (beachTag as LogicalBiome) : baseBiome;
+    }
+  }
 }
 
 /* ============================================================
@@ -91,14 +467,18 @@ function pickCorner(
       break;
   }
   
-  return (hasA && hasB) ?
-    biome !== baseBiome ?
-      BIOME_TILES[baseBiome].corner[type][corner].primary
-    : BIOME_TILES[baseBiome].corner[type][corner].secondary
-    :
-      biome !== baseBiome ?
-      BIOME_TILES[baseBiome].corner[type][corner].secondary
-    : BIOME_TILES[baseBiome].corner[type][corner].primary;
+  const pickPrimary = () =>
+    pickVariant(BIOME_TILES[baseBiome].corner[type][corner].primary);
+  const pickSecondary = () =>
+    pickVariant(BIOME_TILES[baseBiome].corner[type][corner].secondary);
+  
+  return (hasA && hasB)
+    ? biome !== baseBiome
+      ? pickPrimary()
+      : pickSecondary()
+    : biome !== baseBiome
+      ? pickSecondary()
+      : pickPrimary();
 }
 
 function pickTile(
@@ -109,14 +489,23 @@ function pickTile(
   const biome = biomeAt(map, x, y);
   if (biome === "sea") return;
   
+  const isBeachOf = (value: LogicalBiome, base: LogicalBiome) =>
+    value === `${base}-beach`;
+  
+  if (biome.includes("-shore")) {
+    const baseBiome = biome.replace("-shore", "") as "grass" | "desert" | "snow";
+    const tiles = BIOME_TILES[baseBiome].shore;
+    return pickVariant(tiles.center);
+  }
+  
   
   //beach tile
   if (biome.includes("-beach")) {
-    const N = biomeAt(map, x, y - 1) === "sea";
-    const S = biomeAt(map, x, y + 1) === "sea";
-    const E = biomeAt(map, x + 1, y) === "sea";
-    const W = biomeAt(map, x - 1, y) === "sea";
-    const baseBiome = biome.replace("-beach", "") as LogicalBiome;
+    const N = isSeaLike(biomeAt(map, x, y - 1));
+    const S = isSeaLike(biomeAt(map, x, y + 1));
+    const E = isSeaLike(biomeAt(map, x + 1, y));
+    const W = isSeaLike(biomeAt(map, x - 1, y));
+    const baseBiome = biome.replace("-beach", "") as "grass" | "desert" | "snow";
     const tiles = BIOME_TILES[baseBiome];
     // Corners → Sea
     for (const { key, a, b } of CORNERS) {
@@ -130,9 +519,9 @@ function pickTile(
         y + da.dy + db.dy
       );
       
-      const isWaterA = biomeA === "sea";
-      const isWaterB = biomeB === "sea";
-      const isWaterDiag = biomeDiag === "sea";
+      const isWaterA = isSeaLike(biomeA);
+      const isWaterB = isSeaLike(biomeB);
+      const isWaterDiag = isSeaLike(biomeDiag);
       
       // Cas 1 : eau sur A + B + diagonale
       const fullCorner = isWaterA && isWaterB && isWaterDiag;
@@ -146,19 +535,19 @@ function pickTile(
     }
     
     // Edges → Sea
-    if (N) return tiles.edge.toSea.N;
-    if (S) return tiles.edge.toSea.S;
-    if (E) return tiles.edge.toSea.E;
-    if (W) return tiles.edge.toSea.W;
-    return rand(tiles.center.beach);
+    if (N) return pickVariant(tiles.edge.toSea.N);
+    if (S) return pickVariant(tiles.edge.toSea.S);
+    if (E) return pickVariant(tiles.edge.toSea.E);
+    if (W) return pickVariant(tiles.edge.toSea.W);
+    return pickVariant(tiles.center.beach);
   }
-  const tiles = BIOME_TILES[biome];
+  const tiles = BIOME_TILES[biome as "grass" | "desert" | "snow"];
   
   
-  const N = biomeAt(map, x, y - 1) === `${biome}-beach`;
-  const S = biomeAt(map, x, y + 1) === `${biome}-beach`;
-  const E = biomeAt(map, x + 1, y) === `${biome}-beach`;
-  const W = biomeAt(map, x - 1, y) === `${biome}-beach`;
+  const N = isBeachOf(biomeAt(map, x, y - 1), biome);
+  const S = isBeachOf(biomeAt(map, x, y + 1), biome);
+  const E = isBeachOf(biomeAt(map, x + 1, y), biome);
+  const W = isBeachOf(biomeAt(map, x - 1, y), biome);
   
   
   // Corners → Beach
@@ -187,22 +576,22 @@ function pickTile(
       return pickCorner(map, biome, x, y, key, "toBeach");
     }
   }
-  if (N) return tiles.edge.toBeach.N;
-  if (S) return tiles.edge.toBeach.S;
-  if (E) return tiles.edge.toBeach.E;
-  if (W) return tiles.edge.toBeach.W;
+  if (N) return pickVariant(tiles.edge.toBeach.N);
+  if (S) return pickVariant(tiles.edge.toBeach.S);
+  if (E) return pickVariant(tiles.edge.toBeach.E);
+  if (W) return pickVariant(tiles.edge.toBeach.W);
   const isEdge = (dx: number, dy: number) => {
-    return biomeAt(map, x + dx, y + dy) === `${biome}-beach`;
+    return isBeachOf(biomeAt(map, x + dx, y + dy), biome);
   }
   
   // Edges → Beach
-  if (isEdge(0, -1)) return tiles.edge.toBeach.N;
-  if (isEdge(0, 1)) return tiles.edge.toBeach.S;
-  if (isEdge(1, 0)) return tiles.edge.toBeach.E;
-  if (isEdge(-1, 0)) return tiles.edge.toBeach.W;
+  if (isEdge(0, -1)) return pickVariant(tiles.edge.toBeach.N);
+  if (isEdge(0, 1)) return pickVariant(tiles.edge.toBeach.S);
+  if (isEdge(1, 0)) return pickVariant(tiles.edge.toBeach.E);
+  if (isEdge(-1, 0)) return pickVariant(tiles.edge.toBeach.W);
   
   // Center tile
-  return rand(tiles.center.main);
+  return pickVariant(tiles.center.main);
 }
 
 /* ============================================================
@@ -233,9 +622,6 @@ function carveIsland(
       }
     }
   }
-  
-  applyBeachLayer(map, biome);
-  placeBeachClearings(map, cx, cy, size, biome, clearings);
 }
 
 function applyBeachLayer(
@@ -244,16 +630,17 @@ function applyBeachLayer(
 ) {
   const height = map.length;
   const width = map[0].length;
+  const distToSea = computeDistanceToSea(map);
   
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (map[y][x] !== biome) continue;
       
-      const localBeach =
-        BEACH_MIN +
-        Math.floor(Math.random() * (BEACH_MAX - BEACH_MIN + 1));
+      const noise =
+        pseudoNoise(x * 0.15, y * 0.15) * (BEACH_MAX - BEACH_MIN + 1);
+      const localBeach = BEACH_MIN + Math.floor(noise);
       
-      const dist = distanceToSeaManhattan(map, x, y, localBeach);
+      const dist = distToSea[y][x];
       
       if (dist <= localBeach) {
         map[y][x] = `${biome}-beach` as LogicalBiome;
@@ -262,27 +649,42 @@ function applyBeachLayer(
   }
 }
 
-function distanceToSeaManhattan(
-  map: LogicalBiome[][],
-  x: number,
-  y: number,
-  max: number
-): number {
-  for (let d = 1; d <= max; d++) {
-    const checks = [
-      [x + d, y],
-      [x - d, y],
-      [x, y + d],
-      [x, y - d],
-    ];
-    
-    for (const [cx, cy] of checks) {
-      if (biomeAt(map, cx, cy) === "sea") {
-        return d;
+function computeDistanceToSea(map: LogicalBiome[][]): number[][] {
+  const height = map.length;
+  const width = map[0].length;
+  const dist: number[][] = Array.from({length: height}, () =>
+    Array(width).fill(Infinity)
+  );
+  const queue: Array<{x: number; y: number}> = [];
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (map[y][x] === "sea") {
+        dist[y][x] = 0;
+        queue.push({x, y});
       }
     }
   }
-  return max + 1;
+  
+  let head = 0;
+  while (head < queue.length) {
+    const {x, y} = queue[head++];
+    const current = dist[y][x];
+    
+    for (const {dx, dy} of Object.values(DIRS)) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!map[ny]?.[nx]) continue;
+      
+      const next = current + 1;
+      if (next < dist[ny][nx]) {
+        dist[ny][nx] = next;
+        queue.push({x: nx, y: ny});
+      }
+    }
+  }
+  
+  return dist;
 }
 
 // rendu aléatoire de la forme des îles, avec des bords irréguliers
@@ -458,7 +860,8 @@ function carveBeachClearing(
   cx: number,
   cy: number,
   radius: number,
-  biome: LogicalBiome
+  biome: LogicalBiome,
+  preserved?: Set<string>
 ) {
   for (let y = -radius; y <= radius; y++) {
     for (let x = -radius; x <= radius; x++) {
@@ -475,6 +878,7 @@ function carveBeachClearing(
           distanceToSea(map, px, py, radius + 2) > radius
         ) {
           map[py][px] = `${biome}-beach` as LogicalBiome;
+          preserved?.add(`${px},${py}`);
         }
       }
     }
@@ -488,7 +892,8 @@ function placeBeachClearings(
   islandSize: number,
   biome: LogicalBiome,
   clearings: IslandDefinition["clearings"]
-) {
+): Set<string> {
+  const preserved = new Set<string>();
   
   const used: { x: number; y: number }[] = [];
   
@@ -515,9 +920,75 @@ function placeBeachClearings(
       // Assez loin de la mer
       if (distanceToSea(map, x, y, r + 2) <= r) continue;
       
-      carveBeachClearing(map, x, y, r, biome);
+      carveBeachClearing(map, x, y, r, biome, preserved);
       used.push({ x, y });
       break;
+    }
+  }
+  
+  return preserved;
+}
+
+function applyShoreLayer(map: LogicalBiome[][]) {
+  const height = map.length;
+  const width = map[0].length;
+  const dist: number[][] = Array.from({length: height}, () =>
+    Array(width).fill(Infinity)
+  );
+  const nearestBiome: Array<Array<LogicalBiome | null>> = Array.from(
+    {length: height},
+    () => Array(width).fill(null)
+  );
+  
+  const queue: Array<{x: number; y: number}> = [];
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const value = map[y][x];
+      if (value !== "sea") {
+        const base = value
+          .replace("-beach", "")
+          .replace("-shore", "") as LogicalBiome;
+        dist[y][x] = 0;
+        nearestBiome[y][x] = base;
+        queue.push({x, y});
+      }
+    }
+  }
+  
+  let head = 0;
+  while (head < queue.length) {
+    const {x, y} = queue[head++];
+    const current = dist[y][x];
+    if (current >= SHORE_MAX) continue;
+    
+    for (const {dx, dy} of Object.values(DIRS)) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!map[ny]?.[nx]) continue;
+      if (map[ny][nx] !== "sea") continue;
+      
+      const next = current + 1;
+      if (next < dist[ny][nx]) {
+        dist[ny][nx] = next;
+        nearestBiome[ny][nx] = nearestBiome[y][x];
+        queue.push({x: nx, y: ny});
+      }
+    }
+  }
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (map[y][x] !== "sea") continue;
+      const base = nearestBiome[y][x];
+      if (!base) continue;
+      
+      const noise =
+        pseudoNoise(x * 0.12, y * 0.12) * (SHORE_MAX - SHORE_MIN + 1);
+      const localShore = SHORE_MIN + Math.floor(noise);
+      if (dist[y][x] <= localShore) {
+        map[y][x] = `${base}-shore` as LogicalBiome;
+      }
     }
   }
 }
@@ -552,36 +1023,83 @@ function distanceToSea(
 
 export class MapGenerator {
   static generate(options: MapGeneratorOptions): TileMap {
-    const {width, height,islands} = options
-    const logical: LogicalBiome[][] = Array.from(
-      { length: options.height },
-      () => Array(options.width).fill("sea")
+    const {width, height, islands} = options;
+    const scale = 2;
+    const subWidth = width * scale;
+    const subHeight = height * scale;
+    const subLogical: LogicalBiome[][] = Array.from(
+      { length: subHeight },
+      () => Array(subWidth).fill("sea")
     );
     
+    const scaledIslands = islands.map(island =>
+      scaleIslandDefinition(island, scale)
+    );
     
-    
-    for (const island of islands) {
+    for (const island of scaledIslands) {
       const cursorX = island.center.x;
       const cursorY = island.center.y;
-      carveIsland(logical, cursorX, cursorY, island.shape.size, island.biome, island.clearings);
+      carveIsland(subLogical, cursorX, cursorY, island.shape.size, island.biome, island.clearings);
     }
     
+    fillEnclosedSeas(subLogical);
     
+    applyBeachLayer(subLogical, "grass");
+    applyBeachLayer(subLogical, "desert");
+    applyBeachLayer(subLogical, "snow");
+    
+    const preservedBeaches = new Set<string>();
+    for (const island of scaledIslands) {
+      const preserved = placeBeachClearings(
+        subLogical,
+        island.center.x,
+        island.center.y,
+        island.shape.size,
+        island.biome,
+        island.clearings
+      );
+      for (const key of preserved) preservedBeaches.add(key);
+    }
+    
+    closeBeachEdges(subLogical, "grass");
+    closeBeachEdges(subLogical, "desert");
+    closeBeachEdges(subLogical, "snow");
+    
+    applyShoreLayer(subLogical);
+    removeIsolatedBeaches(subLogical, preservedBeaches);
+    stripInlandWaterTiles(subLogical, preservedBeaches);
+    restorePreservedBeaches(subLogical, preservedBeaches);
     
     const tiles: TileMapType = [];
     
     for (let y = 0; y < height; y++) {
       tiles[y] = [];
       for (let x = 0; x < width; x++) {
-        let offset = 0;
-        if (logical[y][x] === "snow") {
-          offset = 2;
+        const subTiles = [];
+        
+        for (let sy = 0; sy < scale; sy++) {
+          for (let sx = 0; sx < scale; sx++) {
+            const subX = x * scale + sx;
+            const subY = y * scale + sy;
+            subTiles.push(buildTileData(subLogical, subX, subY));
+          }
         }
+        
+        const biome = collapseBiome(subTiles) as LogicalBiome;
+        const hasEdge = subTiles.some(tile =>
+          tile.biome.includes("-beach") || tile.biome.includes("-shore")
+        );
+        const offset = biome === "snow" ? 2 : 0;
+        
         tiles[y][x] = {
-          biome: logical[y][x] as LogicalBiome,
-          variant: pickTile(logical, x, y),
+          biome,
+          variant: subTiles[0].variant,
+          baseVariant: subTiles[0].baseVariant,
+          subTiles,
           decoration:
-            logical[y][x] !== "sea" && !logical[y][x].includes("-beach") && Math.random() > 0.9
+            biome !== "sea" &&
+            !hasEdge &&
+            Math.random() > 0.9
               ? {
                   type: rand(["tree", "rock"]),
                   variant: offset + Math.floor(Math.random() * 2)
