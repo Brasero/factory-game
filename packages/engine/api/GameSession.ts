@@ -54,7 +54,7 @@ export class GameSession {
       if (world.conveyors.some(c => c.x === x && c.y === y)) return true;
     }
     if (!world.grid) return false;
-    return world.grid.canPlaceMachine({x, y}, machineType, world);
+    return world.grid.canPlaceMachine({x, y}, machineType);
   }
 
   getSnapshot(): WorldSnapshot {

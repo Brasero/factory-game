@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState, WheelEvent} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
 import {render} from "@web/render/CanvasRenderer.ts";
 import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";

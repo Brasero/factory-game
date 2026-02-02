@@ -1,9 +1,7 @@
 import {Position} from "@engine/models/Position";
 import {GridCell} from "@engine/models/GridCell";
 import type {MachineType} from "@engine/models/Machine.ts";
-import type {World} from "@engine/models/World.ts";
 import type {TileMap} from "@engine/world/TileMap.ts";
-import {resourceNodes} from "@engine/world/resourceNode.ts";
 import type {TileData} from "@engine/models/Tile.ts";
 
 // Classe représentant une grille 2D pour la gestion des positions occupées
