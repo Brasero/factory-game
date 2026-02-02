@@ -48,6 +48,8 @@ export class Grid {
         occupied: false,
         tile: tileMap.get(x, y)?.biome ?? "grass",
         variant: tileMap.get(x, y)?.variant ?? 0,
+        baseVariant: tileMap.get(x, y)?.baseVariant,
+        subTiles: tileMap.get(x, y)?.subTiles,
         resource: null,
         decoration: tileMap.get(x, y)?.decoration ? {
           ...tileMap.get(x, y)!.decoration!,
@@ -69,6 +71,8 @@ export class Grid {
     return {
       biome: cell.tile,
       variant: cell.variant,
+      baseVariant: cell.baseVariant,
+      subTiles: cell.subTiles,
       decoration: cell.decoration ?? undefined
     };
   }
@@ -85,6 +89,8 @@ export class Grid {
           map.push({
             biome: cell.tile,
             variant: cell.variant,
+            baseVariant: cell.baseVariant,
+            subTiles: cell.subTiles,
             decoration: cell.decoration ?? undefined,
             resource: cell.resource,
             pos: {x, y}

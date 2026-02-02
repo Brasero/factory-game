@@ -16,28 +16,92 @@ export function drawTileMap(
 ) {
   if (!grid) return;
   
+  ctx.imageSmoothingEnabled = false;
+  
   const tileset = assetManager.getImage("tileset.environment");
   const water = assetManager.getImage("tileset.water");
   const tilesPerRow = Math.floor(tileset.width / TILE_SIZE);
   
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
+      // SEA BASE
+      drawTileByIndex(ctx, {
+        tileset: water,
+        index: 0,
+        gridX: x,
+        gridY: y,
+        tilesPerRow: 1
+      });
+    }
+  }
+  
+  const subSize = CELL_SIZE / 2;
+  const subDraw = subSize;
+  
+  for (let y = 0; y < grid.height; y++) {
+    for (let x = 0; x < grid.width; x++) {
       const tile = grid.tiles[y][x];
       if (!tile) continue;
       
-      // 🌊 SEA
-      if (tile.biome === "sea") {
-        drawTileByIndex(ctx, {
-          tileset: water,
-          index: 0,
-          gridX: x,
-          gridY: y,
-          tilesPerRow: 1
-        });
+      if (tile.subTiles && tile.subTiles.length === 4) {
+        for (let i = 0; i < 4; i++) {
+          const sub = tile.subTiles[i];
+          if (!sub?.baseVariant && sub?.baseVariant !== 0) continue;
+          const sx = i % 2;
+          const sy = Math.floor(i / 2);
+          drawTileByIndex(ctx, {
+            tileset,
+            index: sub.baseVariant,
+            gridX: x,
+            gridY: y,
+            tilesPerRow,
+            destX: x * CELL_SIZE + sx * subSize,
+            destY: y * CELL_SIZE + sy * subSize,
+            destSize: subDraw
+          });
+        }
         continue;
       }
       
-      // 🌍 BIOME TILE
+      if (!tile.baseVariant && tile.baseVariant !== 0) continue;
+      drawTileByIndex(ctx, {
+        tileset,
+        index: tile.baseVariant,
+        gridX: x,
+        gridY: y,
+        tilesPerRow
+      });
+    }
+  }
+  
+  for (let y = 0; y < grid.height; y++) {
+    for (let x = 0; x < grid.width; x++) {
+      const tile = grid.tiles[y][x];
+      if (!tile) continue;
+      
+      if (tile.subTiles && tile.subTiles.length === 4) {
+        for (let i = 0; i < 4; i++) {
+          const sub = tile.subTiles[i];
+          if (!sub || sub.biome === "sea") continue;
+          const sx = i % 2;
+          const sy = Math.floor(i / 2);
+          drawTileByIndex(ctx, {
+            tileset,
+            index: sub.variant,
+            gridX: x,
+            gridY: y,
+            tilesPerRow,
+            destX: x * CELL_SIZE + sx * subSize,
+            destY: y * CELL_SIZE + sy * subSize,
+            destSize: subDraw
+          });
+        }
+        continue;
+      }
+      
+      if (tile.biome === "sea") continue;
+      
+      // BIOME TILE
       drawTileByIndex(ctx, {
         tileset,
         index: tile.variant,
@@ -60,6 +124,9 @@ export function drawTileMap(
  * @param {number} gridX - The x position in the grid
  * @param {number} gridY - The y position in the grid
  * @param {number} tilesPerRow - The number of tiles per row in the tileset
+ * @param destX
+ * @param destY
+ * @param destSize
  */
 function drawTileByIndex(
   ctx: CanvasRenderingContext2D,
@@ -68,17 +135,26 @@ function drawTileByIndex(
     index,
     gridX,
     gridY,
-    tilesPerRow
+    tilesPerRow,
+    destX,
+    destY,
+    destSize
   }: {
     tileset: HTMLImageElement;
     index: number;
     gridX: number;
     gridY: number;
     tilesPerRow: number;
+    destX?: number;
+    destY?: number;
+    destSize?: number;
   }
 ) {
   const tileX = index % tilesPerRow;
   const tileY = Math.floor(index / tilesPerRow);
+  const drawX = destX ?? (gridX * CELL_SIZE);
+  const drawY = destY ?? (gridY * CELL_SIZE);
+  const drawSize = destSize ?? CELL_SIZE;
   
   ctx.drawImage(
     tileset,
@@ -86,10 +162,10 @@ function drawTileByIndex(
     tileY * TILE_SIZE,
     TILE_SIZE,
     TILE_SIZE,
-    (gridX * CELL_SIZE) - 1,
-    (gridY * CELL_SIZE) - 1,
-    CELL_SIZE + 2,
-    CELL_SIZE + 2
+    drawX,
+    drawY,
+    drawSize,
+    drawSize
   );
 }
 
@@ -112,11 +188,11 @@ export function drawDecorationTiles(
       const tile = grid.tiles[y][x];
       if (!tile) continue;
       
-      // 🌊 SEA
+      // SEA
       if (tile.biome === "sea") {
         continue;
       }
-      // 🌲 DECORATION
+      // DECORATION
       if (tile.decoration !== undefined) {
         if (tile.decoration.type === "rock") {
           // Rock
