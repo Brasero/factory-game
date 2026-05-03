@@ -1,7 +1,7 @@
-import {World} from "@engine/models/World";
-import {Conveyor, DirectionType} from "../models/Conveyor";
-import {Position} from "../models/Position";
-import {ResourcesType} from "../models/Resources";
+import type {World} from "@engine/models/World";
+import type {Conveyor, DirectionType} from "../models/Conveyor";
+import type {Position} from "../models/Position";
+import type {ResourcesType} from "../models/Resources";
 
 export function runConveyors(world: World) {
   world.conveyors.forEach((conveyor, i) => {

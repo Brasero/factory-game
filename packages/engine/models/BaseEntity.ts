@@ -1,4 +1,4 @@
-import {Position} from "./Position";
+import type {Position} from "./Position";
 
 type EntityType = "conveyor" | "machine" | "storage";
 

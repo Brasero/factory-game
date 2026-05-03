@@ -1,15 +1,24 @@
 import { TileMap } from "./TileMap";
-import { TileMapType } from "@engine/models/Tile";
+import type { TileMapType } from "@engine/models/Tile";
 import {BIOME_TILES} from "@engine/config/tileset.ts";
 import type {IslandDefinition} from "@engine/models/IslandDefinition.ts";
+import type {LogicalBiome} from "@engine/world/helpers/map.helpers.ts";
+import {
+  rand,
+  pickVariant,
+  biomeAt,
+  baseBiomeOf,
+  findNearestLandBiome,
+  isSea,
+  isSeaLike,
+  scaleIslandDefinition
+} from "@engine/world/helpers/map.helpers.ts"
 
 
 /**
- * Options for generating a map.
- * @typedef {Object} MapGeneratorOptions
- * @property {number} width - The width of the map in tiles.
- * @property {number} height - The height of the map in tiles.
- * @property {IslandDefinition[]} islands - An array of island definitions to be placed on the map.
+ * Options de generation de carte.
+ * - width/height sont en tuiles finales (pas la sous-grille interne).
+ * - islands est defini dans le meme repere que width/height.
  */
 export interface MapGeneratorOptions {
   width: number;
@@ -18,24 +27,12 @@ export interface MapGeneratorOptions {
 }
 
 /* ============================================================
-  TYPES
+  UTILS (helpers biome + utilitaires grille)
 ============================================================ */
 
-export type LogicalBiome =
-  | "sea"
-  | "grass"
-  | "desert"
-  | "snow"
-  | "grass-beach"
-  | "desert-beach"
-  | "snow-beach"
-  | "grass-shore"
-  | "desert-shore"
-  | "snow-shore";
-
-/* ============================================================
-  UTILS
-============================================================ */
+/**
+ * Expression véctoriel des directions
+ */
 
 const DIRS = {
   N: { dx: 0, dy: -1 },
@@ -51,81 +48,22 @@ const CORNERS = [
   { key: "SW", a: "S", b: "W" }
 ] as const;
 
+/**
+ * Épaisseur maximale et minimale des plages
+ */
 const BEACH_MIN = 3;
 const BEACH_MAX = 5;
-
-const BEACH_CLEARING_RADIUS_MIN = 2;
-const BEACH_CLEARING_RADIUS_MAX = 4;
+/**
+ * Épaisseur maximale et minimale des côtes
+ */
 const SHORE_MIN = 1;
 const SHORE_MAX = 2;
-function rand<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
-function pickVariant<T>(value: T | T[]): T {
-  return Array.isArray(value) ? rand(value) : value;
-}
 
-function biomeAt(map: LogicalBiome[][], x: number, y: number): LogicalBiome {
-  return map[y]?.[x] ?? "sea";
-}
-
-function baseBiomeOf(value: LogicalBiome): "grass" | "desert" | "snow" | null {
-  if (value === "sea") return null;
-  return value
-    .replace("-beach", "")
-    .replace("-shore", "") as "grass" | "desert" | "snow";
-}
-
-function findNearestLandBiome(
-  map: LogicalBiome[][],
-  x: number,
-  y: number,
-  maxDist = 2
-): "grass" | "desert" | "snow" | null {
-  for (let d = 1; d <= maxDist; d++) {
-    for (let dy = -d; dy <= d; dy++) {
-      for (let dx = -d; dx <= d; dx++) {
-        if (Math.abs(dx) !== d && Math.abs(dy) !== d) continue;
-        const biome = baseBiomeOf(biomeAt(map, x + dx, y + dy));
-        if (biome) return biome;
-      }
-    }
-  }
-  return null;
-}
-
-function isSea(value: LogicalBiome): boolean {
-  return value === "sea";
-}
-
-function isSeaLike(value: LogicalBiome): boolean {
-  return value === "sea" || value.includes("-shore");
-}
-
-function scaleIslandDefinition(
-  island: IslandDefinition,
-  scale: number
-): IslandDefinition {
-  return {
-    ...island,
-    center: {
-      x: island.center.x * scale,
-      y: island.center.y * scale
-    },
-    shape: {
-      ...island.shape,
-      size: island.shape.size * scale
-    },
-    clearings: island.clearings.map(clearing => ({
-      ...clearing,
-      x: clearing.x * scale,
-      y: clearing.y * scale,
-      radius: clearing.radius * scale
-    }))
-  };
-}
-
+/**
+ * Retire les lacs des iles, lisse les côte
+ * @param map Tableau représentant la Map
+ */
 function fillEnclosedSeas(map: LogicalBiome[][]) {
   const height = map.length;
   const width = map[0].length;
@@ -223,6 +161,10 @@ function fillEnclosedSeas(map: LogicalBiome[][]) {
   }
 }
 
+/**
+ * Supprime les plages qui ne touchent pas la mer et ne sont pas preservees.
+ * Evite les plages isolees au milieu des terres.
+ */
 function removeIsolatedBeaches(
   map: LogicalBiome[][],
   preserved: Set<string>
@@ -277,6 +219,10 @@ function removeIsolatedBeaches(
   }
 }
 
+/**
+ * Retire les tuiles plage/shore trop loin de la mer, sauf si preservees.
+ * Garde une bande cotiere propre et evite l'eau a l'interieur.
+ */
 function stripInlandWaterTiles(
   map: LogicalBiome[][],
   preserved: Set<string>
@@ -300,6 +246,9 @@ function stripInlandWaterTiles(
   }
 }
 
+/**
+ * Restaure les plages preservees apres les passes de nettoyage.
+ */
 function restorePreservedBeaches(
   map: LogicalBiome[][],
   preserved: Set<string>
@@ -320,6 +269,10 @@ function restorePreservedBeaches(
   }
 }
 
+/**
+ * Convertit biome logique + voisins en variante de tuile concrete.
+ * Le resultat est utilisé pour construire le TileMap.
+ */
 function buildTileData(
   map: LogicalBiome[][],
   x: number,
@@ -332,7 +285,7 @@ function buildTileData(
       nearLand && Math.random() > 0.9
         ? pickVariant(BIOME_TILES[nearLand].littoral)
         : undefined;
-    return {biome, variant: 0, baseVariant};
+    return {biome, variant: 0, baseVariant} as {biome: LogicalBiome; variant: number; baseVariant?: number};
   }
   
   const variant = pickTile(map, x, y);
@@ -345,6 +298,10 @@ function buildTileData(
   return {biome, variant, baseVariant};
 }
 
+/**
+ * Condense une sous-grille de tuiles logiques en un biome parent.
+ * Utilise un vote majoritaire sur les sous-tuiles.
+ */
 function collapseBiome(subTiles: Array<{biome: LogicalBiome}>): LogicalBiome {
   const counts = {
     grass: 0,
@@ -370,6 +327,9 @@ function collapseBiome(subTiles: Array<{biome: LogicalBiome}>): LogicalBiome {
   return "grass";
 }
 
+/**
+ * Ferme les petites ruptures de plage pour une cote plus continue.
+ */
 function closeBeachEdges(
   map: LogicalBiome[][],
   baseBiome: "grass" | "desert" | "snow"
@@ -431,12 +391,16 @@ function closeBeachEdges(
 }
 
 /* ============================================================
-  AUTOTILE PICKER
+  AUTOTILE PICKER (choix des tuiles de transition)
 ============================================================ */
 
+/**
+ * Selectionne une variante de coin selon les adjacences.
+ * type="toBeach" = terre->plage ; type="toSea" = plage->mer.
+ */
 function pickCorner(
   map: LogicalBiome[][],
-  baseBiome: LogicalBiome,
+  baseBiome: "grass" | "desert" | "snow",
   x: number,
   y: number,
   corner: "NE" | "NW" | "SE" | "SW",
@@ -481,11 +445,15 @@ function pickCorner(
       : pickPrimary();
 }
 
+/**
+ * Choisit un index de tuile pour un biome logique selon ses voisins.
+ * Gere les plages, les shores et les bords des biomes de base.
+ */
 function pickTile(
   map: LogicalBiome[][],
   x: number,
   y: number
-): number {
+): number | void {
   const biome = biomeAt(map, x, y);
   if (biome === "sea") return;
   
@@ -499,7 +467,7 @@ function pickTile(
   }
   
   
-  //beach tile
+  // tuile de plage
   if (biome.includes("-beach")) {
     const N = isSeaLike(biomeAt(map, x, y - 1));
     const S = isSeaLike(biomeAt(map, x, y + 1));
@@ -507,7 +475,7 @@ function pickTile(
     const W = isSeaLike(biomeAt(map, x - 1, y));
     const baseBiome = biome.replace("-beach", "") as "grass" | "desert" | "snow";
     const tiles = BIOME_TILES[baseBiome];
-    // Corners → Sea
+    // Coins → Mer
     for (const { key, a, b } of CORNERS) {
       const da = DIRS[a];
       const db = DIRS[b];
@@ -534,7 +502,7 @@ function pickTile(
       }
     }
     
-    // Edges → Sea
+    // Bords → Mer
     if (N) return pickVariant(tiles.edge.toSea.N);
     if (S) return pickVariant(tiles.edge.toSea.S);
     if (E) return pickVariant(tiles.edge.toSea.E);
@@ -550,7 +518,7 @@ function pickTile(
   const W = isBeachOf(biomeAt(map, x - 1, y), biome);
   
   
-  // Corners → Beach
+  // Coins → Plage
   for (const { key, a, b } of CORNERS) {
     const da = DIRS[a];
     const db = DIRS[b];
@@ -584,31 +552,33 @@ function pickTile(
     return isBeachOf(biomeAt(map, x + dx, y + dy), biome);
   }
   
-  // Edges → Beach
+  // Bords → Plage
   if (isEdge(0, -1)) return pickVariant(tiles.edge.toBeach.N);
   if (isEdge(0, 1)) return pickVariant(tiles.edge.toBeach.S);
   if (isEdge(1, 0)) return pickVariant(tiles.edge.toBeach.E);
   if (isEdge(-1, 0)) return pickVariant(tiles.edge.toBeach.W);
   
-  // Center tile
+  // Tuile centrale
   return pickVariant(tiles.center.main);
 }
 
 /* ============================================================
-  ISLAND GENERATION
+  ISLAND GENERATION (peinture des biomes logiques)
 ============================================================ */
 
+/**
+ * Peint une silhouette d'ile bruitée dans la carte logique.
+ */
 function carveIsland(
   map: LogicalBiome[][],
   cx: number,
   cy: number,
   size: number,
-  biome: LogicalBiome,
-  clearings: IslandDefinition["clearings"]
+  biome: LogicalBiome
 ) {
   const range = Math.floor(size * 1.3);
   for (let y = -range; y <= range; y++) {
-    const n = 1 + Math.floor(Math.random() * 5); // exponent for smoothing
+    const n = 1 + Math.floor(Math.random() * 5); // exposant pour le lissage
     for (let x = -range; x <= range; x++) {
       const px = cx + x;
       const py = cy + y;
@@ -624,6 +594,9 @@ function carveIsland(
   }
 }
 
+/**
+ * Ajoute une bande de plage le long de la cote pour un biome de base.
+ */
 function applyBeachLayer(
   map: LogicalBiome[][],
   biome: LogicalBiome
@@ -649,6 +622,9 @@ function applyBeachLayer(
   }
 }
 
+/**
+ * Calcule la distance de Manhattan a la mer la plus proche pour chaque case.
+ */
 function computeDistanceToSea(map: LogicalBiome[][]): number[][] {
   const height = map.length;
   const width = map[0].length;
@@ -688,13 +664,19 @@ function computeDistanceToSea(map: LogicalBiome[][]): number[][] {
 }
 
 // rendu aléatoire de la forme des îles, avec des bords irréguliers
+/**
+ * Bruit simple pour jitter de cote et irregularites d'iles.
+ */
 function pseudoNoise(x: number, y: number, seed = 1337): number {
-  //value noise cheap
+  // bruit simple type value noise
   const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
   return n - Math.floor(n);
 }
 
 // Distortion de la distance pour des îles plus organiques
+/**
+ * Distord la distance radiale pour des silhouettes d'iles plus organiques.
+ */
 function distortedDistance(
   x: number,
   y: number,
@@ -739,122 +721,10 @@ function smoothSquareDistance(
   return squareDist;
 }
 
-/* ============================================================
-  WALKWAY LAYER
-============================================================ */
-function generateBeachPaths(
-  map: LogicalBiome[][],
-  cx: number,
-  cy: number,
-  biome: LogicalBiome
-) {
-  const paths = 1 + Math.floor(Math.random() * 5) + 2;
-  
-  for (let i = 0; i < paths; i++) {
-    const target = findClosestSea(
-      map,
-      cx + Math.floor(Math.random() * 6 - 3),
-      cy + Math.floor(Math.random() * 6 - 3)
-    );
-    
-    
-    
-    if (target) {
-      const walkWay = {
-        from: {
-          x: cx + Math.floor(Math.random() * 6 - 3),
-          y: cy + Math.floor(Math.random() * 6 - 3)
-        },
-        waypoint: {
-          x: target.x + Math.floor(Math.random() * 6 - 3) - Math.floor((target.x - cx) / 4),
-          y: cy + Math.floor(Math.random() * 6 - 3)
-        },
-        to: target
-        }
-      carveBeachPath(
-        map,
-        walkWay.from,
-        walkWay.waypoint,
-        biome
-      );
-      carveBeachPath(
-        map,
-        walkWay.waypoint,
-        walkWay.to,
-        biome
-      );
-    }
-  }
-}
 
-
-function findClosestSea(
-  map: LogicalBiome[][],
-  cx: number,
-  cy: number,
-  maxDist = 50
-): { x: number; y: number } | null {
-  for (let d = 1; d < maxDist; d++) {
-    for (let dy = -d; dy <= d; dy++) {
-      for (let dx = -d; dx <= d; dx++) {
-        if (Math.abs(dx) !== d && Math.abs(dy) !== d) continue;
-        
-        const x = cx + dx;
-        const y = cy + dy;
-        
-        if (biomeAt(map, x, y) === "sea") {
-          return { x, y };
-        }
-      }
-    }
-  }
-  return null;
-}
-
-function carveBeachPath(
-  map: LogicalBiome[][],
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  biome: LogicalBiome
-) {
-  const steps = Math.max(
-    Math.abs(to.x - from.x),
-    Math.abs(to.y - from.y)
-  );
-  
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    if (i % 5 === 0) continue;
-    const wobble =
-      pseudoNoise(from.x + i * 0.8, from.y - i * 0.6) * 2;
-    
-    const x = Math.round(
-      from.x + (to.x - from.x) * t + wobble
-    );
-    const y = Math.round(
-      from.y + (to.y - from.y) * t - wobble
-    );
-    
-    const width = Math.floor(Math.random() * .1) + 1;
-    
-    for (let dy = -width; dy <= width; dy++) {
-      for (let dx = -width; dx <= width; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) > width) continue;
-        
-        const px = x + dx;
-        const py = y + dy;
-        
-        if (!map[py]?.[px]) continue;
-        
-        const current = biomeAt(map, px, py);
-        if (current !== "sea") {
-          map[py][px] = biome + "-beach" as LogicalBiome;
-        }
-      }
-    }
-  }
-}
-
+/**
+ * Creuse une clairiere circulaire et la marque en plage.
+ */
 function carveBeachClearing(
   map: LogicalBiome[][],
   cx: number,
@@ -885,6 +755,9 @@ function carveBeachClearing(
   }
 }
 
+/**
+ * Place toutes les clairieres d'une ile et retourne l'ensemble preserve.
+ */
 function placeBeachClearings(
   map: LogicalBiome[][],
   cx: number,
@@ -929,6 +802,9 @@ function placeBeachClearings(
   return preserved;
 }
 
+/**
+ * Ajoute une bande de shore (eau peu profonde) autour des terres.
+ */
 function applyShoreLayer(map: LogicalBiome[][]) {
   const height = map.length;
   const width = map[0].length;
@@ -993,6 +869,9 @@ function applyShoreLayer(map: LogicalBiome[][]) {
   }
 }
 
+/**
+ * Approxime la distance a la mer dans un rayon maximum.
+ */
 function distanceToSea(
   map: LogicalBiome[][],
   x: number,
@@ -1018,12 +897,13 @@ function distanceToSea(
 
 
 /* ============================================================
-  MAP GENERATOR
+  MAP GENERATOR (point d'entree public)
 ============================================================ */
 
 export class MapGenerator {
   static generate(options: MapGeneratorOptions): TileMap {
     const {width, height, islands} = options;
+    // Echelle de sous-grille interne pour des cotes plus lisses.
     const scale = 2;
     const subWidth = width * scale;
     const subHeight = height * scale;
@@ -1036,18 +916,22 @@ export class MapGenerator {
       scaleIslandDefinition(island, scale)
     );
     
+    // Etape 1 : sculpter les iles dans la sous-grille logique.
     for (const island of scaledIslands) {
       const cursorX = island.center.x;
       const cursorY = island.center.y;
-      carveIsland(subLogical, cursorX, cursorY, island.shape.size, island.biome, island.clearings);
+      carveIsland(subLogical, cursorX, cursorY, island.shape.size, island.biome);
     }
     
+    // Etape 2 : convertir les mers fermees (lacs) en terre.
     fillEnclosedSeas(subLogical);
     
+    // Etape 3 : ajouter les bandes de plage par biome de base.
     applyBeachLayer(subLogical, "grass");
     applyBeachLayer(subLogical, "desert");
     applyBeachLayer(subLogical, "snow");
     
+    // Etape 4 : placer et preserver les clairieres de plage.
     const preservedBeaches = new Set<string>();
     for (const island of scaledIslands) {
       const preserved = placeBeachClearings(
@@ -1061,15 +945,18 @@ export class MapGenerator {
       for (const key of preserved) preservedBeaches.add(key);
     }
     
+    // Etape 5 : fermer les petites ruptures de plage et ajouter le shore.
     closeBeachEdges(subLogical, "grass");
     closeBeachEdges(subLogical, "desert");
     closeBeachEdges(subLogical, "snow");
     
     applyShoreLayer(subLogical);
+    // Etape 6 : nettoyage des artefacts plage/shore parasites.
     removeIsolatedBeaches(subLogical, preservedBeaches);
     stripInlandWaterTiles(subLogical, preservedBeaches);
     restorePreservedBeaches(subLogical, preservedBeaches);
     
+    // Etape 7 : reduire la sous-grille vers les tuiles finales.
     const tiles: TileMapType = [];
     
     for (let y = 0; y < height; y++) {

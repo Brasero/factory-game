@@ -1,4 +1,4 @@
-import {ResourcesType} from "./Resources";
+import type {ResourcesType} from "./Resources";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
 export type DirectionType = "up" | "down" | "left" | "right";

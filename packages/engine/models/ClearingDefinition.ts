@@ -1,4 +1,4 @@
-import {ResourcesType} from "./Resources";
+import type {ResourcesType} from "./Resources";
 
 export type ClearingDefinition = {
   radius: number;

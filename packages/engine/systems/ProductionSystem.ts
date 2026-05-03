@@ -1,7 +1,10 @@
-import {World} from "../models/World";
+import type {World} from "../models/World";
 import type {Resources, ResourcesType} from "@engine/models/Resources.ts";
 
 export function runProduction(world: World): World {
+    /* todo : a modifier, il est necessaire de mettre en place un systeme de production plus maintenable et permettant d'ajouter simplement d'autres machines (ex: centrale électrique, etc)
+    le design pattern "Strategy" pourrait être une bonne solution : chaque machine aurait sa propre logique de production, et on pourrait facilement ajouter de nouvelles machines en créant de nouvelles stratégies de production
+    */
     const machines = world.machines.map((m) => {
         if (
           m.type !== "iron-mine" &&
@@ -13,22 +16,22 @@ export function runProduction(world: World): World {
         const resource =
           m.type === "iron-mine" ? "iron" :
             m.type === "coal-mine" ? "coal" :
-              m.type === "water-pump" && "water"
+              "water";
         
         const current = buffer[resource] || 0;
         const totalStored = Object.values(buffer).reduce((a,b) => a+b, 0);
-        
+
         // buffer plein, on arrête la production
         if (totalStored >= m.capacity) {
             return {...m, active: false};
         }
         progress += m.efficiency;
-        
+
         if (progress >= 10) {
             buffer[resource] = current + m.production;
             progress = 0;
         }
-        
+
         return {
             ...m,
             buffer,
@@ -43,7 +46,7 @@ export function runProduction(world: World): World {
     }
      world.storages.forEach((s) => {
          const entries = Object.entries(resource) as [ResourcesType, number][]
-         entries.forEach(([key, n]) => {
+         entries.forEach(([key]) => {
              resource[key] += s.stored[key] || 0
          })
     })

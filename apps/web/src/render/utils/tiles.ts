@@ -22,21 +22,29 @@ export function drawTileMap(
   const water = assetManager.getImage("tileset.water");
   const tilesPerRow = Math.floor(tileset.width / TILE_SIZE);
   
+  const subSize = CELL_SIZE / 2;
+  const subDraw = subSize;
+  
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
       // SEA BASE
-      drawTileByIndex(ctx, {
-        tileset: water,
-        index: 0,
-        gridX: x,
-        gridY: y,
-        tilesPerRow: 1
-      });
+      for (let i = 0; i < 4; i++) {
+        const sx = i%2
+        const sy = Math.floor(i / 2)
+        drawTileByIndex(ctx, {
+          tileset: water,
+          index: 0,
+          gridX: x,
+          gridY: y,
+          tilesPerRow: 1,
+          destX: (x*CELL_SIZE) + (sx * subSize),
+          destY: (y * CELL_SIZE) + ( sy * subSize ),
+          destSize: subDraw
+        });
+      }
     }
   }
   
-  const subSize = CELL_SIZE / 2;
-  const subDraw = subSize;
   
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
@@ -55,8 +63,8 @@ export function drawTileMap(
             gridX: x,
             gridY: y,
             tilesPerRow,
-            destX: x * CELL_SIZE + sx * subSize,
-            destY: y * CELL_SIZE + sy * subSize,
+            destX: (x * CELL_SIZE) - 1 + (sx * subSize) + 2,
+            destY: (y * CELL_SIZE) - 1 + (sy * subSize) + 2,
             destSize: subDraw
           });
         }
@@ -102,13 +110,13 @@ export function drawTileMap(
       if (tile.biome === "sea") continue;
       
       // BIOME TILE
-      drawTileByIndex(ctx, {
-        tileset,
-        index: tile.variant,
-        gridX: x,
-        gridY: y,
-        tilesPerRow
-      });
+      // drawTileByIndex(ctx, {
+      //   tileset,
+      //   index: tile.variant,
+      //   gridX: x,
+      //   gridY: y,
+      //   tilesPerRow
+      // });
     }
   }
 }

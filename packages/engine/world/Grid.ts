@@ -1,5 +1,5 @@
-import {Position} from "@engine/models/Position";
-import {GridCell} from "@engine/models/GridCell";
+import type {Position} from "@engine/models/Position";
+import type {GridCell} from "@engine/models/GridCell";
 import type {MachineType} from "@engine/models/Machine.ts";
 import type {TileMap} from "@engine/world/TileMap.ts";
 import type {TileData} from "@engine/models/Tile.ts";
@@ -20,16 +20,16 @@ import type {TileData} from "@engine/models/Tile.ts";
  * @property {number} width - La largeur de la grille.
  * @property {number} height - La hauteur de la grille.
  * @property {GridCell[][]} cells - La matrice des cellules de la grille.
- * @method isInside(pos: Position): boolean - Vérifie si une position est à l'intérieur de la grille.
- * @method isOccupied(pos: Position): boolean - Vérifie si une position est occupée.
- * @method occupy(pos: Position): boolean - Occupe une position dans la grille si elle est dans les limites et non occupée.
- * @method free(pos: Position): void - Libère une position dans la grille si elle est dans les limites.
+ * @method isInside(pos : Position) : boolean - Vérifie si une position est à l'intérieur de la grille.
+ * @method isOccupied(pos : Position) : boolean - Vérifie si une position est occupée.
+ * @method occupy(pos : Position) : boolean - Occupe une position dans la grille si elle est dans les limites et non occupée.
+ * @method free(pos : Position) : void - Libère une position dans la grille si elle est dans les limites.
  * @example
- * const grid = new Grid(10, 10);
- * grid.occupy({x: 2, y: 3});
- * console.log(grid.isOccupied({x: 2, y: 3})); // true
- * grid.free({x: 2, y: 3});
- * console.log(grid.isOccupied({x: 2, y: 3})); // false
+ * const grid = new Grid(10, 10) ;
+ * grid.occupy({x : 2, y : 3}) ;
+ * console.log(grid.isOccupied({x : 2, y : 3})); // true
+ * grid.free({x : 2, y : 3});
+ * console.log(grid.isOccupied({x : 2, y : 3})); // false
  */
 export class Grid {
   readonly width: number;

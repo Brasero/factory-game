@@ -114,7 +114,7 @@ export const BIOME_TILES = {
   snow: offsetBiome(144)
 }
 
-function offsetBiome( offset) {
+function offsetBiome(offset: number) {
   const g = grassTiles;
   const applyOffset = value =>
     Array.isArray(value)

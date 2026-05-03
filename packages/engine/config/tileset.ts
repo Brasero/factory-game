@@ -1,7 +1,7 @@
 const grassTiles = {
   center: {
-    main: [3, 4, 9, 10, 11, 13, 15, 16, 18, 21, 22, 23, 27, 28],
-    beach: [5, 7, 29, 31, 32, 33, 34, 35]
+    main: [ 10, 11, 13, 22, 23, 18 ],
+    beach: [ 34, 35, 46, 47 ]
   },
   edge: {
     toBeach: {
@@ -64,8 +64,8 @@ const grassTiles = {
 
 export const BIOME_TILES = {
   grass: grassTiles,
-  desert: offsetBiome(72),
-  snow: offsetBiome(144)
+  desert: offsetBiome(72) as typeof grassTiles,
+  snow: offsetBiome(144) as typeof grassTiles
 };
 
 function offsetBiome(offset: number) {

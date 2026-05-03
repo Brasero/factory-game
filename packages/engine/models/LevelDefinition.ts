@@ -1,4 +1,4 @@
-import {IslandDefinition} from "./IslandDefinition";
+import type {IslandDefinition} from "./IslandDefinition";
 
 export type LevelDefinition = {
   id: string;

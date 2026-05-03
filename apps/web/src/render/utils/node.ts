@@ -21,12 +21,28 @@ export function drawResourceNodes(
         img = assetManager.getImage("node.water");
         break;
     }
-    ctx.drawImage(
-      img,
-      node.pos.x * CELL_SIZE,
-      node.pos.y * CELL_SIZE,
-      CELL_SIZE,
-      CELL_SIZE
-    )
+    const subSize = CELL_SIZE / 2
+    for (let i = 0; i < 4; i++) {
+      const sx = i%2
+      const sy = Math.floor(i / 2)
+      ctx.drawImage(
+        img,
+        0,
+        0,
+        CELL_SIZE,
+        CELL_SIZE,
+        node.pos.x * CELL_SIZE + sx * subSize,
+        node.pos.y * CELL_SIZE + sy * subSize,
+        subSize,
+        subSize
+      )
+    }
+    // ctx.drawImage(
+    //   img,
+    //   node.pos.x * CELL_SIZE,
+    //   node.pos.y * CELL_SIZE,
+    //   CELL_SIZE,
+    //   CELL_SIZE
+    // )
   })
 }

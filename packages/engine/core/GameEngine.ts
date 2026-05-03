@@ -1,4 +1,4 @@
-import {World} from "@engine/models/World.ts";
+import type {World} from "@engine/models/World.ts";
 import {runProduction} from "@engine/systems/ProductionSystem.ts";
 import type {MachineType} from "@engine/models/Machine.ts";
 import {runConveyors} from "@engine/systems/ConveyorSystem.ts";
@@ -74,7 +74,7 @@ export class GameEngine {
             }
             return true
         } catch (e) {
-            console.error(`Une erreur est survenu lors de l'ajout du stockage ${e.message}`)
+            console.error(`Une erreur est survenu lors de l'ajout du stockage ${e}`)
             return false
         }
     }

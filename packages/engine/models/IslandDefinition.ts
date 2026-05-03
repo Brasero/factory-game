@@ -1,5 +1,5 @@
-import {LogicalBiome} from "../world/MapGenerator";
-import {ClearingDefinition} from "./ClearingDefinition";
+import type {LogicalBiome} from "../world/MapGenerator";
+import type {ClearingDefinition} from "./ClearingDefinition";
 import type {Position} from "@engine/models/Position.ts";
 
 export type IslandDefinition = {

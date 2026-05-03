@@ -1,13 +1,15 @@
-import {isMachineType, Machine, MachineType} from "../../models/Machine";
-import {World} from "../../models/World";
+import {isMachineType} from "../../models/Machine";
+import type { Machine, MachineType } from "@engine/models/Machine";
+import type {World} from "../../models/World";
 import type {ResourcesType} from "../../models/Resources";
 import {MACHINE_CAPACITY, MACHINE_SPRITE_SHEET} from "../../config/machineConfig";
-import {EntityManagerType} from "./EntityManager.type";
+import type {EntityManagerType} from "./EntityManager.type";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 import {isStorageType} from "@engine/models/Storage.ts";
 import {isConveyorType} from "@engine/models/Conveyor.ts";
+import type {Position} from "@engine/models/Position.ts";
 
 class EntityManager implements EntityManagerType {
   placeMachine(x: number, y: number, type: MachineType, world: World): World | false {
@@ -15,7 +17,7 @@ class EntityManager implements EntityManagerType {
     if (!grid) throw new Error("Le monde n'a pas de grille définie.");
     
     try {
-      const canPlace = grid.canPlaceMachine({x, y}, type, world);
+      const canPlace = grid.canPlaceMachine({x, y}, type);
       if (!canPlace) return false;
       const success = grid.occupy({x, y})// Marque la case comme occupée
       if (!success) return false;
@@ -112,7 +114,7 @@ class EntityManager implements EntityManagerType {
       }
       return world
     } catch (e) {
-      console.error(`Une erreur est survenu lors de l'ajout du stockage ${e.message}`)
+      console.error(`Une erreur est survenu lors de l'ajout du stockage ${e}`)
       return false
     }
   }
@@ -148,7 +150,7 @@ class EntityManager implements EntityManagerType {
   }
   
   private getEntityAt(x: number, y: number, world: World): BaseEntity | null {
-    const findFn = (e) => e.x === x && e.y === y;
+    const findFn = (e: Position) => e.x === x && e.y === y;
     const storage = world.storages.find(findFn);
     if (storage) return storage;
     const machine = world.machines.find(findFn);

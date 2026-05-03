@@ -36,8 +36,8 @@ export function render(
     
     if (!world.grid) return;
     drawTileMap(ctx, world.grid);
-    drawResourceNodes(ctx, world.grid);
-    drawDynamicEntities(ctx, world);
+    drawResourceNodes(ctx, world.grid); // Dessin des nœuds de ressources
+    drawDynamicEntities(ctx, world); // Dessin des entitées dynamiques
     drawDecorationTiles(ctx, world.grid);
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {

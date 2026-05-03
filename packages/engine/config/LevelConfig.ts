@@ -1,4 +1,4 @@
-import {LevelDefinition} from "../models/LevelDefinition";
+import type {LevelDefinition} from "../models/LevelDefinition";
 
 export const levels: LevelDefinition[] = [
   {
