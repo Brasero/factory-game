@@ -1,3 +1,4 @@
+import {visibleCells, isVisible, type ViewportBounds} from "./utils/viewport";
 import type {
   WorldSnapshot,
   Position,
@@ -17,8 +18,6 @@ import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 
 const CELL_SIZE = config.CELL_SIZE;
-const width = window.innerWidth;
-const height = window.innerHeight;
 export function render(
     ctx: CanvasRenderingContext2D,
     world: WorldSnapshot,
@@ -27,7 +26,7 @@ export function render(
     hoveredStorage?: Storage
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
     if (camera) {
         ctx.translate(camera.x, camera.y);
@@ -35,10 +34,12 @@ export function render(
     }
     
     if (!world.grid) return;
-    drawTileMap(ctx, world.grid);
-    drawResourceNodes(ctx, world.grid); // Dessin des nœuds de ressources
-    drawDynamicEntities(ctx, world); // Dessin des entitées dynamiques
-    drawDecorationTiles(ctx, world.grid);
+    const bounds = visibleCells(ctx.canvas.width, ctx.canvas.height, CELL_SIZE,
+      camera ?? {x: 0, y: 0, scale: 1}, world.grid.width, world.grid.height);
+    drawTileMap(ctx, world.grid, bounds);
+    drawResourceNodes(ctx, world.grid, bounds); // Dessin des nœuds de ressources
+    drawDynamicEntities(ctx, world, bounds); // Dessin des entitées dynamiques
+    drawDecorationTiles(ctx, world.grid, bounds);
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
@@ -65,24 +66,30 @@ type DrawCall = {
 
 function drawDynamicEntities(
   ctx: CanvasRenderingContext2D,
-  world: WorldSnapshot
+  world: WorldSnapshot,
+  bounds: ViewportBounds
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
 
   world.conveyors.forEach(conveyor => {
     const next = getNextPosition(conveyor);
-    previousByPos.set(`${next.x},${next.y}`, conveyor);
+    const key = `${next.x},${next.y}`;
+    const existing = previousByPos.get(key);
+    if (!existing || conveyor.y < existing.y || (conveyor.y === existing.y && conveyor.x < existing.x)) {
+      previousByPos.set(key, conveyor);
+    }
   });
 
   world.conveyors.forEach(conveyor => {
-    const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`);
+    if (!isVisible(conveyor, bounds)) return;
+    const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`) ?? null;
     const path = buildConveyorPath(world, conveyor, CELL_SIZE, prev);
     drawCalls.push({
       x: conveyor.x,
       y: conveyor.y,
       layer: 0,
-      draw: () => drawConveyorAt(ctx, world, conveyor)
+      draw: () => drawConveyorAt(ctx, world, conveyor, prev)
     });
     if (conveyor.carrying.length) {
       drawCalls.push({
@@ -95,6 +102,7 @@ function drawDynamicEntities(
   });
 
   world.machines.forEach(machine => {
+    if (!isVisible(machine, bounds)) return;
     drawCalls.push({
       x: machine.x,
       y: machine.y,
@@ -104,6 +112,7 @@ function drawDynamicEntities(
   });
 
   world.storages.forEach(storage => {
+    if (!isVisible(storage, bounds)) return;
     drawCalls.push({
       x: storage.x,
       y: storage.y,
@@ -298,9 +307,9 @@ export function buildConveyorPath(
   world: WorldSnapshot,
   conveyor: Conveyor,
   cellSize: number,
-  prevOverride?: Conveyor
+  prevOverride?: Conveyor | null
 ): ConveyorPath {
-    const prev = prevOverride ?? findPreviousConveyor(world, conveyor);
+    const prev = prevOverride === undefined ? findPreviousConveyor(world, conveyor) : prevOverride;
     
     const center = {
         x: conveyor.x * cellSize + cellSize / 2,

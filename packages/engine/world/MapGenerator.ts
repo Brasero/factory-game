@@ -453,9 +453,9 @@ function pickTile(
   map: LogicalBiome[][],
   x: number,
   y: number
-): number | void {
+): number {
   const biome = biomeAt(map, x, y);
-  if (biome === "sea") return;
+  if (biome === "sea") return 0;
   
   const isBeachOf = (value: LogicalBiome, base: LogicalBiome) =>
     value === `${base}-beach`;
@@ -541,7 +541,7 @@ function pickTile(
     const diagonalOnly = (!isBeachA && !isBeachB) && isBeachDiag;
     
     if (fullCorner || diagonalOnly) {
-      return pickCorner(map, biome, x, y, key, "toBeach");
+      return pickCorner(map, baseBiomeOf(biome)!, x, y, key, "toBeach");
     }
   }
   if (N) return pickVariant(tiles.edge.toBeach.N);
@@ -673,34 +673,6 @@ function pseudoNoise(x: number, y: number, seed = 1337): number {
   return n - Math.floor(n);
 }
 
-// Distortion de la distance pour des îles plus organiques
-/**
- * Distord la distance radiale pour des silhouettes d'iles plus organiques.
- */
-function distortedDistance(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  size: number
-): number {
-  const dx = x - cx;
-  const dy = y - cy;
-  
-  const base = Math.sqrt(dx * dx + dy * dy);
-  
-  const angle = Math.atan2(dy, dx);
-  
-  const edgeNoise =
-    pseudoNoise(
-      Math.cos(angle) * size + cx,
-      Math.sin(angle) * size + cy
-    ) * size * 0.001;
-  
-  
-  return base + edgeNoise;
-}
-
 function smoothSquareDistance(
   x: number,
   y: number,
@@ -762,7 +734,6 @@ function placeBeachClearings(
   map: LogicalBiome[][],
   cx: number,
   cy: number,
-  islandSize: number,
   biome: LogicalBiome,
   clearings: IslandDefinition["clearings"]
 ): Set<string> {
@@ -938,7 +909,6 @@ export class MapGenerator {
         subLogical,
         island.center.x,
         island.center.y,
-        island.shape.size,
         island.biome,
         island.clearings
       );

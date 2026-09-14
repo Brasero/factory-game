@@ -21,6 +21,6 @@ export function isConveyorType(entity: unknown): entity is Conveyor {
   return (
       typeof entity === 'object' &&
       entity !== null &&
-      (entity as any).entityType === 'conveyor'
+      "entityType" in entity && entity.entityType === 'conveyor'
   )
 }

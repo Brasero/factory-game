@@ -1,5 +1,4 @@
 import type {World} from "../models/World";
-import type {Resources, ResourcesType} from "@engine/models/Resources.ts";
 
 export function runProduction(world: World): World {
     /* todo : a modifier, il est necessaire de mettre en place un systeme de production plus maintenable et permettant d'ajouter simplement d'autres machines (ex: centrale électrique, etc)
@@ -28,7 +27,7 @@ export function runProduction(world: World): World {
         progress += m.efficiency;
 
         if (progress >= 10) {
-            buffer[resource] = current + m.production;
+            buffer[resource] = current + Math.min(m.production, m.capacity - totalStored);
             progress = 0;
         }
 
@@ -39,20 +38,5 @@ export function runProduction(world: World): World {
             active: true
         };
     })
-    const resource: Resources = {
-        water: 0,
-        iron: 0,
-        coal: 0
-    }
-     world.storages.forEach((s) => {
-         const entries = Object.entries(resource) as [ResourcesType, number][]
-         entries.forEach(([key]) => {
-             resource[key] += s.stored[key] || 0
-         })
-    })
-    return {
-        ...world,
-        machines: machines,
-        resources: resource
-    }
+    return {...world, machines};
 }

@@ -1,48 +1,52 @@
-import {describe, it, expect} from "vitest";
-import * as GameController from "./GameController";
-import {config} from "@engine/config/gridConfig.ts";
+import {afterEach, beforeEach, describe, it, expect, vi} from "vitest";
+import {createTestWorld} from "@engine/test/createTestWorld";
+
+// Keep the real session and engine; replace only terrain generation.
+vi.mock("@engine/world/WorldFactory", () => ({createWorld: createTestWorld}));
 
 describe("GameController", () => {
-  it("Placement d'une mine de fer", () => {
-    const success = GameController.placeIronMine(1, 1);
-    expect(success, "La mine de fer devrait être placée avec succès").toBe(true);
-  })
-  it("Ne doit pas placer une mine de fer sur une position occupée", () => {
-    const success = GameController.placeIronMine(1, 1);
-    expect(success, "La mine de fer ne devrait pas être placée sur une position occupée").toBe(false);
-  })
-  it("Ne doit pas placer une mine de fer en dehors des limites", () => {
-    const width = config.WIDTH / config.CELL_SIZE;
-    const height = config.HEIGHT / config.CELL_SIZE;
-    const success = GameController.placeIronMine(width + 1, height + 1);
-    expect(success, "La mine de fer ne devrait pas être placée en dehors des limites").toBe(false);
-  })
-  it("Placement d'une mine de charbon", () => {
-    const success = GameController.placeCoalMine(1, 2);
-    expect(success, "La mine de charbon devrait être placée avec succès").toBe(true);
-  })
-  it("Ne doit pas placer une mine de charbon sur une position occupée", () => {
-    const success = GameController.placeCoalMine(1, 2);
-    expect(success, "La mine de charbon ne devrait pas être placée sur une position occupée").toBe(false);
-  })
-  it("Ne doit pas placer une mine de charbon en dehors des limites", () => {
-    const width = config.WIDTH / config.CELL_SIZE;
-    const height = config.HEIGHT / config.CELL_SIZE;
-    const success = GameController.placeCoalMine(width + 1, height + 1);
-    expect(success, "La mine de charbon ne devrait pas être placée en dehors des limites").toBe(false);
-  })
-  it("Placement d'une pompe à eau", () => {
-    const success = GameController.placeWaterPump(2, 3);
-    expect(success, "La pompe à eau devrait être placée avec succès").toBe(true);
-  })
-  it("Ne doit pas placer une pompe à eau sur une position occupée", () => {
-    const success = GameController.placeWaterPump(2, 3);
-    expect(success, "La pompe à eau ne devrait pas être placée sur une position occupée").toBe(false);
-  })
-  it("Ne doit pas placer une pompe à eau en dehors des limites", () => {
-    const width = config.WIDTH / config.CELL_SIZE;
-    const height = config.HEIGHT / config.CELL_SIZE;
-    const success = GameController.placeWaterPump(width + 1, height + 1);
-    expect(success, "La pompe à eau ne devrait pas être placée en dehors des limites").toBe(false);
-  })
-})
+  beforeEach(() => { vi.resetModules(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it.each([
+    ["placeIronMine", 1], ["placeCoalMine", 2], ["placeWaterPump", 3]
+  ] as const)("%s validates resource, occupancy and bounds", async (method, x) => {
+    const controller = await import("./GameController");
+    expect(controller[method](x, 1)).toBe(true);
+    expect(controller[method](x, 1)).toBe(false);
+    expect(controller[method](0, 0)).toBe(false);
+    expect(controller[method](-1, 1)).toBe(false);
+    expect(controller[method](10, 1)).toBe(false);
+  });
+
+  it("runs one timer, allows editing while paused and resumes", async () => {
+    vi.useFakeTimers();
+    const controller = await import("./GameController");
+    const {getWorldSnapshot} = await import("./worldStore");
+    controller.startGame(); controller.startGame();
+    vi.advanceTimersByTime(300);
+    expect(getWorldSnapshot().tick).toBe(3);
+    controller.pauseGame();
+    controller.placeStorage(0, 0);
+    vi.advanceTimersByTime(1000);
+    expect(getWorldSnapshot().tick).toBe(3);
+    expect(getWorldSnapshot().storages).toHaveLength(1);
+    controller.startGame();
+    vi.advanceTimersByTime(100);
+    expect(getWorldSnapshot().tick).toBe(4);
+    controller.pauseGame();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("publishes placement and destruction to the UI store", async () => {
+    const controller = await import("./GameController");
+    const {getWorldSnapshot} = await import("./worldStore");
+    controller.placeIronMine(1, 1);
+    const before = getWorldSnapshot();
+    expect(before.machines).toHaveLength(1);
+    controller.destroyEntity(1, 1);
+    expect(getWorldSnapshot().machines).toHaveLength(0);
+    expect(before.machines).toHaveLength(1);
+    expect(controller.placeIronMine(1, 1)).toBe(true);
+  });
+});

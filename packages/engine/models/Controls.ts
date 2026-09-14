@@ -1,4 +1,4 @@
-import {MachineType} from "@engine/models/Machine";
+import type {MachineType} from "@engine/models/Machine";
 
 export type SelectedItem = "storage" | "conveyor" | MachineType
 export type ToolMode = "build" | "destroy";

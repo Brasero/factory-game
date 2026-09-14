@@ -1,3 +1,4 @@
+import type {ViewportBounds} from "./viewport";
 import {TILE_SIZE} from "@engine/api/constants.ts";
 import {config as gridConfig} from "@web/config/gridConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
@@ -12,7 +13,8 @@ const CELL_SIZE = gridConfig.CELL_SIZE;
  */
 export function drawTileMap(
   ctx: CanvasRenderingContext2D,
-  grid: GridSnapshot
+  grid: GridSnapshot,
+  bounds: ViewportBounds = {minX: 0, minY: 0, maxX: grid.width, maxY: grid.height}
 ) {
   if (!grid) return;
   
@@ -25,8 +27,8 @@ export function drawTileMap(
   const subSize = CELL_SIZE / 2;
   const subDraw = subSize;
   
-  for (let y = 0; y < grid.height; y++) {
-    for (let x = 0; x < grid.width; x++) {
+  for (let y = bounds.minY; y < bounds.maxY; y++) {
+    for (let x = bounds.minX; x < bounds.maxX; x++) {
       // SEA BASE
       for (let i = 0; i < 4; i++) {
         const sx = i%2
@@ -46,8 +48,8 @@ export function drawTileMap(
   }
   
   
-  for (let y = 0; y < grid.height; y++) {
-    for (let x = 0; x < grid.width; x++) {
+  for (let y = bounds.minY; y < bounds.maxY; y++) {
+    for (let x = bounds.minX; x < bounds.maxX; x++) {
       const tile = grid.tiles[y][x];
       if (!tile) continue;
       
@@ -82,8 +84,8 @@ export function drawTileMap(
     }
   }
   
-  for (let y = 0; y < grid.height; y++) {
-    for (let x = 0; x < grid.width; x++) {
+  for (let y = bounds.minY; y < bounds.maxY; y++) {
+    for (let x = bounds.minX; x < bounds.maxX; x++) {
       const tile = grid.tiles[y][x];
       if (!tile) continue;
       
@@ -184,15 +186,16 @@ function drawTileByIndex(
  */
 export function drawDecorationTiles(
   ctx: CanvasRenderingContext2D,
-  grid: GridSnapshot
+  grid: GridSnapshot,
+  bounds: ViewportBounds = {minX: 0, minY: 0, maxX: grid.width, maxY: grid.height}
 ) {
   if (!grid) return;
   
   const trees = assetManager.getImage("tileset.trees");
   const rock = assetManager.getImage("tileset.rock");
   
-  for (let y = 0; y < grid.height; y++) {
-    for (let x = 0; x < grid.width; x++) {
+  for (let y = bounds.minY; y < bounds.maxY; y++) {
+    for (let x = bounds.minX; x < bounds.maxX; x++) {
       const tile = grid.tiles[y][x];
       if (!tile) continue;
       

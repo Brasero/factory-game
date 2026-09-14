@@ -1,4 +1,4 @@
-import type {LogicalBiome} from "@engine/world/MapGenerator.ts";
+import type {LogicalBiome} from "@engine/world/helpers/map.helpers.ts";
 
 /**
  * @interface TileData

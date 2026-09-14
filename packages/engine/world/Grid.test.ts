@@ -1,8 +1,10 @@
-import {describe, it, expect} from "vitest";
-import {Grid} from "./Grid";
+import {beforeEach, describe, it, expect} from "vitest";
+import type {Grid} from "./Grid";
+import {createTestWorld} from "@engine/test/createTestWorld";
 
 describe("Fonctionnement de la grille", () => {
-  const grid = new Grid(10, 10);
+  let grid: Grid;
+  beforeEach(() => { grid = createTestWorld().grid!; });
   it("Doit verifier si une position est a l'interieur de la grille", () => {
     expect(grid.isInside({x: 5, y: 5}), "La position (5,5) devrait être à l'intérieur de la grille").toBe(true);
     expect(grid.isInside({x: -1, y: 5}), "La position (-1,5) devrait être à l'extérieur de la grille").toBe(false);

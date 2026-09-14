@@ -1,44 +1,19 @@
-import type {World} from "../models/World";
-import type {ResourcesType} from "../models/Resources";
+import type {World} from "@engine/models/World";
+import type {ResourcesType} from "@engine/models/Resources";
+import {buildNetworkTopology, type NetworkTopology} from "./NetworkTopology";
 
-export function runOutputMachine(world: World) {
-  const conveyors = [...world.conveyors];
-  
-  const machines = world.machines.map(m => {
-    const conveyorIndex = world.conveyors.findIndex(c => (
-      c.x === m.x
-      && c.y === m.y + 1
-      && c.direction !== "up"
-      && c.carrying.length < c.capacity
-      && m.type !== "water-pump"
-    ) || (
-      c.x === m.x + 1
-      && c.y === m.y
-      && c.direction !== "left"
-      && !c.carrying
-      && m.type === "water-pump"
-    ));
-    if (conveyorIndex === -1) return m;
-    
-    //Trouver une ressource disponible dans le buffer de la machine
-    const entry = Object.entries(m.buffer).find(([, amount]) => amount > 0)
-    
-    if (!entry) return m;
-    
-    const [resources, amount] = entry as [ResourcesType, number];
-    const conveyor = conveyors[conveyorIndex]
-    conveyors[conveyorIndex] = {
-      ...conveyor, carrying: [...conveyor.carrying, {
-        type: resources, amount: 1, progress: 0
-      }]
-    }
-    
-    return {
-      ...m, buffer: {
-        ...m.buffer, [resources]: amount - 1
-      }
-    }
-    
-  });
+export function runOutputMachine(world: World, network: NetworkTopology = buildNetworkTopology(world)): World {
+  const conveyors = world.conveyors.map(c => ({...c, carrying: [...c.carrying]}));
+  const machines = [...world.machines];
+  for (const index of network.machineOrder) {
+    const m = machines[index];
+    const targetIndex = network.machineOutputs[index];
+    const target = targetIndex === undefined ? undefined : conveyors[targetIndex];
+    if (!target || target.carrying.length >= target.capacity) continue;
+    const resource = (Object.keys(m.buffer) as ResourcesType[]).find(key => m.buffer[key] > 0);
+    if (!resource) continue;
+    target.carrying.push({type: resource, amount: 1, progress: 0});
+    machines[index] = {...m, buffer: {...m.buffer, [resource]: m.buffer[resource] - 1}};
+  }
   return {...world, machines, conveyors};
 }

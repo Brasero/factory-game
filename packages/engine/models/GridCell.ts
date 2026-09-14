@@ -1,4 +1,4 @@
-import type {LogicalBiome} from "@engine/world/MapGenerator.ts";
+import type {LogicalBiome} from "@engine/world/helpers/map.helpers.ts";
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {SubTileData} from "@engine/models/Tile.ts";
 

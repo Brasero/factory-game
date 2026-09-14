@@ -69,6 +69,7 @@ class EntityManager implements EntityManagerType {
         };
       }
 
+      if (!grid.canPlaceMachine({x, y}, "conveyor")) return false;
       const success = grid.occupy({x,y})
       if (!success) return false;
       const conveyor: Conveyor = {
@@ -98,6 +99,7 @@ class EntityManager implements EntityManagerType {
     if (!grid) throw new Error("Le monde n'a pas de grille définie.");
     
     try {
+      if (!grid.canPlaceMachine({x, y}, "storage")) return false;
       const success = grid.occupy({x, y});
       if (!success) return false;
       const storage: Storage = {

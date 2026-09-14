@@ -23,12 +23,13 @@ export function drawConveyors(ctx: CanvasRenderingContext2D, world: WorldSnapsho
 export function drawConveyorAt(
   ctx: CanvasRenderingContext2D,
   world: WorldSnapshot,
-  conveyor: Conveyor
+  conveyor: Conveyor,
+  previous?: Conveyor | null
 ) {
   const px = conveyor.x * CELL_SIZE;
   const py = conveyor.y * CELL_SIZE;
 
-  const previousConveyor = findPreviousConveyor(world, conveyor);
+  const previousConveyor = previous === undefined ? findPreviousConveyor(world, conveyor) : previous;
   const outgoing = conveyor.direction
   const incoming = previousConveyor ? getIncomingDirection(previousConveyor, conveyor) : outgoing;
   const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)

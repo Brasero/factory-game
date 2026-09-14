@@ -30,6 +30,6 @@
     "noUncheckedSideEffectImports": true
   },
   "include": [
-    "apps/web/src"
+    "apps/web/src", "packages/engine"
   ],
 }

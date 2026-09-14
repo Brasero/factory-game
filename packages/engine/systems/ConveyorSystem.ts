@@ -1,135 +1,41 @@
 import type {World} from "@engine/models/World";
-import type {Conveyor, DirectionType} from "../models/Conveyor";
-import type {Position} from "../models/Position";
-import type {ResourcesType} from "../models/Resources";
+import {buildNetworkTopology, type NetworkTopology} from "./NetworkTopology";
 
-export function runConveyors(world: World) {
-  world.conveyors.forEach((conveyor, i) => {
-    if (!conveyor.carrying.length) return;
-    
-    const targetPos = getNextPosition(conveyor.x, conveyor.y, conveyor.direction);
-    const findAtTarget = (i: Partial<Position>) =>
-      i.x === targetPos.x && i.y === targetPos.y;
-    
-    const targetMachine = world.machines.find(findAtTarget);
-    const targetStorage = world.storages.find(findAtTarget);
-    const targetConveyor = world.conveyors.find(findAtTarget);
-    
-    const nextCarrying: typeof conveyor.carrying = [];
-    
-    conveyor.carrying.forEach((item, i) => {
-      let canTransfer = false;
-      const offset = .35 * i
-      
-      if (targetMachine) {
-        const stored = targetMachine.buffer?.[item.type] || 0;
-        canTransfer = stored < targetMachine.capacity;
-      } else if (targetStorage) {
-        const stored = targetStorage.stored[item.type] || 0;
-        canTransfer = stored < targetStorage.capacity;
-      } else if (targetConveyor) {
-        canTransfer = canTransfertToConveyor(targetConveyor, world, targetPos);
-      }
-      
-      // 1️⃣ Avancer tant qu’on n’est pas à la fin
-      if (item.progress < 1) {
-        nextCarrying.push({
-          ...item,
-          progress: Math.min(item.progress + conveyor.speed, 1 - offset),
-        });
-        return;
-      }
-      
-      // 2️⃣ Bloqué → on reste
-      if (!canTransfer) {
-        nextCarrying.push(item);
-        return;
-      }
-      
-      // 3️⃣ Transfert réel
-      if (targetMachine) {
-        targetMachine.buffer ??= {} as Record<ResourcesType, number>;
-        targetMachine.buffer[item.type] =
-          (targetMachine.buffer[item.type] || 0) + item.amount;
-        return;
-      }
-      
-      if (targetStorage) {
-        const stored = targetStorage.stored[item.type] || 0;
-        const space = targetStorage.capacity - stored;
-        const moved = Math.min(space, item.amount);
-        
-        targetStorage.stored[item.type] = stored + moved;
-        
-        if (item.amount > moved) {
-          nextCarrying.push({
-            ...item,
-            amount: item.amount - moved,
-          });
+export function runConveyors(world: World, network: NetworkTopology = buildNetworkTopology(world)): void {
+  const next = world.conveyors.map(c => ({...c, carrying: [] as typeof c.carrying}));
+  const arrivals = world.conveyors.map(() => [] as World["conveyors"][number]["carrying"]);
+  const slots = world.conveyors.map(c => c.capacity - c.carrying.length);
+  for (const index of network.beltOrder) {
+    const belt = world.conveyors[index];
+    const carrying = next[index].carrying;
+    const target = network.targets[index];
+    const machine = target?.kind === "machine" ? world.machines[target.index] : undefined;
+    const storage = target?.kind === "storage" ? world.storages[target.index] : undefined;
+    const destination = machine ? {buffer: machine.buffer, capacity: machine.capacity}
+      : storage ? {buffer: storage.stored, capacity: storage.capacity} : undefined;
+    for (const item of belt.carrying) {
+      let remaining = item.amount;
+      if (item.progress >= 1) {
+        if (destination) {
+          const used = Object.values(destination.buffer).reduce((sum, amount) => sum + amount, 0);
+          const moved = Math.min(remaining, Math.max(0, destination.capacity - used));
+          destination.buffer[item.type] = (destination.buffer[item.type] ?? 0) + moved;
+          remaining -= moved;
+        } else if (target?.kind === "belt" && slots[target.index] > 0) {
+          arrivals[target.index].push({...item, progress: 0});
+          slots[target.index]--;
+          remaining = 0;
         }
-        return;
       }
-      
-      if (targetConveyor) {
-        transfertToConveyor(targetConveyor, item, world)
-        return;
+      if (remaining > 0) {
+        const ahead = carrying.at(-1)?.progress;
+        const limit = ahead === undefined ? 1 : Math.max(0, ahead - 0.35);
+        carrying.push({...item, amount: remaining, progress: Math.min(item.progress + belt.speed, limit)});
       }
-    });
-    
-    world.conveyors[i] = {
-      ...conveyor,
-      carrying: nextCarrying
-    };
+    }
+  }
+  world.conveyors = next.map((updated, index) => {
+    updated.carrying.push(...arrivals[index]);
+    return updated;
   });
-}
-
-
-
-function getNextPosition(x: number, y: number, direction: DirectionType): Position {
-  switch (direction) {
-    case "up":
-      y -= 1;
-      break;
-    case "down":
-      y += 1;
-      break
-    case "right":
-      x += 1;
-      break;
-    case "left":
-      x -= 1;
-      break
-  }
-  return {x, y};
-}
-
-function countIncomingConveyors(world: World, x: number, y: number): number {
-  return world.conveyors.reduce((count, conveyor) => {
-    const next = getNextPosition(conveyor.x, conveyor.y, conveyor.direction);
-    return count + (next.x === x && next.y === y ? 1 : 0);
-  }, 0);
-}
-
-export function canTransfertToConveyor(
-  target: Conveyor,
-  world: World,
-  targetPos: Position
-): boolean {
-  const incoming = countIncomingConveyors(world, targetPos.x, targetPos.y);
-  if (incoming > 1) return false;
-  return target.carrying.length < target.capacity;
-}
-
-export function transfertToConveyor(target: Conveyor, item: {type: ResourcesType, amount: number}, world: World) {
-  const index = world.conveyors.findIndex(c => c.id === target.id);
-  world.conveyors[index] = {
-    ...world.conveyors[index],
-    carrying: [
-      ...target.carrying,
-      {
-        ...item,
-        progress: 0
-      }
-    ]
-  }
 }

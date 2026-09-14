@@ -32,6 +32,8 @@ import type {TileData} from "@engine/models/Tile.ts";
  * console.log(grid.isOccupied({x : 2, y : 3})); // false
  */
 export class Grid {
+  private terrainVersion = 0;
+  get revision(): number { return this.terrainVersion; }
   readonly width: number;
   readonly height: number;
   
@@ -47,7 +49,7 @@ export class Grid {
         tile: tileMap.get(x, y)?.biome ?? "grass",
         variant: tileMap.get(x, y)?.variant ?? 0,
         baseVariant: tileMap.get(x, y)?.baseVariant,
-        subTiles: tileMap.get(x, y)?.subTiles,
+        subTiles: tileMap.get(x, y)?.subTiles?.map(tile => ({...tile})),
         resource: null,
         decoration: tileMap.get(x, y)?.decoration ? {
           ...tileMap.get(x, y)!.decoration!,
@@ -70,8 +72,8 @@ export class Grid {
       biome: cell.tile,
       variant: cell.variant,
       baseVariant: cell.baseVariant,
-      subTiles: cell.subTiles,
-      decoration: cell.decoration ?? undefined
+      subTiles: cell.subTiles?.map(tile => ({...tile})),
+      decoration: cell.decoration ? {...cell.decoration} : undefined
     };
   }
   /**
@@ -88,8 +90,8 @@ export class Grid {
             biome: cell.tile,
             variant: cell.variant,
             baseVariant: cell.baseVariant,
-            subTiles: cell.subTiles,
-            decoration: cell.decoration ?? undefined,
+            subTiles: cell.subTiles?.map(tile => ({...tile})),
+            decoration: cell.decoration ? {...cell.decoration} : undefined,
             resource: cell.resource,
             pos: {x, y}
           });
@@ -105,7 +107,7 @@ export class Grid {
    * @param {number} y - La coordonnée y.
    */
   isInside({x, y}: Position): boolean {
-    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+    return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < this.width && y < this.height;
   }
   
   /**
@@ -117,8 +119,9 @@ export class Grid {
   setResource(x: number, y: number, resource: GridCell["resource"]) {
     if (!this.isInside({x, y})) return;
     if (this.cells[y][x].tile === "sea" ) return;
+    if (this.cells[y][x].resource === resource) return;
     this.cells[y][x].resource = resource;
-    console.log(`Resource ${resource} set at (${x}, ${y})`);
+    this.terrainVersion++;
   }
   
   /**

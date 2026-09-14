@@ -19,6 +19,6 @@ export function isMachineType(entity: unknown): entity is Machine {
     return (
         typeof entity === 'object' &&
         entity !== null &&
-        (entity as any).entityType === 'machine'
+        "entityType" in entity && entity.entityType === 'machine'
     )
 }
