@@ -198,3 +198,19 @@ Les outils `merger` et `splitter` occupent une case, avec une orientation commun
 - Les sprites existants `splitter.png` et `combiner.png` sont animés et orientés au rendu. Les snapshots transportent le curseur de distribution ; les rotations et destructions invalident le cache de connexions.
 
 Les mergers et splitters utilisent les lignes directionnelles natives de leurs spritesheets : huit frames jaunes lorsqu'un convoyeur est connecté à un port, quatre frames rouges sinon. Les ressources contenues restent simulées mais sont masquées dans le boîtier. La connexion est recalculée au rendu après placement, rotation et destruction ; un stock vide ou une saturation ne signifie pas une déconnexion.
+
+## Sixième lot : corrections issues du bug bounty
+
+Six défauts reproduits ont été corrigés, chacun protégé par un test qui échoue sur l'ancien code.
+
+- **Assets embarqués dans le build.** Le registre référençait les images par leur chemin source (`/apps/web/src/assets/...`). Vite ne les copiait pas dans `dist/` et le build de production ne démarrait pas. Les images utilisées sont désormais importées. Les plus lourdes sont copiées dans `dist/assets`, celles de moins de 4 Ko sont intégrées au JS (bundle de 267 à 305 Ko, 115 Ko gzip).
+- **Casse des noms de fichiers.** `Water_Pump_running.png` ne correspondait pas au fichier `Water_Pump_Running.png` : macOS et Vite tolèrent l'écart, Linux non. Un test compare chaque import, segment par segment, à la casse exacte du disque ; le build Linux de la CI échoue aussi sur un import introuvable.
+- **Aucune entrée par la sortie avant.** Tapis, splitters et mergers refusent désormais un objet venant de la case vers laquelle ils pointent. Deux tapis face à face ne s'échangent plus le même objet, et un routeur ne pousse plus dans un tapis qui lui fait face. Les sorties de machines et de coffres utilisent la même règle (`acceptsInput`).
+- **Jonctions implicites.** Seules les entrées acceptées comptent : un tapis refusé par son voisin ne bloque plus l'entrée légitime de ce voisin.
+- **Rendu des tapis face à face.** Le rendu ne considère plus un tapis refusé comme prédécesseur. Il ne demande donc plus de sprite de demi-tour inexistant, dont l'absence interrompait tout le dessin à chaque frame.
+- **Entrées des machines.** Une machine n'accepte que l'ingrédient de sa recette ; les extracteurs n'acceptent rien. Du charbon ne peut plus bloquer une fonderie, ni ressortir d'une mine de fer. Un splitter envoie un paquet refusé vers sa sortie suivante.
+- **Cuisson sans ingrédient (régression de `6c36fc5`).** La fonderie vérifie de nouveau la présence de minerai et la place en sortie avant d'avancer. Elle ne s'affiche plus active à vide et ne produit plus sa première plaque en un tick. La capacité ne compte toujours que la sortie (`e0bd751`) : un tampon rempli de minerai reste transformable.
+
+Le test de topologie qui envoyait de l'eau dans une mine utilise maintenant du fer vers une fonderie, sans changer ce qu'il vérifie.
+
+Validation : `npm run check` et ordre aléatoire (seed 42) réussis, **103 tests**. Vérification manuelle dans le navigateur sur `npm run preview` : chargement du jeu, puis deux tapis face à face sans erreur ni disparition des décors.

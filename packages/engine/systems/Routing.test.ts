@@ -93,6 +93,48 @@ describe("Explicit conveyor routing", () => {
     expect(total(world.conveyors)).toBe(1);
   });
 
+  it("never feeds a belt through its front, so facing belts keep their items", () => {
+    const world = createTestWorld();
+    world.conveyors = [node(4, 4, "right"), node(5, 4, "left")];
+    world.conveyors[0].carrying = [packet()];
+    const network = buildNetworkTopology(world);
+    for (let i = 0; i < 20; i++) {
+      runConveyors(world, network);
+      expect(world.conveyors.map(c => c.carrying.length)).toEqual([1, 0]);
+    }
+    expect(world.conveyors[0].carrying[0].progress).toBe(1);
+  });
+
+  it.each(["splitter", "merger"] as const)("does not push %s packets into belts facing its outputs", type => {
+    const world = createTestWorld();
+    const router = node(3, 3, "right", type);
+    router.carrying = [packet(), packet()];
+    world.conveyors = [router, node(4, 3, "left"), node(3, 4, "up"), node(3, 2, "down")];
+    for (let i = 0; i < 20; i++) runConveyors(world);
+    expect(world.conveyors.map(c => c.carrying.length)).toEqual([2, 0, 0, 0]);
+  });
+
+  it("ignores rejected belts when detecting implicit junctions", () => {
+    const world = createTestWorld();
+    // (4,1) pointe vers l'avant de (3,1) : refuse, il ne doit pas bloquer l'entree legitime (2,1).
+    world.conveyors = [node(2, 1, "right"), node(3, 1, "right"), node(4, 1, "left")];
+    world.conveyors[0].carrying = [packet()];
+    runConveyors(world);
+    expect(world.conveyors.map(c => c.carrying.length)).toEqual([0, 1, 0]);
+  });
+
+  it("sends packets refused by a machine to the splitter's other outputs", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(4, 3, "iron-smelter");
+    const world = engine.getWorld();
+    const splitter = node(3, 3, "right", "splitter");
+    splitter.carrying = [{...packet(), type: "coal"}];
+    world.conveyors = [splitter, node(3, 4, "down")];
+    runConveyors(world);
+    expect(world.machines[0].buffer).toEqual({});
+    expect(world.conveyors.map(c => c.carrying.length)).toEqual([0, 1]);
+  });
+
   it.each(["splitter", "merger"] as const)("places, rotates and destroys %s with cache invalidation", type => {
     const engine = new GameEngine(createTestWorld());
     expect(engine.placeConveyor(0, 0, "right", type)).toBe(true);

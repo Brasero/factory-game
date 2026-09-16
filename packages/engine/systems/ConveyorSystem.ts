@@ -1,5 +1,12 @@
 import type {World} from "@engine/models/World";
+import type {Machine} from "@engine/models/Machine";
+import type {ResourcesType} from "@engine/models/Resources";
+import {MACHINE_RECIPES} from "@engine/config/recipeConfig";
 import {buildNetworkTopology, inputPort, type NetworkTopology} from "./NetworkTopology";
+
+// Une machine n'accepte que l'ingredient de sa recette ; les extracteurs n'acceptent rien.
+const acceptsResource = (machine: Machine, resource: ResourcesType) =>
+  MACHINE_RECIPES[machine.type]?.input === resource;
 
 export function runConveyors(world: World, network: NetworkTopology = buildNetworkTopology(world)): void {
   const next = world.conveyors.map(c => ({...c, carrying: [] as typeof c.carrying}));
@@ -33,7 +40,8 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
             if (next[target.index].type === "merger") {
               next[target.index].routingCursor = (inputPort(next[target.index], belt) + 1) % 4;
             }
-          } else if (target.kind !== "belt") {
+          } else if (target.kind === "storage" ||
+            (target.kind === "machine" && acceptsResource(world.machines[target.index], item.type))) {
             const entity = target.kind === "machine" ? world.machines[target.index] : world.storages[target.index];
             const buffer = "buffer" in entity ? entity.buffer : entity.stored;
             const used = Object.values(buffer).reduce((sum, amount) => sum + amount, 0);

@@ -28,20 +28,19 @@ export function buildNetworkTopology(world: World): NetworkTopology {
   world.conveyors.forEach((c, index) => occupied.set(positionKey(c), {kind: "belt", index}));
   world.storages.forEach((s, index) => occupied.set(positionKey(s), {kind: "storage", index}));
   world.machines.forEach((m, index) => occupied.set(positionKey(m), {kind: "machine", index}));
+  // Seules les entrees acceptees comptent : un tapis refuse par son receveur ne cree pas de jonction.
   const incoming = new Map<string, number>();
-  const destinations = world.conveyors.map(c => outputDirections(c).map(direction => nextPosition(c, direction)));
-  destinations.flat().forEach(pos => {
-    const key = positionKey(pos);
+  const connections = world.conveyors.map(source => outputDirections(source).map(direction => {
+    const key = positionKey(nextPosition(source, direction));
+    const target = occupied.get(key);
+    if (target?.kind !== "belt") return {key, target};
+    if (!acceptsInput(world.conveyors[target.index], source)) return {key, target: undefined};
     incoming.set(key, (incoming.get(key) ?? 0) + 1);
-  });
-  const outputs = destinations.map((positions, index) => positions.map(pos => {
-    const target = occupied.get(positionKey(pos));
-    if (target?.kind === "belt") {
-      const receiver = world.conveyors[target.index];
-      if (!acceptsInput(receiver, world.conveyors[index])) return undefined;
-      // Seul un merger autorise plusieurs arrivees sur une meme case.
-      if (receiver.type !== "merger" && incoming.get(positionKey(pos))! > 1) return undefined;
-    }
+    return {key, target};
+  }));
+  const outputs = connections.map(ports => ports.map(({key, target}) => {
+    // Seul un merger autorise plusieurs arrivees sur une meme case.
+    if (target?.kind === "belt" && world.conveyors[target.index].type !== "merger" && incoming.get(key)! > 1) return undefined;
     return target;
   }));
   return {
@@ -51,8 +50,7 @@ export function buildNetworkTopology(world: World): NetworkTopology {
       const pump = m.type === "water-pump";
       const target = occupied.get(positionKey({x: m.x + (pump ? 1 : 0), y: m.y + (pump ? 0 : 1)}));
       if (target?.kind !== "belt") return undefined;
-      if (!acceptsInput(world.conveyors[target.index], m)) return undefined;
-      return world.conveyors[target.index].direction === (pump ? "left" : "up") ? undefined : target.index;
+      return acceptsInput(world.conveyors[target.index], m) ? target.index : undefined;
     }),
     beltOrder: spatialOrder(world.conveyors),
     machineOrder: spatialOrder(world.machines)
@@ -70,8 +68,8 @@ export function inputPort(belt: Conveyor, source: Position): number {
   const dx = source.x - belt.x, dy = source.y - belt.y;
   return directions.indexOf(dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up");
 }
+// Aucun element n'accepte d'entree par sa sortie avant ; un splitter n'accepte que l'arriere.
 export function acceptsInput(belt: Conveyor, source: Position): boolean {
-  if (belt.type === "conveyor") return true;
   const forward = directions.indexOf(belt.direction);
   const port = inputPort(belt, source);
   return belt.type === "splitter" ? port === (forward + 2) % 4 : port !== forward;

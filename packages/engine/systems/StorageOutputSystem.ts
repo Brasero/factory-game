@@ -1,5 +1,4 @@
 import {MACHINE_RECIPES} from "@engine/config/recipeConfig";
-import type {Conveyor} from "@engine/models/Conveyor";
 import type {ResourcesType} from "@engine/models/Resources";
 import type {Storage} from "@engine/models/Storage";
 import type {World} from "@engine/models/World";
@@ -7,10 +6,6 @@ import {acceptsInput, directions, nextPosition, positionKey} from "@engine/syste
 
 const usedCapacity = (buffer: Record<ResourcesType, number>) =>
   Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
-
-function beltPointsToStorage(belt: Conveyor, storage: Storage): boolean {
-  return positionKey(nextPosition(belt, belt.direction)) === positionKey(storage);
-}
 
 function firstStoredResource(storage: Storage): ResourcesType | undefined {
   return (Object.keys(storage.stored) as ResourcesType[]).find(resource => (storage.stored[resource] ?? 0) > 0);
@@ -40,7 +35,8 @@ export function runStorageOutputs(world: World): World {
       const conveyorIndex = conveyorsByPosition.get(positionKey(pos));
       if (conveyorIndex === undefined) continue;
       const conveyor = conveyors[conveyorIndex];
-      if (beltPointsToStorage(conveyor, storage) || !acceptsInput(conveyor, storage)) continue;
+      // acceptsInput exclut aussi les tapis qui pointent vers le coffre.
+      if (!acceptsInput(conveyor, storage)) continue;
       if (conveyor.carrying.length >= conveyor.capacity) continue;
       const resource = firstStoredResource(storage);
       if (!resource) continue;

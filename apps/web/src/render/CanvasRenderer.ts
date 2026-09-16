@@ -1,4 +1,5 @@
 import {visibleCells, isVisible, type ViewportBounds} from "./utils/viewport";
+import {acceptsInput, positionKey} from "@engine/systems/NetworkTopology";
 import type {
   WorldSnapshot,
   Position,
@@ -78,11 +79,14 @@ function drawDynamicEntities(
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
+  const conveyorsByPos = new Map(world.conveyors.map(conveyor => [positionKey(conveyor), conveyor]));
   const connected = connectedRouterIds(world.conveyors);
 
   world.conveyors.forEach(conveyor => {
-    const next = getNextPosition(conveyor);
-    const key = `${next.x},${next.y}`;
+    const key = positionKey(getNextPosition(conveyor));
+    const receiver = conveyorsByPos.get(key);
+    // Un tapis refusé par son voisin (face à face) n'en est pas le prédécesseur : aucun sprite de demi-tour.
+    if (!receiver || !acceptsInput(receiver, conveyor)) return;
     const existing = previousByPos.get(key);
     if (!existing || conveyor.y < existing.y || (conveyor.y === existing.y && conveyor.x < existing.x)) {
       previousByPos.set(key, conveyor);
@@ -323,7 +327,7 @@ export function findPreviousConveyor(
 ): Conveyor | undefined {
     return world.conveyors.find(c => {
         const next = getNextPosition(c);
-        return next.x === current.x && next.y === current.y;
+        return next.x === current.x && next.y === current.y && acceptsInput(current, c);
     });
 }
 export function getEntryPoint(

@@ -89,6 +89,34 @@ describe("Conveyor transfers", () => {
     expect(world.machines[0].buffer.water).toBe(2);
   });
 
+  it("does not export into a belt pointing back into the machine", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(3, 1, "water-pump");
+    engine.placeConveyor(4, 1, "left");
+    const world = engine.getWorld();
+    world.machines[0].buffer.water = 5;
+    const exported = runOutputMachine(world);
+    expect(exported.conveyors[0].carrying).toHaveLength(0);
+    expect(exported.machines[0].buffer.water).toBe(5);
+  });
+
+  it("feeds machines only with their recipe ingredient", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(5, 5, "iron-smelter");
+    engine.placeMachine(1, 1, "iron-mine");
+    const world = engine.getWorld();
+    world.conveyors = [belt(4, 5, "right"), belt(0, 1, "right")];
+    world.conveyors.forEach(c => { c.carrying[0].type = "coal"; });
+    runConveyors(world);
+    // Le charbon ne bloque plus la fonderie et la mine n'accepte aucune ressource.
+    expect(world.machines.map(m => m.buffer)).toEqual([{}, {}]);
+    expect(world.conveyors.map(c => c.carrying.length)).toEqual([1, 1]);
+    world.conveyors.forEach(c => { c.carrying[0].type = "iron"; });
+    runConveyors(world);
+    expect(world.machines.map(m => m.buffer)).toEqual([{iron: 1}, {}]);
+    expect(world.conveyors.map(c => c.carrying.length)).toEqual([0, 1]);
+  });
+
   it("updates HUD totals in the transfer tick and after destruction", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeStorage(2, 1);

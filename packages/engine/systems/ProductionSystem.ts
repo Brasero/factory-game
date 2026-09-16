@@ -9,13 +9,15 @@ export function runProduction(world: World): World {
         const recipe = MACHINE_RECIPES[m.type];
         if (recipe) {
             const buffer = {...(m.buffer ?? {})};
-            const progress = m.progress + m.efficiency;
-            if (progress < recipe.duration) {
-                return {...m, buffer, progress, active: true};
-            }
+            // Sans ingredient ou sortie pleine, la cuisson attend sans avancer.
+            // Seule la sortie compte : un tampon rempli d'ingredients doit rester transformable.
             const totalStored = buffer[recipe.output] || 0;
             if ((buffer[recipe.input] ?? 0) <= 0 || totalStored >= m.capacity) {
                 return {...m, active: false};
+            }
+            const progress = m.progress + m.efficiency;
+            if (progress < recipe.duration) {
+                return {...m, buffer, progress, active: true};
             }
             buffer[recipe.input] = (buffer[recipe.input] ?? 1) - 1;
             buffer[recipe.output] = (buffer[recipe.output] ?? 0) + m.production;
