@@ -1,11 +1,12 @@
 import {imagePath} from "@web/config/assets.registry.ts";
 type AssetKey = string;
+interface AssetRegistry { [key: string]: string | AssetRegistry }
 
 class AssetManager {
   private images = new Map<AssetKey, HTMLImageElement>()
   private loaded = false;
   
-  async loadAll(registry: Record<string, any>): Promise<void> {
+  async loadAll(registry: AssetRegistry): Promise<void> {
     const entries = this.flattenRegistry(registry);
     
     await Promise.all(
@@ -29,16 +30,16 @@ class AssetManager {
   private loadImage(key: AssetKey, src: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.src = src;
       img.onload = () => {
         this.images.set(key, img)
         resolve()
       }
-      img.onerror = reject
+      img.onerror = reject;
+      img.src = src;
     })
   }
   
-  flattenRegistry(obj: Record<string, any>, prefix = ""): {key: string, src: string}[] {
+  flattenRegistry(obj: AssetRegistry, prefix = ""): {key: string, src: string}[] {
     return Object.entries(obj).flatMap(([k, v]) => {
       const currentKey = prefix ? `${prefix}.${k}` : k;
       

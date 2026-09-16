@@ -1,5 +1,4 @@
 import {createSession, TickLoop} from "@engine/api/index.ts";
-import {render} from "@web/render/CanvasRenderer.ts";
 import type {DirectionType, WorldSnapshot, SelectedItem} from "@engine/api/types.ts";
 import {setWorldSnapshot} from "@web/game/worldStore.ts";
 
@@ -8,18 +7,20 @@ const loop = new TickLoop();
 setWorldSnapshot(session.getSnapshot());
 
 export function startGame() {
-    const canvas = document.querySelector("canvas");
-    const ctx = canvas?.getContext("2d");
-    
     loop.start(() => {
         session.tick();
-        const snapshot = updateWorld();
-        if (ctx) render(ctx, snapshot);
+        updateWorld();
     }, 100)
 }
 
 export function pauseGame() {
     loop.stop()
+}
+
+export function placeMiner(x: number, y: number) {
+    if (session.canPlaceMachine(x, y, "iron-mine")) return placeIronMine(x, y);
+    if (session.canPlaceMachine(x, y, "coal-mine")) return placeCoalMine(x, y);
+    return false;
 }
 
 export function placeIronMine(x: number, y: number) {
@@ -61,12 +62,26 @@ export function placeWaterPump(x: number, y: number) {
     return success;
 }
 
-export function placeConveyor(x: number, y: number, direction: DirectionType) {
+export function placeIronSmelter(x: number, y: number) {
+    const success = session.dispatch({
+        type: "place-machine",
+        x,
+        y,
+        machineType: "iron-smelter"
+    });
+    if (success) {
+        updateWorld()
+    }
+    return success;
+}
+
+export function placeConveyor(x: number, y: number, direction: DirectionType, conveyorType: "conveyor" | "splitter" | "merger" = "conveyor") {
     const success = session.dispatch({
         type: "place-conveyor",
         x,
         y,
-        direction
+        direction,
+        conveyorType
     })
     if (success) {
         updateWorld();
@@ -78,9 +93,10 @@ export function placeConveyorLine(
   line: {x: number, y: number, direction: DirectionType}[]
 ) {
     for (const c of line) {
-        const success = placeConveyor(c.x, c.y, c.direction)
+        const success = session.dispatch({type: "place-conveyor", ...c})
         if (!success) break
     }
+    updateWorld();
 }
 
 export function canPlaceAt(x: number, y: number, item: SelectedItem | ""): boolean {

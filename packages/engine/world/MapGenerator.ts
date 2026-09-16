@@ -280,12 +280,7 @@ function buildTileData(
 ): {biome: LogicalBiome; variant: number; baseVariant?: number} {
   const biome = biomeAt(map, x, y);
   if (biome === "sea") {
-    const nearLand = findNearestLandBiome(map, x, y, 2);
-    const baseVariant =
-      nearLand && Math.random() > 0.9
-        ? pickVariant(BIOME_TILES[nearLand].littoral)
-        : undefined;
-    return {biome, variant: 0, baseVariant} as {biome: LogicalBiome; variant: number; baseVariant?: number};
+    return {biome, variant: 0};
   }
   
   const variant = pickTile(map, x, y);
@@ -310,6 +305,7 @@ function collapseBiome(subTiles: Array<{biome: LogicalBiome}>): LogicalBiome {
   };
   
   for (const tile of subTiles) {
+    if (tile.biome.includes("-shore")) continue;
     const base = baseBiomeOf(tile.biome);
     if (base) counts[base]++;
   }
@@ -453,9 +449,9 @@ function pickTile(
   map: LogicalBiome[][],
   x: number,
   y: number
-): number | void {
+): number {
   const biome = biomeAt(map, x, y);
-  if (biome === "sea") return;
+  if (biome === "sea") return 0;
   
   const isBeachOf = (value: LogicalBiome, base: LogicalBiome) =>
     value === `${base}-beach`;
@@ -463,7 +459,8 @@ function pickTile(
   if (biome.includes("-shore")) {
     const baseBiome = biome.replace("-shore", "") as "grass" | "desert" | "snow";
     const tiles = BIOME_TILES[baseBiome].shore;
-    return pickVariant(tiles.center);
+    // Les rochers incluent leur fond d’eau et remplacent directement le fond shore.
+    return pickVariant(Math.random() > 0.9 ? tiles.rocks : tiles.center);
   }
   
   
@@ -541,7 +538,7 @@ function pickTile(
     const diagonalOnly = (!isBeachA && !isBeachB) && isBeachDiag;
     
     if (fullCorner || diagonalOnly) {
-      return pickCorner(map, biome, x, y, key, "toBeach");
+      return pickCorner(map, baseBiomeOf(biome)!, x, y, key, "toBeach");
     }
   }
   if (N) return pickVariant(tiles.edge.toBeach.N);
@@ -673,34 +670,6 @@ function pseudoNoise(x: number, y: number, seed = 1337): number {
   return n - Math.floor(n);
 }
 
-// Distortion de la distance pour des îles plus organiques
-/**
- * Distord la distance radiale pour des silhouettes d'iles plus organiques.
- */
-function distortedDistance(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  size: number
-): number {
-  const dx = x - cx;
-  const dy = y - cy;
-  
-  const base = Math.sqrt(dx * dx + dy * dy);
-  
-  const angle = Math.atan2(dy, dx);
-  
-  const edgeNoise =
-    pseudoNoise(
-      Math.cos(angle) * size + cx,
-      Math.sin(angle) * size + cy
-    ) * size * 0.001;
-  
-  
-  return base + edgeNoise;
-}
-
 function smoothSquareDistance(
   x: number,
   y: number,
@@ -762,7 +731,6 @@ function placeBeachClearings(
   map: LogicalBiome[][],
   cx: number,
   cy: number,
-  islandSize: number,
   biome: LogicalBiome,
   clearings: IslandDefinition["clearings"]
 ): Set<string> {
@@ -938,7 +906,6 @@ export class MapGenerator {
         subLogical,
         island.center.x,
         island.center.y,
-        island.shape.size,
         island.biome,
         island.clearings
       );
@@ -955,6 +922,17 @@ export class MapGenerator {
     removeIsolatedBeaches(subLogical, preservedBeaches);
     stripInlandWaterTiles(subLogical, preservedBeaches);
     restorePreservedBeaches(subLogical, preservedBeaches);
+    // Le lissage peut retirer la plage sur une pointe. Toute terre exposee
+    // a l'eau doit retrouver une transition cotiere avant le choix des sprites.
+    for (let y = 0; y < subHeight; y++) {
+      for (let x = 0; x < subWidth; x++) {
+        const biome = subLogical[y][x];
+        if (biome !== "grass" && biome !== "desert" && biome !== "snow") continue;
+        if (Object.values(DIRS).some(({dx, dy}) => isSeaLike(biomeAt(subLogical, x + dx, y + dy)))) {
+          subLogical[y][x] = `${biome}-beach`;
+        }
+      }
+    }
     
     // Etape 7 : reduire la sous-grille vers les tuiles finales.
     const tiles: TileMapType = [];

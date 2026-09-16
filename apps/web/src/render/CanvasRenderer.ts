@@ -1,3 +1,4 @@
+import {visibleCells, isVisible, type ViewportBounds} from "./utils/viewport";
 import type {
   WorldSnapshot,
   Position,
@@ -12,22 +13,21 @@ import {machineConfig} from "@web/config/machineConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {drawStorageTooltip, drawStorageAt} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
-import {drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
+import {connectedRouterIds, drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
 import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 
 const CELL_SIZE = config.CELL_SIZE;
-const width = window.innerWidth;
-const height = window.innerHeight;
 export function render(
     ctx: CanvasRenderingContext2D,
     world: WorldSnapshot,
     camera?: Camera,
     hoveredCell?: Position & {canPlace: boolean},
-    hoveredStorage?: Storage
+    hoveredStorage?: Storage,
+    measure?: (layer: string, milliseconds: number) => void
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
     if (camera) {
         ctx.translate(camera.x, camera.y);
@@ -35,10 +35,18 @@ export function render(
     }
     
     if (!world.grid) return;
-    drawTileMap(ctx, world.grid);
-    drawResourceNodes(ctx, world.grid); // Dessin des nœuds de ressources
-    drawDynamicEntities(ctx, world); // Dessin des entitées dynamiques
-    drawDecorationTiles(ctx, world.grid);
+    const bounds = visibleCells(ctx.canvas.width, ctx.canvas.height, CELL_SIZE,
+      camera ?? {x: 0, y: 0, scale: 1}, world.grid.width, world.grid.height);
+    const drawLayer = (name: string, draw: () => void) => {
+        if (!measure) { draw(); return; }
+        const start = performance.now();
+        draw();
+        measure(name, performance.now() - start);
+    };
+    drawLayer("terrain", () => drawTileMap(ctx, world.grid!, bounds));
+    drawLayer("resources", () => drawResourceNodes(ctx, world.grid!, bounds));
+    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds));
+    drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
@@ -65,26 +73,33 @@ type DrawCall = {
 
 function drawDynamicEntities(
   ctx: CanvasRenderingContext2D,
-  world: WorldSnapshot
+  world: WorldSnapshot,
+  bounds: ViewportBounds
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
+  const connected = connectedRouterIds(world.conveyors);
 
   world.conveyors.forEach(conveyor => {
     const next = getNextPosition(conveyor);
-    previousByPos.set(`${next.x},${next.y}`, conveyor);
+    const key = `${next.x},${next.y}`;
+    const existing = previousByPos.get(key);
+    if (!existing || conveyor.y < existing.y || (conveyor.y === existing.y && conveyor.x < existing.x)) {
+      previousByPos.set(key, conveyor);
+    }
   });
 
   world.conveyors.forEach(conveyor => {
-    const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`);
+    if (!isVisible(conveyor, bounds)) return;
+    const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`) ?? null;
     const path = buildConveyorPath(world, conveyor, CELL_SIZE, prev);
     drawCalls.push({
       x: conveyor.x,
       y: conveyor.y,
       layer: 0,
-      draw: () => drawConveyorAt(ctx, world, conveyor)
+      draw: () => drawConveyorAt(ctx, world, conveyor, prev, connected.has(conveyor.id))
     });
-    if (conveyor.carrying.length) {
+    if (conveyor.type === "conveyor" && conveyor.carrying.length) {
       drawCalls.push({
         x: conveyor.x,
         y: conveyor.y,
@@ -95,6 +110,7 @@ function drawDynamicEntities(
   });
 
   world.machines.forEach(machine => {
+    if (!isVisible(machine, bounds)) return;
     drawCalls.push({
       x: machine.x,
       y: machine.y,
@@ -104,6 +120,7 @@ function drawDynamicEntities(
   });
 
   world.storages.forEach(storage => {
+    if (!isVisible(storage, bounds)) return;
     drawCalls.push({
       x: storage.x,
       y: storage.y,
@@ -151,6 +168,47 @@ function drawMachineAt(
   machine: WorldSnapshot["machines"][number]
 ) {
     const isWorking = machine.active;
+    if (machine.type === "iron-smelter") {
+        const sprite = isWorking ? assetManager.getImage("machine.automation.ironSmelter.running") : assetManager.getImage("machine.automation.ironSmelter.idle");
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % machineConfig.IRON_SMELTER_FRAME_COUNT : 0;
+        const frameWidth = isWorking ? machineConfig.IRON_SMELTER_RUNNING_CELL_WIDTH : machineConfig.IRON_SMELTER_IDLE_CELL_WIDTH
+        const frameHeight = isWorking ? machineConfig.IRON_SMELTER_RUNNING_CELL_HEIGHT : machineConfig.IRON_SMELTER_IDLE_CELL_HEIGHT
+        const drawSize =  machineConfig.IRON_SMELTER_DRAW_SIZE;
+        const drawOffsetWidth = (frameWidth - CELL_SIZE) / 2;
+        const drawOffsetHeight = (frameHeight - CELL_SIZE);
+        const drawX = machine.x * CELL_SIZE - drawOffsetWidth;
+        const drawY = machine.y * CELL_SIZE - drawOffsetHeight;
+        ctx.drawImage(
+          sprite,
+          frame * frameWidth,
+          0,
+          frameWidth,
+          frameHeight,
+          drawX,
+          drawY,
+          frameWidth,
+          frameHeight
+        );
+        if (isWorking) {
+            const particles = assetManager.getImage("machine.automation.ironSmelterParticles");
+            const particleFrame = Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % machineConfig.IRON_SMELTER_PARTICLE_FRAME_COUNT;
+            const particleColumn = particleFrame % machineConfig.IRON_SMELTER_PARTICLE_COLUMNS;
+            const particleRow = Math.floor(particleFrame / machineConfig.IRON_SMELTER_PARTICLE_COLUMNS);
+            const particleSize = machineConfig.IRON_SMELTER_PARTICLE_DRAW_SIZE;
+            ctx.drawImage(
+              particles,
+              particleColumn * machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              particleRow * machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              drawX + drawSize * 0.5 - particleSize * 0.5,
+              drawY - particleSize * 0.15,
+              particleSize,
+              particleSize
+            );
+        }
+        return;
+    }
     const spritePrefix = machine.spriteName!
     const state = isWorking ? "running": "idle";
     const type = machine.type === "water-pump" ? "pump" : "miner"
@@ -215,8 +273,20 @@ function drawHoveredCell(
 const resourceSprites: Record<ResourcesType, string> = {
   iron: "ore.ironOre",
   coal: "ore.coalOre",
-  water: "ore.waterOre"
+  water: "ore.waterOre",
+  ironPlate: "ore.ironPlate"
 };
+
+function drawResourceIcon(
+  ctx: CanvasRenderingContext2D,
+  type: ResourcesType,
+  x: number,
+  y: number,
+  size: number
+) {
+    const sprite = assetManager.getImage(resourceSprites[type]);
+    ctx.drawImage(sprite, x, y, size, size);
+}
 
 function drawResourcesForConveyor(
   ctx: CanvasRenderingContext2D,
@@ -230,13 +300,7 @@ function drawResourcesForConveyor(
         // Position de base au centre de la case
         const pos = interpolateOnConveyor(path, progress)
         
-        const sprite = assetManager.getImage(resourceSprites[type]);
-        if (!sprite) return;
-        ctx.drawImage(
-          sprite,
-          pos.x - 10, pos.y - 15,
-          CELL_SIZE - 10, CELL_SIZE - 10
-        );
+        drawResourceIcon(ctx, type, pos.x - 10, pos.y - 15, CELL_SIZE - 10);
     })
 }
 export function directionToVector(dir: DirectionType): Position {
@@ -298,9 +362,9 @@ export function buildConveyorPath(
   world: WorldSnapshot,
   conveyor: Conveyor,
   cellSize: number,
-  prevOverride?: Conveyor
+  prevOverride?: Conveyor | null
 ): ConveyorPath {
-    const prev = prevOverride ?? findPreviousConveyor(world, conveyor);
+    const prev = prevOverride === undefined ? findPreviousConveyor(world, conveyor) : prevOverride;
     
     const center = {
         x: conveyor.x * cellSize + cellSize / 2,

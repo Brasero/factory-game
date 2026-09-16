@@ -1,5 +1,5 @@
-import {Position} from "./Position";
-import {DirectionType} from "./Conveyor";
+import type {Position} from "./Position";
+import type {DirectionType} from "./Conveyor";
 
 export interface ConveyorPlacement extends Position {
     direction: DirectionType;

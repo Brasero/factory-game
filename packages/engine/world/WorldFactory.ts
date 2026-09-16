@@ -8,7 +8,7 @@ import {levels} from "@engine/config/LevelConfig.ts";
 export function createWorld(): World {
     const gridWidth = config.WIDTH / config.CELL_SIZE
     const gridHeight = config.HEIGHT / config.CELL_SIZE
-    const level = levels[1];
+    const level = levels[2];
     const resourceNodes = extractResourceNodeFromLevel(level);
     const tileMap = MapGenerator.generate({
         width: gridWidth,
@@ -26,7 +26,8 @@ export function createWorld(): World {
         resources: {
             iron: 0,
             coal: 0,
-            water: 0
+            water: 0,
+            ironPlate: 0
         },
         conveyors: [],
         storages: [],

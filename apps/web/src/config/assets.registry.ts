@@ -3,11 +3,13 @@ const materialBasePath = assetsBasePath + "/ore-nodeTiles/Materials";
 const conveyorBasePath = assetsBasePath + "/logistic/conveyor/conveyor";
 const machinesBasePath = assetsBasePath + "/machines";
 const storageBasePath = assetsBasePath + "/logistic/storage";
+const automationBasePath = assetsBasePath + "/logistic/automation";
 export const imagePath = {
   ore: {
     ironOre: materialBasePath + "/Iron/Ores/Ore-0003.png",
     coalOre: materialBasePath + "/Coal/Ores/Ore-0003.png",
-    waterOre: materialBasePath + "/Water/Ores/water-item.png"
+    waterOre: materialBasePath + "/Water/Ores/water-item.png",
+    ironPlate: automationBasePath + "/iron-plate.png"
   },
   conveyor: {
     up: conveyorBasePath + "/conveyor-up.png",
@@ -22,6 +24,10 @@ export const imagePath = {
     "down-right": conveyorBasePath + "/conveyor-down-right.png",
     "up-left": conveyorBasePath + "/conveyor-up-left.png",
     "up-right": conveyorBasePath + "/conveyor-up-right.png",
+  },
+  router: {
+    splitter: assetsBasePath + "/logistic/conveyor/splitter/splitter.png",
+    merger: assetsBasePath + "/logistic/conveyor/combiner/combiner.png"
   },
   machine: {
     miner: {
@@ -39,6 +45,13 @@ export const imagePath = {
         idle: machinesBasePath + "/Water_Pump.png",
         running: machinesBasePath + "/Water_Pump_running.png"
       }
+    },
+    automation: {
+      ironSmelter: {
+        idle: machinesBasePath + "/Stone_Furnace.png",
+        running: machinesBasePath + "/Stone_Furnace_Active.png"
+      },
+      ironSmelterParticles: automationBasePath + "/iron-smelter-particles.png"
     }
   },
   storage: {

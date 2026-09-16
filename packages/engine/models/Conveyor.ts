@@ -10,7 +10,8 @@ export type ResourceCarryingType = {
 
 export interface Conveyor extends BaseEntity {
   entityType: 'conveyor';
-  type: "conveyor";
+  type: "conveyor" | "splitter" | "merger";
+  routingCursor?: number;
   direction: DirectionType;
   carrying: ResourceCarryingType[];
   speed: number;
@@ -21,6 +22,6 @@ export function isConveyorType(entity: unknown): entity is Conveyor {
   return (
       typeof entity === 'object' &&
       entity !== null &&
-      (entity as any).entityType === 'conveyor'
+      "entityType" in entity && entity.entityType === 'conveyor'
   )
 }

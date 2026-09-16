@@ -1,3 +1,4 @@
+import {isVisible, type ViewportBounds} from "./viewport";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {config as gridConfig} from "@web/config/gridConfig.ts";
 import type {GridSnapshot} from "@engine/api/types.ts";
@@ -5,10 +6,12 @@ import type {GridSnapshot} from "@engine/api/types.ts";
 const CELL_SIZE = gridConfig.CELL_SIZE
 export function drawResourceNodes(
   ctx: CanvasRenderingContext2D,
-  grid: GridSnapshot
+  grid: GridSnapshot,
+  bounds?: ViewportBounds
 ) {
   if (!grid) return;
   grid.resources.forEach(node => {
+    if (bounds && !isVisible(node.pos, bounds)) return;
     let img: HTMLImageElement;
     switch (node.resource) {
       case "iron":
@@ -20,6 +23,8 @@ export function drawResourceNodes(
       case "water":
         img = assetManager.getImage("node.water");
         break;
+      default:
+        return;
     }
     const subSize = CELL_SIZE / 2
     for (let i = 0; i < 4; i++) {

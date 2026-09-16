@@ -1,4 +1,4 @@
-import {ResourcesType} from "./Resources";
+import type {ResourcesType} from "./Resources";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
 export interface Storage extends BaseEntity {
@@ -12,6 +12,6 @@ export function isStorageType(entity: unknown): entity is Storage {
   return (
       typeof entity === "object" &&
       entity !== null &&
-      (entity as any).entityType === 'storage'
+      "entityType" in entity && entity.entityType === 'storage'
   )
 }

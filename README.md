@@ -80,7 +80,7 @@ Le jeu fonctionne sur un **tick global** (ex: 1 tick = 1 seconde).
 * **React**
 * **TypeScript**
 * **Vite** (ou équivalent)
-* **Context API** pour l’état global
+* **Redux Toolkit** pour les commandes et `useSyncExternalStore` pour les instantanés du monde
 
 ---
 
@@ -104,8 +104,8 @@ http://localhost:5173
 * [x] Création du monde
 * [x] Tick system
 * [x] Production de ressources
-* [ ] Convoyeurs
-* [ ] UI de placement des machines
+* [x] Convoyeurs (première implémentation)
+* [x] UI de placement des machines
 * [ ] Sauvegarde / chargement
 
 ---
@@ -128,3 +128,9 @@ Projet développé par **Brandon Ricci**.
 ## 📄 Licence
 
 Projet personnel – libre d’expérimentation.
+
+## Vérifications et plan technique
+
+`npm run check` exécute le lint, les tests et le build. `npm test` lance les tests une fois ; `npm run test:watch` les relance pendant le développement.
+
+Voir [le plan de stabilisation et de performances](docs/stabilisation.md) pour la couverture actuelle, ses limites et les prochaines étapes.

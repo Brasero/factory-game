@@ -1,278 +1,171 @@
-import {useEffect, useRef, useState} from "react";
-import {useAppSelector, useAppDispatch} from "@web/store/hooks.ts";
-import {render} from "@web/render/CanvasRenderer.ts";
-import {drawPreviewConveyor} from "@web/render/utils/conveyor.ts";
-import {useWorldSnapshot} from "@web/game/worldStore.ts";
-import {
-  destroyEntity,
-  placeCoalMine,
-  placeConveyorLine,
-  placeIronMine,
-  placeStorage,
-  placeWaterPump,
-  canPlaceAt
-} from "@web/game/GameController.ts";
-import {selectCurentTool, selectSelectedItem} from "@web/store/selectors.ts";
-import {setSelectedItem, setToolMode} from "@web/store/controlSlice.ts";
-import type {
-  Position,
-  DirectionType,
-  Storage,
-  SelectedItem
-} from "@engine/api/types.ts";
-import { buildConveyorPlacements, getBestPath} from "@web/render/utils/canvas.ts";
-import type {Camera} from "@web/model/Camera.ts";
+import {useEffect, useEffectEvent, useRef, useState} from "react";
+import {useAppSelector, useAppDispatch} from "@web/store/hooks";
+import {render} from "./CanvasRenderer";
+import {drawPreviewConveyor} from "./utils/conveyor";
+import {useWorldSnapshot} from "@web/game/worldStore";
+import {destroyEntity, placeMiner, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine, placeIronSmelter,
+  placeStorage, placeWaterPump, canPlaceAt} from "@web/game/GameController";
+import {selectCurentTool, selectSelectedItem} from "@web/store/selectors";
+import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
+import type {Position, ConveyorPlacement, DirectionType} from "@engine/api/types";
+import {buildConveyorPlacements, getBestPath} from "./utils/canvas";
+import type {Camera} from "@web/model/Camera";
 
-interface GameCanvasProps {
-  width: number;
-  height: number;
-  cellSize: number;
-}
+interface GameCanvasProps {width: number; height: number; cellSize: number}
+type Drag = {start: Position; last: Position; mode: "pan" | "conveyor"; moved: boolean};
 
-interface ConveyorPreview extends Position {
-  direction: DirectionType;
-}
-
-export function GameCanvas({ width, height, cellSize }: GameCanvasProps) {
+export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drag = useRef<Drag | null>(null);
+  const suppressClick = useRef(false);
+  const camera = useRef<Camera>({scale: 1, minScale: 0.5, maxScale: 2.5, x: 0, y: 0});
   const world = useWorldSnapshot();
   const dispatch = useAppDispatch();
-  const selectedItem = useAppSelector(selectSelectedItem) as SelectedItem | "";
-  const currentTool = useAppSelector(selectCurentTool)
-  const [hoveredCell, setHoveredCell] = useState<Position & {canPlace: boolean} | null>(null);
-  const [dragStart, setDragStart] = useState<Position | null>(null)
-  const [conveyorPreview, setConveyorPreview] = useState<ConveyorPreview[] | null>(null);
-  const [hoveredStorage, setHoveredStorage] = useState<Storage | null>(null)
-  // x et y sont au centre de la carte
-  const cameraRef = useRef<Camera>({
-    scale: 1,
-    minScale: 0.5,
-    maxScale: 2.5,
-    x: 0,
-    y: 0
-  })
- 
-  
-  const getCellFromMouse = (position: Position, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const camera = cameraRef.current;
-    
-    // Coordonées écran -> canvas
-    const screenX = position.x - rect.left;
-    const screenY = position.y - rect.top;
-    
-    // Inversion exacte de la transformation canvas
-    const worldX = (screenX - camera.x) / camera.scale;
-    const worldY = (screenY - camera.y) / camera.scale;
+  const selectedItem = useAppSelector(selectSelectedItem);
+  const currentTool = useAppSelector(selectCurentTool);
+  const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "splitter" || selectedItem === "merger";
+  const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
+  const [hover, setHover] = useState<Position | null>(null);
+  const [preview, setPreview] = useState<ConveyorPlacement[]>([]);
+  const [cameraVersion, redrawCamera] = useState(0);
+
+  const cellAt = (clientX: number, clientY: number): Position => {
+    const rect = canvasRef.current!.getBoundingClientRect();
     return {
-      x: Math.floor(worldX / cellSize),
-      y: Math.floor(worldY / cellSize)
+      x: Math.floor((clientX - rect.left - camera.current.x) / camera.current.scale / cellSize),
+      y: Math.floor((clientY - rect.top - camera.current.y) / camera.current.scale / cellSize)
     };
   };
-  
-  
-  // Rendu automatique du canvas à chaque update du world
+  const pathTo = (end: Position) => buildConveyorPlacements(getBestPath(
+    cellAt(drag.current!.start.x, drag.current!.start.y), end,
+    pos => canPlaceAt(pos.x, pos.y, "conveyor")
+  ), beltDirection);
+
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    if (!world) return;
-    
-    render(ctx, world, cameraRef.current,hoveredCell ?? undefined, hoveredStorage ?? undefined);
-    if (conveyorPreview) {
-      drawPreviewConveyor(ctx, conveyorPreview);
+    const frame = requestAnimationFrame(() => {
+      const storage = hover ? world.storages.find(s => s.x === hover.x && s.y === hover.y) : undefined;
+      const highlight = hover && (selectedItem || currentTool === "destroy")
+        ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem)} : undefined;
+      render(ctx, world, camera.current, highlight, storage);
+      if (isDirectionalTool && currentTool === "build") {
+        const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem)
+          ? [{...hover, direction: beltDirection, type: selectedItem as "conveyor" | "splitter" | "merger"}] : [];
+        if (placement.length) drawPreviewConveyor(ctx, placement, world);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [world, hover, preview, selectedItem, currentTool, cameraVersion, width, height, beltDirection, isDirectionalTool]);
+
+  // Stable subscriptions; effect events read the latest tool and camera state.
+  const finishDrag = useEffectEvent((event: MouseEvent) => {
+    if (event.button !== 0 || !drag.current) return;
+    suppressClick.current = drag.current.moved;
+    if (drag.current.mode === "conveyor" && selectedItem === "conveyor" && event.target === canvasRef.current) {
+      placeConveyorLine(pathTo(cellAt(event.clientX, event.clientY)));
     }
-    
-  }, [cameraRef,hoveredCell, world.tick, hoveredStorage]);
-  
-  // Gestion du zoom sur le canvas et du déplacement de la caméra
+    drag.current = null;
+    setPreview([]);
+  });
+  const cancelDrag = useEffectEvent(() => {
+    drag.current = null;
+    setPreview([]);
+  });
+  const rotateBelt = useEffectEvent((event: KeyboardEvent) => {
+    const target = event.target;
+    if (!isDirectionalTool || currentTool !== "build" || event.key.toLowerCase() !== "r" ||
+        event.ctrlKey || event.metaKey || event.altKey || event.repeat ||
+        (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select")))) return;
+    event.preventDefault();
+    const directions: DirectionType[] = ["right", "down", "left", "up"];
+    const next = directions[(directions.indexOf(beltDirection) + (event.shiftKey ? 3 : 1)) % 4];
+    setBeltDirection(next);
+    setPreview(previous => previous.length === 1 ? [{...previous[0], direction: next}] : previous);
+  });
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const handleWheel = (e: HTMLElementEventMap["Wheel"]) => {
-      e.preventDefault();
-      const camera = cameraRef.current
-      const zoomFactor = 1.1;
-      const direction = e.deltaY > 0 ? -1 : 1;
-      const oldScale = camera.scale;
-      
-      const newScale = Math.min(
-        camera.maxScale,
-        Math.max(camera.minScale, oldScale * (direction > 0 ? zoomFactor : 1 / zoomFactor))
-      );
-      
-      if (newScale === oldScale) return;
-      
+    const canvas = canvasRef.current!;
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const c = camera.current;
+      const scale = Math.min(c.maxScale, Math.max(c.minScale, c.scale * (event.deltaY > 0 ? 1 / 1.1 : 1.1)));
       const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      camera.x = mouseX - ((mouseX - camera.x) * newScale) / oldScale;
-      camera.y = mouseY - ((mouseY - camera.y) * newScale) / oldScale;
-      camera.scale = newScale
-      render(canvas.getContext("2d"), world, camera);
+      const x = event.clientX - rect.left, y = event.clientY - rect.top;
+      c.x = x - (x - c.x) * scale / c.scale;
+      c.y = y - (y - c.y) * scale / c.scale;
+      c.scale = scale;
+      redrawCamera(v => v + 1);
     };
-    const handleMouseMove = (e: MouseEvent) => {
-      if (e.buttons !== 1) return;
-      const camera = cameraRef.current;
-      if (!camera) return;
-      if (!dragStart) return;
-      if (selectedItem !== "") return;
-      const lastMouse = dragStart;
-      const dx = (e.clientX - lastMouse.x) / camera.scale;
-      const dy = (e.clientY - lastMouse.y) / camera.scale;
-      camera.x += dx * camera.scale;
-      camera.y += dy * camera.scale;
-      setDragStart({x: e.clientX, y: e.clientY});
-    }
-    
-    canvas.addEventListener("wheel", handleWheel, {passive: false});
-    canvas.addEventListener("mousemove", handleMouseMove);
+    const keydown = (event: KeyboardEvent) => rotateBelt(event);
+    window.addEventListener("keydown", keydown);
+    const up = (event: MouseEvent) => finishDrag(event);
+    const blur = () => cancelDrag();
+    canvas.addEventListener("wheel", wheel, {passive: false});
+    window.addEventListener("mouseup", up);
+    window.addEventListener("blur", blur);
     return () => {
-      canvas.removeEventListener("wheel", handleWheel);
-      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("wheel", wheel);
+      window.removeEventListener("keydown", keydown);
+      window.removeEventListener("mouseup", up);
+      window.removeEventListener("blur", blur);
     };
-  }, [dragStart, world]);
-  
-  // Gestion du click sur le canvas
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return;
-    
-    const handleClick = (e: MouseEvent) => {
-      const {x, y} = getCellFromMouse({x: e.clientX, y: e.clientY}, canvas);
-      if (currentTool === "destroy") {
-        destroyEntity(x,y);
-        return
+  }, []);
+
+  return <div style={{position: "relative", width, height}}>
+    {isDirectionalTool && currentTool === "build" && <div className="conveyor-help" role="status">
+      <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "merger" ? "Merger" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
+      {selectedItem !== "conveyor" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
+      <span><kbd>R</kbd> Rotation horaire</span>
+      <span><kbd>Maj</kbd> + <kbd>R</kbd> Rotation antihoraire</span>
+    </div>}
+    <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
+    style={{border: "1px solid black"}}
+    onMouseDown={event => {
+      if (event.button !== 0) return;
+      suppressClick.current = false;
+      if (selectedItem === "conveyor" || (!selectedItem && currentTool === "build")) {
+        const pos = {x: event.clientX, y: event.clientY};
+        drag.current = {start: pos, last: pos, moved: false, mode: selectedItem === "conveyor" ? "conveyor" : "pan"};
       }
-      switch (selectedItem) {
-        case "iron-mine":
-          placeIronMine(x, y);
-          break
-        
-        case "coal-mine":
-          placeCoalMine(x, y);
-          break
-        
-        case "water-pump":
-          placeWaterPump(x, y);
-          break
-        
-        case "storage":
-          placeStorage(x, y);
-          break
-        
-        default:
-          return
+    }}
+    onMouseMove={event => {
+      const active = drag.current;
+      if (active && event.buttons === 1) {
+        active.moved ||= Math.hypot(event.clientX - active.start.x, event.clientY - active.start.y) > 3;
+        if (active.mode === "pan") {
+          camera.current.x += event.clientX - active.last.x;
+          camera.current.y += event.clientY - active.last.y;
+          active.last = {x: event.clientX, y: event.clientY};
+          redrawCamera(v => v + 1);
+        } else {
+          setPreview(pathTo(cellAt(event.clientX, event.clientY)));
+        }
       }
-    }
-    
-    const handleRightClick = (e: MouseEvent) => {
-      e.preventDefault();
+      const next = cellAt(event.clientX, event.clientY);
+      setHover(previous => previous?.x === next.x && previous.y === next.y ? previous : next);
+    }}
+    onMouseLeave={() => setHover(null)}
+    onContextMenu={event => {
+      event.preventDefault();
+      drag.current = null;
+      setPreview([]);
       dispatch(setSelectedItem(""));
       dispatch(setToolMode("build"));
-      return
-    }
-    
-    canvas.addEventListener("click", handleClick);
-    canvas.addEventListener("contextmenu", handleRightClick);
-    return () => {
-      canvas.removeEventListener("click", handleClick);
-      canvas.removeEventListener("contextmenu", handleRightClick);
-    }
-  }, [world, cellSize, selectedItem,currentTool])
-  
-  // gestion du hover sur le canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const handleMove = (e: MouseEvent) => {
-      if (selectedItem === "" && currentTool === "build") {
-        setHoveredCell(null);
-        return;
+    }}
+    onClick={event => {
+      if (suppressClick.current) { suppressClick.current = false; return; }
+      const {x, y} = cellAt(event.clientX, event.clientY);
+      if (currentTool === "destroy") { destroyEntity(x, y); return; }
+      switch (selectedItem) {
+        case "merger":
+        case "splitter": placeConveyor(x, y, beltDirection, selectedItem); break;
+        case "miner": placeMiner(x, y); break;
+        case "iron-mine": placeIronMine(x, y); break;
+        case "coal-mine": placeCoalMine(x, y); break;
+        case "water-pump": placeWaterPump(x, y); break;
+        case "iron-smelter": placeIronSmelter(x, y); break;
+        case "storage": placeStorage(x, y); break;
       }
-      const {x, y} = getCellFromMouse({x: e.clientX, y: e.clientY}, canvas);
-      const canPlace = canPlaceAt(x, y, selectedItem);
-      
-      setHoveredCell({x, y, canPlace});
-    }
-    
-    const handleLeave = () => setHoveredCell(null);
-    
-    canvas.addEventListener("mousemove", handleMove);
-    canvas.addEventListener("mouseleave", handleLeave);
-    
-    return () => {
-      canvas.removeEventListener("mousemove", handleMove);
-      canvas.removeEventListener("mouseleave", handleLeave);
-    }
-  }, [selectedItem, cellSize, currentTool]);
-  
-  //Gestion du mouseDown et mouseUp et de la pose de tapis
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    
-    const handleMouseDown = (e: MouseEvent) => {
-      const {clientX: x, clientY: y} = e;
-      if (e.button === 2) return;
-      setDragStart({x, y});
-    };
-    
-    
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!dragStart) return;
-      const {clientX: x, clientY: y} = e;
-      const end = getCellFromMouse({x,y}, canvas);
-      const start = getCellFromMouse(dragStart, canvas);
-      if (selectedItem === "conveyor") {
-        const cells= getBestPath(start, end, pos => canPlaceAt(pos.x, pos.y, "conveyor"));
-        const conveyors = buildConveyorPlacements(cells);
-        placeConveyorLine(conveyors);
-      }
-      
-      setDragStart(null);
-      setConveyorPreview(null)
-    };
-    
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragStart, cellSize, selectedItem]);
-  
-  // Gestion du preview d'ajout de convoyeur et du hover de coffre
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return
-    const handleMouseMove = (e: MouseEvent) => {
-      const {clientX: x, clientY: y} = e;
-      const current = getCellFromMouse({x, y}, canvas)
-      const storage = world.storages.find(
-        s => s.x === current.x && s.y === current.y
-      )
-      setHoveredStorage(storage ?? null)
-      
-      if (!dragStart || selectedItem !== "conveyor") return
-      const start = getCellFromMouse(dragStart, canvas);
-      const cells = getBestPath(start, current, pos => canPlaceAt(pos.x, pos.y, "conveyor"));
-      const preview = buildConveyorPlacements(cells);
-      setConveyorPreview(preview);
-    }
-    
-    canvas.addEventListener("mousemove", handleMouseMove);
-    return () => canvas.removeEventListener("mousemove", handleMouseMove);
-  }, [dragStart, world]);
-  
-  
-  
-  return <canvas ref={canvasRef} width={width} height={height} style={{ border: "1px solid black"}} />
+    }} />
+  </div>;
 }

@@ -148,6 +148,48 @@ export const levels: LevelDefinition[] = [
             ],
           }
         ],
+      },
+      {
+        biome: "grass",
+        center:{
+          x: 45,
+          y: 15,
+        },
+        shape: {
+          type: "organique",
+          size: 15,
+        },
+        clearings: [
+          {
+            x: -5,
+            y: -2,
+            radius: 3,
+            resources: [
+              { type: "iron" },
+              { type: "iron" },
+              { type: "iron" },
+              { type: "iron" }
+            ],
+          },
+          {
+            x: 4,
+            y: 3,
+            radius: 1,
+            resources: [
+              { type: "iron" },
+            ],
+          },
+          {
+            x: 5,
+            y: -10,
+            radius: 2,
+            resources: [
+              { type: "water" },
+              { type: "water" },
+              { type: "water" },
+            ]
+          }
+        ],
       }
     ],
   }

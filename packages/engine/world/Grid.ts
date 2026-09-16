@@ -1,7 +1,7 @@
 import type {Position} from "@engine/models/Position";
 import type {GridCell} from "@engine/models/GridCell";
 import type {MachineType} from "@engine/models/Machine.ts";
-import type {TileMap} from "@engine/world/TileMap.ts";
+import {TileMap} from "@engine/world/TileMap.ts";
 import type {TileData} from "@engine/models/Tile.ts";
 
 // Classe représentant une grille 2D pour la gestion des positions occupées
@@ -32,6 +32,8 @@ import type {TileData} from "@engine/models/Tile.ts";
  * console.log(grid.isOccupied({x : 2, y : 3})); // false
  */
 export class Grid {
+  private terrainVersion = 0;
+  get revision(): number { return this.terrainVersion; }
   readonly width: number;
   readonly height: number;
   
@@ -47,7 +49,7 @@ export class Grid {
         tile: tileMap.get(x, y)?.biome ?? "grass",
         variant: tileMap.get(x, y)?.variant ?? 0,
         baseVariant: tileMap.get(x, y)?.baseVariant,
-        subTiles: tileMap.get(x, y)?.subTiles,
+        subTiles: tileMap.get(x, y)?.subTiles?.map(tile => ({...tile})),
         resource: null,
         decoration: tileMap.get(x, y)?.decoration ? {
           ...tileMap.get(x, y)!.decoration!,
@@ -57,6 +59,18 @@ export class Grid {
     );
   }
   
+  /** Independent copy, including occupancy, for engine ownership boundaries. */
+  clone(): Grid {
+    const copy = new Grid(this.width, this.height, new TileMap(this.width, this.height, []));
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        copy.cells[y][x] = structuredClone(this.cells[y][x]);
+      }
+    }
+    copy.terrainVersion = this.terrainVersion;
+    return copy;
+  }
+
   /**
    * Renvoie les données de la tuile à la position spécifiée si elle existe dans la grille.
    * @param {number} x - La coordonnée x de la tuile.
@@ -70,8 +84,8 @@ export class Grid {
       biome: cell.tile,
       variant: cell.variant,
       baseVariant: cell.baseVariant,
-      subTiles: cell.subTiles,
-      decoration: cell.decoration ?? undefined
+      subTiles: cell.subTiles?.map(tile => ({...tile})),
+      decoration: cell.decoration ? {...cell.decoration} : undefined
     };
   }
   /**
@@ -88,8 +102,8 @@ export class Grid {
             biome: cell.tile,
             variant: cell.variant,
             baseVariant: cell.baseVariant,
-            subTiles: cell.subTiles,
-            decoration: cell.decoration ?? undefined,
+            subTiles: cell.subTiles?.map(tile => ({...tile})),
+            decoration: cell.decoration ? {...cell.decoration} : undefined,
             resource: cell.resource,
             pos: {x, y}
           });
@@ -105,7 +119,7 @@ export class Grid {
    * @param {number} y - La coordonnée y.
    */
   isInside({x, y}: Position): boolean {
-    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+    return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < this.width && y < this.height;
   }
   
   /**
@@ -117,8 +131,9 @@ export class Grid {
   setResource(x: number, y: number, resource: GridCell["resource"]) {
     if (!this.isInside({x, y})) return;
     if (this.cells[y][x].tile === "sea" ) return;
+    if (this.cells[y][x].resource === resource) return;
     this.cells[y][x].resource = resource;
-    console.log(`Resource ${resource} set at (${x}, ${y})`);
+    this.terrainVersion++;
   }
   
   /**
@@ -152,6 +167,8 @@ export class Grid {
     if (cell.decoration) return false;
     
     switch(machineType) {
+      case "miner":
+        return cell.resource === "iron" || cell.resource === "coal";
       case "iron-mine":
         return cell.resource === "iron";
       case "coal-mine":

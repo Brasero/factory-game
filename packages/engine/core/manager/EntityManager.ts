@@ -45,7 +45,7 @@ class EntityManager implements EntityManagerType {
       return false;
     }
   }
-  placeConveyor(x: number, y: number, direction: DirectionType, world: World): World | false {
+  placeConveyor(x: number, y: number, direction: DirectionType, world: World, type: Conveyor["type"] = "conveyor"): World | false {
     const {grid, conveyors} = world;
     if (!grid) throw new Error("Le monde n'a pas de grille définie.")
     
@@ -58,6 +58,7 @@ class EntityManager implements EntityManagerType {
       const existingConveyor = conveyors.find(c => c.x === x && c.y === y);
 
       if (existingConveyor) {
+        if (existingConveyor.type !== type) return false;
         const otherConveyors = conveyors.filter(c => c !== existingConveyor);
         const updated: Conveyor = {
           ...existingConveyor,
@@ -69,13 +70,15 @@ class EntityManager implements EntityManagerType {
         };
       }
 
+      if (!grid.canPlaceMachine({x, y}, "conveyor")) return false;
       const success = grid.occupy({x,y})
       if (!success) return false;
       const conveyor: Conveyor = {
         id: crypto.randomUUID(),
         x,
         y,
-        type: "conveyor",
+        type,
+        routingCursor: 0,
         direction,
         entityType: 'conveyor',
         speed: 0.2,
@@ -98,6 +101,7 @@ class EntityManager implements EntityManagerType {
     if (!grid) throw new Error("Le monde n'a pas de grille définie.");
     
     try {
+      if (!grid.canPlaceMachine({x, y}, "storage")) return false;
       const success = grid.occupy({x, y});
       if (!success) return false;
       const storage: Storage = {

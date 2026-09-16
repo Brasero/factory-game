@@ -1,7 +1,7 @@
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
-export type MachineType = "iron-mine"|"coal-mine"|"water-pump"|"conveyor";
+export type MachineType = "iron-mine"|"coal-mine"|"water-pump"|"iron-smelter"|"conveyor";
 
 export interface Machine extends BaseEntity {
     type: MachineType;
@@ -19,6 +19,6 @@ export function isMachineType(entity: unknown): entity is Machine {
     return (
         typeof entity === 'object' &&
         entity !== null &&
-        (entity as any).entityType === 'machine'
+        "entityType" in entity && entity.entityType === 'machine'
     )
 }

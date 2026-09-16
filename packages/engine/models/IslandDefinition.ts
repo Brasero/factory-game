@@ -1,4 +1,4 @@
-import type {LogicalBiome} from "../world/MapGenerator";
+import type {LogicalBiome} from "../world/helpers/map.helpers";
 import type {ClearingDefinition} from "./ClearingDefinition";
 import type {Position} from "@engine/models/Position.ts";
 

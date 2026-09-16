@@ -1,6 +1,3 @@
-interface ViteTypeOptions {
-
-}
 interface ImportMetaEnv {
   readonly VITE_CELL_SIZE: number
 }
