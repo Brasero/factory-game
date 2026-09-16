@@ -13,7 +13,7 @@ import {machineConfig} from "@web/config/machineConfig.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {drawStorageTooltip, drawStorageAt} from "@web/render/utils/storage.ts"
 import {drawResourceNodes} from "@web/render/utils/node.ts";
-import {drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
+import {connectedRouterIds, drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
 import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 
@@ -23,7 +23,8 @@ export function render(
     world: WorldSnapshot,
     camera?: Camera,
     hoveredCell?: Position & {canPlace: boolean},
-    hoveredStorage?: Storage
+    hoveredStorage?: Storage,
+    measure?: (layer: string, milliseconds: number) => void
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -36,10 +37,16 @@ export function render(
     if (!world.grid) return;
     const bounds = visibleCells(ctx.canvas.width, ctx.canvas.height, CELL_SIZE,
       camera ?? {x: 0, y: 0, scale: 1}, world.grid.width, world.grid.height);
-    drawTileMap(ctx, world.grid, bounds);
-    drawResourceNodes(ctx, world.grid, bounds); // Dessin des nœuds de ressources
-    drawDynamicEntities(ctx, world, bounds); // Dessin des entitées dynamiques
-    drawDecorationTiles(ctx, world.grid, bounds);
+    const drawLayer = (name: string, draw: () => void) => {
+        if (!measure) { draw(); return; }
+        const start = performance.now();
+        draw();
+        measure(name, performance.now() - start);
+    };
+    drawLayer("terrain", () => drawTileMap(ctx, world.grid!, bounds));
+    drawLayer("resources", () => drawResourceNodes(ctx, world.grid!, bounds));
+    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds));
+    drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
@@ -71,6 +78,7 @@ function drawDynamicEntities(
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
+  const connected = connectedRouterIds(world.conveyors);
 
   world.conveyors.forEach(conveyor => {
     const next = getNextPosition(conveyor);
@@ -89,9 +97,9 @@ function drawDynamicEntities(
       x: conveyor.x,
       y: conveyor.y,
       layer: 0,
-      draw: () => drawConveyorAt(ctx, world, conveyor, prev)
+      draw: () => drawConveyorAt(ctx, world, conveyor, prev, connected.has(conveyor.id))
     });
-    if (conveyor.carrying.length) {
+    if (conveyor.type === "conveyor" && conveyor.carrying.length) {
       drawCalls.push({
         x: conveyor.x,
         y: conveyor.y,
@@ -160,6 +168,47 @@ function drawMachineAt(
   machine: WorldSnapshot["machines"][number]
 ) {
     const isWorking = machine.active;
+    if (machine.type === "iron-smelter") {
+        const sprite = isWorking ? assetManager.getImage("machine.automation.ironSmelter.running") : assetManager.getImage("machine.automation.ironSmelter.idle");
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % machineConfig.IRON_SMELTER_FRAME_COUNT : 0;
+        const frameWidth = isWorking ? machineConfig.IRON_SMELTER_RUNNING_CELL_WIDTH : machineConfig.IRON_SMELTER_IDLE_CELL_WIDTH
+        const frameHeight = isWorking ? machineConfig.IRON_SMELTER_RUNNING_CELL_HEIGHT : machineConfig.IRON_SMELTER_IDLE_CELL_HEIGHT
+        const drawSize =  machineConfig.IRON_SMELTER_DRAW_SIZE;
+        const drawOffsetWidth = (frameWidth - CELL_SIZE) / 2;
+        const drawOffsetHeight = (frameHeight - CELL_SIZE);
+        const drawX = machine.x * CELL_SIZE - drawOffsetWidth;
+        const drawY = machine.y * CELL_SIZE - drawOffsetHeight;
+        ctx.drawImage(
+          sprite,
+          frame * frameWidth,
+          0,
+          frameWidth,
+          frameHeight,
+          drawX,
+          drawY,
+          frameWidth,
+          frameHeight
+        );
+        if (isWorking) {
+            const particles = assetManager.getImage("machine.automation.ironSmelterParticles");
+            const particleFrame = Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % machineConfig.IRON_SMELTER_PARTICLE_FRAME_COUNT;
+            const particleColumn = particleFrame % machineConfig.IRON_SMELTER_PARTICLE_COLUMNS;
+            const particleRow = Math.floor(particleFrame / machineConfig.IRON_SMELTER_PARTICLE_COLUMNS);
+            const particleSize = machineConfig.IRON_SMELTER_PARTICLE_DRAW_SIZE;
+            ctx.drawImage(
+              particles,
+              particleColumn * machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              particleRow * machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              machineConfig.IRON_SMELTER_PARTICLE_SIZE,
+              drawX + drawSize * 0.5 - particleSize * 0.5,
+              drawY - particleSize * 0.15,
+              particleSize,
+              particleSize
+            );
+        }
+        return;
+    }
     const spritePrefix = machine.spriteName!
     const state = isWorking ? "running": "idle";
     const type = machine.type === "water-pump" ? "pump" : "miner"
@@ -224,8 +273,20 @@ function drawHoveredCell(
 const resourceSprites: Record<ResourcesType, string> = {
   iron: "ore.ironOre",
   coal: "ore.coalOre",
-  water: "ore.waterOre"
+  water: "ore.waterOre",
+  ironPlate: "ore.ironPlate"
 };
+
+function drawResourceIcon(
+  ctx: CanvasRenderingContext2D,
+  type: ResourcesType,
+  x: number,
+  y: number,
+  size: number
+) {
+    const sprite = assetManager.getImage(resourceSprites[type]);
+    ctx.drawImage(sprite, x, y, size, size);
+}
 
 function drawResourcesForConveyor(
   ctx: CanvasRenderingContext2D,
@@ -239,13 +300,7 @@ function drawResourcesForConveyor(
         // Position de base au centre de la case
         const pos = interpolateOnConveyor(path, progress)
         
-        const sprite = assetManager.getImage(resourceSprites[type]);
-        if (!sprite) return;
-        ctx.drawImage(
-          sprite,
-          pos.x - 10, pos.y - 15,
-          CELL_SIZE - 10, CELL_SIZE - 10
-        );
+        drawResourceIcon(ctx, type, pos.x - 10, pos.y - 15, CELL_SIZE - 10);
     })
 }
 export function directionToVector(dir: DirectionType): Position {

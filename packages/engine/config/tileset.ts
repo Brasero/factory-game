@@ -57,7 +57,8 @@ const grassTiles = {
   },
   littoral: [58, 59, 70, 71],
   shore: {
-    center: [39, 40, 49, 51, 52, 54, 63, 64],
+    // Les autres sprites sont des transitions directionnelles, pas des variantes de fond.
+    center: [49],
     rocks: [58, 59, 70, 71]
   }
 };

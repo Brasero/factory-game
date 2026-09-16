@@ -46,6 +46,7 @@ export type PlaceMachineCommand = {
 
 export type PlaceConveyorCommand = {
   type: "place-conveyor";
+  conveyorType?: Conveyor["type"];
   x: number;
   y: number;
   direction: DirectionType;

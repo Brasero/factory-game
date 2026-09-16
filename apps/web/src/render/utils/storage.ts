@@ -7,7 +7,8 @@ import {assetManager} from "@web/render/manager/AssetManager.ts";
 const resourceIcon: Record<ResourcesType, string> = {
   iron: "ore.ironOre",
   coal: "ore.coalOre",
-  water: "ore.waterOre"
+  water: "ore.waterOre",
+  ironPlate: "ore.ironPlate"
 }
 const CELL_SIZE = GridConfig.CELL_SIZE
 export function drawStorageTooltip(

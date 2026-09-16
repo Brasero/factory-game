@@ -14,13 +14,14 @@ vi.mock("./CanvasRenderer", () => ({render: vi.fn()}));
 vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), placeStorage: vi.fn(),
-  placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeWaterPump: vi.fn(), placeConveyorLine: vi.fn()
+  placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
+  placeWaterPump: vi.fn(), placeConveyorLine: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
 let host: HTMLDivElement;
 let canvas: HTMLCanvasElement;
-const world = (tick = 0) => ({tick, machines: [], conveyors: [], storages: [], resources: {iron: 0, coal: 0, water: 0}});
+const world = (tick = 0) => ({tick, machines: [], conveyors: [], storages: [], resources: {iron: 0, coal: 0, water: 0, ironPlate: 0}});
 const tree = (width = 640, height = 480) => createElement(Provider, {store, children: createElement(GameCanvas, {width, height, cellSize: 32})});
 const mouse = (target: EventTarget, type: string, x: number, y: number, buttons = 0) => {
   act(() => { target.dispatchEvent(new MouseEvent(type, {bubbles: true, clientX: x, clientY: y, button: 0, buttons})); });
@@ -55,6 +56,39 @@ describe("Canvas interactions (DOM)", () => {
     mouse(canvas, "mousemove", 17, 16, 1);
     mouse(canvas, "mouseup", 17, 16);
     expect(controller.placeConveyorLine).toHaveBeenCalledWith([{x: 0, y: 0, direction: "right"}]);
+  });
+  it("rotates single belts in both directions and dismisses the shortcut hint", () => {
+    act(() => store.dispatch(setSelectedItem("conveyor")));
+    expect(host.textContent).toContain("Rotation horaire");
+    const rotate = (shiftKey = false) => act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", {key: shiftKey ? "R" : "r", shiftKey}));
+    });
+    const place = (direction: string) => {
+      mouse(canvas, "mousedown", 16, 16, 1);
+      mouse(canvas, "mouseup", 16, 16);
+      expect(controller.placeConveyorLine).toHaveBeenLastCalledWith([{x: 0, y: 0, direction}]);
+    };
+    for (const direction of ["down", "left", "up", "right"]) { rotate(); place(direction); }
+    rotate(true); place("up");
+    act(() => store.dispatch(setSelectedItem("miner")));
+    expect(host.textContent).not.toContain("Rotation horaire");
+    rotate();
+    mouse(canvas, "click", 48, 48);
+    expect(controller.placeMiner).toHaveBeenCalledWith(1, 1);
+    act(() => store.dispatch(setSelectedItem("conveyor")));
+    place("up");
+  });
+  it.each(["splitter", "merger"] as const)("places and rotates %s using the belt shortcuts", type => {
+    act(() => store.dispatch(setSelectedItem(type)));
+    expect(host.textContent).toContain(type === "splitter" ? "Splitter" : "Merger");
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "r"})));
+    mouse(canvas, "click", 80, 112);
+    expect(controller.placeConveyor).toHaveBeenLastCalledWith(2, 3, "down", type);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "R", shiftKey: true})));
+    mouse(canvas, "click", 80, 112);
+    expect(controller.placeConveyor).toHaveBeenLastCalledWith(2, 3, "right", type);
+    mouse(canvas, "contextmenu", 80, 112);
+    expect(host.textContent).not.toContain("Rotation horaire");
   });
   it("draws a belt drag and cancels a release outside the canvas", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));

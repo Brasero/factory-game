@@ -117,9 +117,10 @@ export function getBestPath(
 }
 
 export function buildConveyorPlacements(
-    path: Position[]
+    path: Position[],
+    defaultDirection: DirectionType = "right"
 ): ConveyorPlacement[] {
-  if (path.length === 1) return [{...path[0], direction: "right"}];
+  if (path.length === 1) return [{...path[0], direction: defaultDirection}];
   return path.map((cell,i) => {
     const next = path[i + 1] ?? path[i - 1];
     if (i === path.length - 1) {

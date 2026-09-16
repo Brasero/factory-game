@@ -280,12 +280,7 @@ function buildTileData(
 ): {biome: LogicalBiome; variant: number; baseVariant?: number} {
   const biome = biomeAt(map, x, y);
   if (biome === "sea") {
-    const nearLand = findNearestLandBiome(map, x, y, 2);
-    const baseVariant =
-      nearLand && Math.random() > 0.9
-        ? pickVariant(BIOME_TILES[nearLand].littoral)
-        : undefined;
-    return {biome, variant: 0, baseVariant} as {biome: LogicalBiome; variant: number; baseVariant?: number};
+    return {biome, variant: 0};
   }
   
   const variant = pickTile(map, x, y);
@@ -310,6 +305,7 @@ function collapseBiome(subTiles: Array<{biome: LogicalBiome}>): LogicalBiome {
   };
   
   for (const tile of subTiles) {
+    if (tile.biome.includes("-shore")) continue;
     const base = baseBiomeOf(tile.biome);
     if (base) counts[base]++;
   }
@@ -463,7 +459,8 @@ function pickTile(
   if (biome.includes("-shore")) {
     const baseBiome = biome.replace("-shore", "") as "grass" | "desert" | "snow";
     const tiles = BIOME_TILES[baseBiome].shore;
-    return pickVariant(tiles.center);
+    // Les rochers incluent leur fond d’eau et remplacent directement le fond shore.
+    return pickVariant(Math.random() > 0.9 ? tiles.rocks : tiles.center);
   }
   
   
@@ -925,6 +922,17 @@ export class MapGenerator {
     removeIsolatedBeaches(subLogical, preservedBeaches);
     stripInlandWaterTiles(subLogical, preservedBeaches);
     restorePreservedBeaches(subLogical, preservedBeaches);
+    // Le lissage peut retirer la plage sur une pointe. Toute terre exposee
+    // a l'eau doit retrouver une transition cotiere avant le choix des sprites.
+    for (let y = 0; y < subHeight; y++) {
+      for (let x = 0; x < subWidth; x++) {
+        const biome = subLogical[y][x];
+        if (biome !== "grass" && biome !== "desert" && biome !== "snow") continue;
+        if (Object.values(DIRS).some(({dx, dy}) => isSeaLike(biomeAt(subLogical, x + dx, y + dy)))) {
+          subLogical[y][x] = `${biome}-beach`;
+        }
+      }
+    }
     
     // Etape 7 : reduire la sous-grille vers les tuiles finales.
     const tiles: TileMapType = [];

@@ -3,11 +3,11 @@ import {useAppSelector, useAppDispatch} from "@web/store/hooks";
 import {render} from "./CanvasRenderer";
 import {drawPreviewConveyor} from "./utils/conveyor";
 import {useWorldSnapshot} from "@web/game/worldStore";
-import {destroyEntity, placeCoalMine, placeConveyorLine, placeIronMine, placeStorage,
-  placeWaterPump, canPlaceAt} from "@web/game/GameController";
+import {destroyEntity, placeMiner, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine, placeIronSmelter,
+  placeStorage, placeWaterPump, canPlaceAt} from "@web/game/GameController";
 import {selectCurentTool, selectSelectedItem} from "@web/store/selectors";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
-import type {Position, ConveyorPlacement} from "@engine/api/types";
+import type {Position, ConveyorPlacement, DirectionType} from "@engine/api/types";
 import {buildConveyorPlacements, getBestPath} from "./utils/canvas";
 import type {Camera} from "@web/model/Camera";
 
@@ -23,6 +23,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const dispatch = useAppDispatch();
   const selectedItem = useAppSelector(selectSelectedItem);
   const currentTool = useAppSelector(selectCurentTool);
+  const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "splitter" || selectedItem === "merger";
+  const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
   const [hover, setHover] = useState<Position | null>(null);
   const [preview, setPreview] = useState<ConveyorPlacement[]>([]);
   const [cameraVersion, redrawCamera] = useState(0);
@@ -37,7 +39,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const pathTo = (end: Position) => buildConveyorPlacements(getBestPath(
     cellAt(drag.current!.start.x, drag.current!.start.y), end,
     pos => canPlaceAt(pos.x, pos.y, "conveyor")
-  ));
+  ), beltDirection);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
@@ -47,10 +49,14 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       const highlight = hover && (selectedItem || currentTool === "destroy")
         ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem)} : undefined;
       render(ctx, world, camera.current, highlight, storage);
-      if (preview.length) drawPreviewConveyor(ctx, preview);
+      if (isDirectionalTool && currentTool === "build") {
+        const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem)
+          ? [{...hover, direction: beltDirection, type: selectedItem as "conveyor" | "splitter" | "merger"}] : [];
+        if (placement.length) drawPreviewConveyor(ctx, placement, world);
+      }
     });
     return () => cancelAnimationFrame(frame);
-  }, [world, hover, preview, selectedItem, currentTool, cameraVersion, width, height]);
+  }, [world, hover, preview, selectedItem, currentTool, cameraVersion, width, height, beltDirection, isDirectionalTool]);
 
   // Stable subscriptions; effect events read the latest tool and camera state.
   const finishDrag = useEffectEvent((event: MouseEvent) => {
@@ -66,6 +72,17 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     drag.current = null;
     setPreview([]);
   });
+  const rotateBelt = useEffectEvent((event: KeyboardEvent) => {
+    const target = event.target;
+    if (!isDirectionalTool || currentTool !== "build" || event.key.toLowerCase() !== "r" ||
+        event.ctrlKey || event.metaKey || event.altKey || event.repeat ||
+        (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select")))) return;
+    event.preventDefault();
+    const directions: DirectionType[] = ["right", "down", "left", "up"];
+    const next = directions[(directions.indexOf(beltDirection) + (event.shiftKey ? 3 : 1)) % 4];
+    setBeltDirection(next);
+    setPreview(previous => previous.length === 1 ? [{...previous[0], direction: next}] : previous);
+  });
   useEffect(() => {
     const canvas = canvasRef.current!;
     const wheel = (event: WheelEvent) => {
@@ -79,6 +96,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       c.scale = scale;
       redrawCamera(v => v + 1);
     };
+    const keydown = (event: KeyboardEvent) => rotateBelt(event);
+    window.addEventListener("keydown", keydown);
     const up = (event: MouseEvent) => finishDrag(event);
     const blur = () => cancelDrag();
     canvas.addEventListener("wheel", wheel, {passive: false});
@@ -86,12 +105,20 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     window.addEventListener("blur", blur);
     return () => {
       canvas.removeEventListener("wheel", wheel);
+      window.removeEventListener("keydown", keydown);
       window.removeEventListener("mouseup", up);
       window.removeEventListener("blur", blur);
     };
   }, []);
 
-  return <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
+  return <div style={{position: "relative", width, height}}>
+    {isDirectionalTool && currentTool === "build" && <div className="conveyor-help" role="status">
+      <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "merger" ? "Merger" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
+      {selectedItem !== "conveyor" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
+      <span><kbd>R</kbd> Rotation horaire</span>
+      <span><kbd>Maj</kbd> + <kbd>R</kbd> Rotation antihoraire</span>
+    </div>}
+    <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
     style={{border: "1px solid black"}}
     onMouseDown={event => {
       if (event.button !== 0) return;
@@ -130,10 +157,15 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       const {x, y} = cellAt(event.clientX, event.clientY);
       if (currentTool === "destroy") { destroyEntity(x, y); return; }
       switch (selectedItem) {
+        case "merger":
+        case "splitter": placeConveyor(x, y, beltDirection, selectedItem); break;
+        case "miner": placeMiner(x, y); break;
         case "iron-mine": placeIronMine(x, y); break;
         case "coal-mine": placeCoalMine(x, y); break;
         case "water-pump": placeWaterPump(x, y); break;
+        case "iron-smelter": placeIronSmelter(x, y); break;
         case "storage": placeStorage(x, y); break;
       }
-    }} />;
+    }} />
+  </div>;
 }

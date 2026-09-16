@@ -1,7 +1,6 @@
 import {it} from "vitest";
 import {performance} from "node:perf_hooks";
 import {GameEngine} from "./GameEngine";
-import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
 import {createTestWorld} from "@engine/test/createTestWorld";
 import type {Conveyor} from "@engine/models/Conveyor";
 import {Grid} from "@engine/world/Grid";
@@ -29,7 +28,7 @@ it.skipIf(!process.env.PERF)("reports reproducible simulation and snapshot timin
       }));
       const engine = new GameEngine(world);
       console.log(JSON.stringify({count, loaded, simulationMs: measure(() => engine.tick()),
-        snapshotMs: measure(() => { buildWorldSnapshot(engine.getWorld()); })}));
+        snapshotMs: measure(() => { engine.getSnapshot(); })}));
     }
   }
 });

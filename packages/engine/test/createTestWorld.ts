@@ -11,5 +11,5 @@ export function createTestWorld(): World {
   grid.setResource(2, 1, "coal");
   grid.setResource(3, 1, "water");
   return {tick: 0, grid, machines: [], conveyors: [], storages: [],
-    resources: {iron: 0, coal: 0, water: 0}};
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0}};
 }

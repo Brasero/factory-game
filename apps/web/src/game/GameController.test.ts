@@ -19,6 +19,30 @@ describe("GameController", () => {
     expect(controller[method](10, 1)).toBe(false);
   });
 
+  it("places the iron smelter on free buildable ground", async () => {
+    const controller = await import("./GameController");
+    expect(controller.placeIronSmelter(0, 0)).toBe(true);
+    expect(controller.placeIronSmelter(0, 0)).toBe(false);
+    expect(controller.placeIronSmelter(-1, 1)).toBe(false);
+    expect(controller.placeIronSmelter(10, 1)).toBe(false);
+  });
+
+  it("places the generic miner on iron and coal only", async () => {
+    const controller = await import("./GameController");
+    const {getWorldSnapshot} = await import("./worldStore");
+    for (const x of [1, 2]) {
+      expect(controller.canPlaceAt(x, 1, "miner")).toBe(true);
+      expect(controller.placeMiner(x, 1)).toBe(true);
+      expect(controller.canPlaceAt(x, 1, "miner")).toBe(false);
+      expect(controller.placeMiner(x, 1)).toBe(false);
+    }
+    for (const [x, y] of [[3, 1], [0, 0], [-1, 1], [10, 1]]) {
+      expect(controller.canPlaceAt(x, y, "miner")).toBe(false);
+      expect(controller.placeMiner(x, y)).toBe(false);
+    }
+    expect(getWorldSnapshot().machines.map(machine => machine.type)).toEqual(["iron-mine", "coal-mine"]);
+  });
+
   it("runs one timer, allows editing while paused and resumes", async () => {
     vi.useFakeTimers();
     const controller = await import("./GameController");

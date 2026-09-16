@@ -87,9 +87,114 @@ Le test de rendu d'une vue de 320 × 320 pixels sur mer dessine 576 sous-tuiles 
 
 Vérification manuelle dans le navigateur : chargement, pause, déplacement de caméra, placement d'un coffre pendant la pause, zoom et reprise sans retour de caméra. La matrice complète des interactions et le redimensionnement restent à automatiser.
 
-### Prochain lot
+## Deuxième lot implémenté
 
-1. Compléter les tests navigateur (tracés, destruction, resize, glisser hors canvas) et les tests de régression des transferts vers les machines.
-2. Mesurer le rendu réel et les allocations dans le navigateur avant de choisir un cache de terrain par blocs.
-3. Mettre en cache les connexions et réduire les abonnements React recréés à chaque tick si le profil confirme leur coût.
-4. Concevoir séparément les futurs splitter/merger avec alternance explicite et tests de saturation ; ne pas autoriser de fusion implicite des convoyeurs simples.
+- Connexions du réseau calculées à la demande puis conservées entre ticks. Construction, rotation et destruction invalident le cache. Les index lisent les inventaires et capacités courants ; aucune copie d'inventaire n'est conservée dans la topologie.
+- Les modifications structurelles doivent passer par les commandes de `GameEngine`. Le troisième lot ci-dessous ferme les accès directs qui contournaient cette invalidation.
+- Ordre spatial stable et blocage volontaire des jonctions simples conservés. Tests de reconstruction du réseau et de transfert partiel vers une machine pleine puis libérée.
+- Gestionnaires globaux du Canvas stables entre ticks ; caméra et glissement conservés dans des références. Annulation sur perte de focus, clic droit ou relâchement hors canvas.
+- Correction du tracé restant sur sa case initiale : l'aperçu ne plante plus ; un convoyeur isolé est orienté à droite par défaut.
+- Six tests DOM avec React et happy-dom couvrent placement/destruction sans tick, tracé, annulation, caméra, zoom et redimensionnement. Le contrôleur et le rendu y sont simulés : ce ne sont pas des tests navigateur de bout en bout.
+- Réutilisation de l'index des prédécesseurs dans le rendu, y compris pour les convoyeurs sans prédécesseur, pour supprimer les recherches linéaires répétées. Un test protège ce comportement.
+
+### Mesures comparatives locales
+
+Comparaisons réalisées avant/après pendant la même session de développement sur une scène de 5 000 convoyeurs chargés, avec 10 passages d'échauffement et 50 échantillons :
+
+| Mesure | Médiane avant | Médiane après | p95 avant | p95 après |
+| --- | --- | --- | --- | --- |
+| Simulation Node | 3,123 ms | 0,801 ms | 5,932 ms | 1,433 ms |
+| Appels de rendu Canvas | 11,000 ms | 2,300 ms | 12,800 ms | 2,600 ms |
+
+Pour reproduire la mesure Canvas, lancer `npm run dev` puis ouvrir `/render-benchmark.html` sur le serveur annoncé par Vite. Cette entrée de développement n'est pas incluse dans le build de production. Elle utilise les vrais assets, un terrain herbeux fixe de 250 × 190 cases et une vue de 1 280 × 720 pixels ; seule la partie visible des convoyeurs est dessinée. Le temps mesuré est celui des appels CPU, hors chargement des assets et exécution GPU. Ces chiffres ne mesurent ni les FPS ni les allocations mémoire et ne constituent pas des seuils CI.
+
+La baisse du coût CPU ne justifie pas encore un cache de terrain par blocs : cette décision attend un profil sur des scènes plus représentatives et une mesure mémoire/GPU.
+
+Vérification manuelle dans le navigateur : construction d'une ligne de convoyeurs pendant la pause, destruction d'un convoyeur central, déplacement, zoom et reprise. Le redimensionnement est couvert par le test DOM.
+
+Validation du lot : `npm run check` et tests avec `--sequence.shuffle --sequence.seed=42` ; 44 tests ordinaires, plus un benchmark activé séparément.
+
+## Troisième lot : propriété du monde
+
+L'encapsulation est traitée avant le profil mémoire/GPU pour fermer un risque de connexions périmées identifié au lot précédent.
+
+- `GameEngine` conserve le monde dans un champ JavaScript privé `#world`. Le constructeur copie les entités, inventaires et la grille (terrain, ressources et occupation) pour isoler les références fournies par l'appelant.
+- `getWorld()` renvoie désormais une copie indépendante destinée aux exports et aux fixtures. Modifier cette copie ne modifie plus la simulation. C'est un changement de contrat pour les consommateurs directs du moteur.
+- `getSnapshot()` reste la lecture fréquente : seules les données dynamiques sont copiées, le terrain immuable reste partagé via son cache. `GameSession` utilise cette méthode et délègue la validation du placement au moteur sans exporter le monde.
+- Les tests préparent leurs inventaires avant la construction du moteur, ou exercent directement les systèmes sur un monde de test. Aucun accès mutable de test n'est ajouté à l'API de production.
+- Deux nouveaux tests vérifient l'isolation des entrées, exports et snapshots, y compris les inventaires imbriqués, l'occupation et les modifications tentées après calcul des connexions.
+
+Validation : `npm run check` et ordre aléatoire (seed 42) réussis, **46 tests** ; benchmark séparé réussi. Référence locale actuelle à 5 000 convoyeurs chargés : simulation médiane 0,884 ms, snapshot médian 0,187 ms. Ces valeurs ne constituent pas une comparaison contrôlée avec le lot précédent. La copie initiale et les exports complets ont un coût proportionnel à la taille du monde ; ils ne sont pas mesurés par ce benchmark et ne doivent pas être appelés dans la boucle de rendu.
+
+### Suite du plan
+
+1. Mesurer allocations, démarrage et coût GPU sur des scènes comprenant machines, ressources et décorations ; décider ensuite d'un éventuel cache par blocs.
+2. Compléter la couverture navigateur de bout en bout et préciser le comportement temporel après un onglet inactif ; l'interpolation et le rattrapage restent à faire.
+3. Concevoir séparément les futurs splitter/merger avec alternance explicite et tests de saturation ; ne pas autoriser de fusion implicite des convoyeurs simples.
+
+## Quatrième lot : scènes mixtes et démarrage
+
+`/render-benchmark.html` mesure désormais des scènes fixes comprenant 100, 1 000 ou 5 000 convoyeurs chargés, 1/5/25 mines et autant de coffres, des ressources et des arbres. La grille reste de 250 × 190 cases. Les rangées de production sont synthétiques, pas une sauvegarde de joueur ni une mesure du générateur procédural. La fixture est partagée dans `packages/engine/test/createBenchmarkWorld.ts`.
+
+Chaque scène passe successivement aux zooms 0,5, 1 et 2, avec déplacement horizontal de caméra. Chaque passage exécute un tick, un snapshot et un rendu par frame (charge de stress, différente de la cadence normale du jeu). Le monde continue d'évoluer entre les zooms. Les résultats incluent 10 frames d'échauffement et 50 échantillons par zoom, les intervalles requestAnimationFrame, les durées de création/copie/premier snapshot et les relevés du tas JS disponibles. L'export JSON contient le navigateur et les paramètres ; toute perte de visibilité invalide le passage.
+
+### Référence locale du 15 septembre 2026
+
+Navigateur intégré Chrome 152 annoncé par le user-agent, macOS, Canvas 1 280 × 720, DPR 1, onglet visible. Un passage, cache des assets non contrôlé ; ce n'est pas une comparaison avant/après.
+
+| Convoyeurs | Rendu médian zoom 0,5 | Zoom 1 | Zoom 2 |
+| --- | --- | --- | --- |
+| 100 | 14,4 ms | 1,6 ms | 1,2 ms |
+| 1 000 | 14,9 ms | 1,8 ms | 1,2 ms |
+| 5 000 | 15,8 ms | 2,2 ms | 1,8 ms |
+
+À 5 000 convoyeurs, le p95 du rendu au zoom 0,5 atteint 17,5 ms et celui des intervalles entre frames 33,4 ms. La création de scène prend 10,1 ms, la copie du moteur 62,7 ms et le premier snapshot 7,9 ms. Le chargement des assets est mesuré une fois à 14,6 ms, sans garantie de cache froid. Ces mesures excluent le chargement initial des modules Vite/React.
+
+Le tas JS relevé après les passages de cette scène varie entre 33,9 et 49,4 Mo décimaux. Le GC n'est pas contrôlé et les anciennes scènes peuvent attendre leur collecte : ces valeurs ne représentent ni les allocations totales ni une preuve de fuite. L'échantillonnage `HeapProfiler.startSampling` a été refusé par l'outil du navigateur intégré. Le profil détaillé des allocations et le coût GPU restent donc **non mesurés**.
+
+Pour compléter ces mesures dans Chrome DevTools : lancer un passage dédié avec l'enregistrement Memory « Allocation sampling », puis un autre avec le panneau Performance, en conservant navigateur, viewport et scène. Garder ces passages instrumentés séparés des références de temps ordinaires. Le protocole de profilage mémoire est décrit dans la [documentation officielle HeapProfiler](https://chromedevtools.github.io/devtools-protocol/tot/HeapProfiler/). Un intervalle entre frames n'est jamais présenté comme un temps GPU.
+
+### Décision pour le prochain lot
+
+Prioriser le travail de dessin au dézoom : son coût est déjà élevé avec seulement 100 convoyeurs, ce qui oriente l'enquête vers le terrain et les décorations plutôt que vers la taille du réseau. Mesurer ces couches séparément avant d'introduire un cache par blocs avec limite mémoire et invalidation. Examiner ensuite la copie initiale de la grille (en conservant son isolation). Le profil GPU/allocation reste à compléter dans un outil le permettant ; aucun Web Worker n'est justifié par ces seuls résultats.
+
+## Cinquième lot : coût du fond marin
+
+Le benchmark relève maintenant séparément terrain, ressources, entités et décorations via un observateur optionnel du rendu. Les appels à l'horloge par couche sont désactivés dans le jeu normal.
+
+Le profil de la scène mixte à 5 000 convoyeurs, zoom 0,5, attribue environ 15 ms au terrain, 1,7 ms aux entités et 0,1 ms aux décorations. Le fond marin dessinait quatre fois la même sous-tuile par case visible, y compris sous les terres. Il est désormais rempli avec un `CanvasPattern` construit depuis la première sous-tuile de l'asset existant.
+
+Le cache conserve un motif de 16 × 16 pixels par contexte Canvas, via une WeakMap, et le remplace si l'image source change. Il ne dépend pas des données du terrain : les autres couches continuent à lire le snapshot courant. Aucun cache de blocs de carte n'est introduit.
+
+### Fidélité et repli
+
+La comparaison navigateur a révélé que les motifs et les sprites individuels ne sont pas rasterisés de façon identique à toutes les transformations. Le chemin optimisé est donc limité aux échelles 0,5 / 1 / 2, sans rotation et avec translation entière. Les autres transformations, ainsi que l'absence d'OffscreenCanvas ou de motif disponible, utilisent le dessin original. Les gains ci-dessous ne s'appliquent donc pas aux caméras fractionnaires ou aux zooms intermédiaires.
+
+Le benchmark compare les pixels sur des Canvas séparés avant ses mesures : zooms 0,5 / 0,75 / 1 / 2 et translations 0 / −33,5 / 47, sur le terrain et les décorations de la fixture. Les **12 comparaisons sont identiques** dans le navigateur testé, y compris les chemins de repli. Ces contrôles ne constituent pas une preuve universelle pour tous les navigateurs, assets ou transformations. Les lectures de pixels ne touchent pas le Canvas chronométré.
+
+### Comparaison locale
+
+Même session, scène et protocole que le lot précédent, avec instrumentation des couches activée des deux côtés ; Chrome 152 annoncé, Canvas 1 280 × 720, DPR 1, onglet visible, 50 échantillons après 10 frames d'échauffement.
+
+| 5 000 convoyeurs, zoom 0,5 | Avant | Après |
+| --- | --- | --- |
+| Rendu CPU médian | 16,9 ms | 2,2 ms |
+| Rendu CPU p95 | 18,7 ms | 2,5 ms |
+| Terrain médian | 15,0 ms | 0,1 ms |
+| Intervalle entre frames p95 | 33,4 ms | 17,7 ms |
+
+Un test unitaire protège la réutilisation du motif, son remplacement au changement d'asset, la restauration de l'état de remplissage et les replis fractionnaires. `npm run check` : **48 tests réussis**, benchmark Node exclu des tests ordinaires, lint et build réussis.
+
+Prochain travail : réduire le coût de copie initiale de la grille sans affaiblir l'isolation du moteur, puis étendre les profils aux terrains procéduraux et aux zooms intermédiaires avant de décider d'un cache plus général. Les limites de profilage GPU et allocations détaillées restent inchangées.
+
+
+### Merger et splitter
+
+Les outils `merger` et `splitter` occupent une case, avec une orientation commune aux tapis (`R` horaire, `Maj+R` antihoraire). Un clic sur un élément du même type ajuste sa direction en conservant son inventaire ; changer de type exige une destruction préalable.
+
+- Splitter : une entrée arrière, trois sorties (avant, droite, gauche). Distribution circulaire des paquets entre les sorties disponibles ; une sortie pleine ou absente est ignorée.
+- Merger : entrées arrière et latérales, sortie avant. Priorité circulaire entre les convoyeurs entrants pour éviter la famine sous saturation.
+- Les stocks restent bornés et les arrivées attendent le prochain tick avant un nouveau transfert. Les tapis ordinaires refusent toujours les jonctions implicites.
+- Les sprites existants `splitter.png` et `combiner.png` sont animés et orientés au rendu. Les snapshots transportent le curseur de distribution ; les rotations et destructions invalident le cache de connexions.
+
+Les mergers et splitters utilisent les lignes directionnelles natives de leurs spritesheets : huit frames jaunes lorsqu'un convoyeur est connecté à un port, quatre frames rouges sinon. Les ressources contenues restent simulées mais sont masquées dans le boîtier. La connexion est recalculée au rendu après placement, rotation et destruction ; un stock vide ou une saturation ne signifie pas une déconnexion.

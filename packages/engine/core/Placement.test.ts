@@ -20,9 +20,11 @@ describe("Placement rules", () => {
     expect(world.conveyors).toHaveLength(0);
   });
   it("rotates an existing belt without losing its items, then frees the cell", () => {
-    const engine = new GameEngine(createTestWorld());
+    let engine = new GameEngine(createTestWorld());
     engine.placeConveyor(0, 0, "right");
-    engine.getWorld().conveyors[0].carrying.push({type: "coal", amount: 1, progress: 0.5});
+    const initial = engine.getWorld();
+    initial.conveyors[0].carrying.push({type: "coal", amount: 1, progress: 0.5});
+    engine = new GameEngine(initial);
     expect(engine.placeConveyor(0, 0, "down")).toBe(true);
     expect(engine.getWorld().conveyors[0].carrying).toHaveLength(1);
     engine.destroyEntityAt(0, 0);

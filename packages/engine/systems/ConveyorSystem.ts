@@ -1,30 +1,50 @@
 import type {World} from "@engine/models/World";
-import {buildNetworkTopology, type NetworkTopology} from "./NetworkTopology";
+import {buildNetworkTopology, inputPort, type NetworkTopology} from "./NetworkTopology";
 
 export function runConveyors(world: World, network: NetworkTopology = buildNetworkTopology(world)): void {
   const next = world.conveyors.map(c => ({...c, carrying: [] as typeof c.carrying}));
   const arrivals = world.conveyors.map(() => [] as World["conveyors"][number]["carrying"]);
   const slots = world.conveyors.map(c => c.capacity - c.carrying.length);
-  for (const index of network.beltOrder) {
+  // Priorite circulaire des entrees de merger, stable quel que soit l'ordre des tableaux.
+  const priority = (index: number) => {
+    const target = network.targets[index];
+    const merger = target?.kind === "belt" ? world.conveyors[target.index] : undefined;
+    return merger?.type === "merger"
+      ? (inputPort(merger, world.conveyors[index]) - (merger.routingCursor ?? 0) + 4) % 4 : 0;
+  };
+  const order = [...network.beltOrder].sort((a, b) => priority(a) - priority(b));
+  for (const index of order) {
     const belt = world.conveyors[index];
     const carrying = next[index].carrying;
-    const target = network.targets[index];
-    const machine = target?.kind === "machine" ? world.machines[target.index] : undefined;
-    const storage = target?.kind === "storage" ? world.storages[target.index] : undefined;
-    const destination = machine ? {buffer: machine.buffer, capacity: machine.capacity}
-      : storage ? {buffer: storage.stored, capacity: storage.capacity} : undefined;
     for (const item of belt.carrying) {
       let remaining = item.amount;
       if (item.progress >= 1) {
-        if (destination) {
-          const used = Object.values(destination.buffer).reduce((sum, amount) => sum + amount, 0);
-          const moved = Math.min(remaining, Math.max(0, destination.capacity - used));
-          destination.buffer[item.type] = (destination.buffer[item.type] ?? 0) + moved;
+        const outputs = network.outputs[index];
+        const start = belt.type === "splitter" ? (next[index].routingCursor ?? 0) % outputs.length : 0;
+        for (let offset = 0; offset < outputs.length; offset++) {
+          const port = (start + offset) % outputs.length;
+          const target = outputs[port];
+          if (!target) continue;
+          let moved = 0;
+          if (target.kind === "belt" && slots[target.index] > 0) {
+            arrivals[target.index].push({...item, amount: remaining, progress: 0});
+            slots[target.index]--;
+            moved = remaining;
+            if (next[target.index].type === "merger") {
+              next[target.index].routingCursor = (inputPort(next[target.index], belt) + 1) % 4;
+            }
+          } else if (target.kind !== "belt") {
+            const entity = target.kind === "machine" ? world.machines[target.index] : world.storages[target.index];
+            const buffer = "buffer" in entity ? entity.buffer : entity.stored;
+            const used = Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
+            moved = Math.min(remaining, Math.max(0, entity.capacity - used));
+            buffer[item.type] = (buffer[item.type] ?? 0) + moved;
+          }
           remaining -= moved;
-        } else if (target?.kind === "belt" && slots[target.index] > 0) {
-          arrivals[target.index].push({...item, progress: 0});
-          slots[target.index]--;
-          remaining = 0;
+          if (moved > 0) {
+            if (belt.type === "splitter") next[index].routingCursor = (port + 1) % outputs.length;
+            break;
+          }
         }
       }
       if (remaining > 0) {

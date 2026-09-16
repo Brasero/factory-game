@@ -23,6 +23,8 @@ export function drawResourceNodes(
       case "water":
         img = assetManager.getImage("node.water");
         break;
+      default:
+        return;
     }
     const subSize = CELL_SIZE / 2
     for (let i = 0; i < 4; i++) {

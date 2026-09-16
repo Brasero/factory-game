@@ -6,10 +6,11 @@ describe("GameEngine", () => {
   let engine: GameEngine;
   beforeEach(() => { engine = new GameEngine(createTestWorld()); });
 
-  it("keeps the supplied world and advances its clock", () => {
+  it("owns an independent world and advances its clock", () => {
     const world = createTestWorld();
     const game = new GameEngine(world);
-    expect(game.getWorld()).toBe(world);
+    expect(game.getWorld()).toEqual(world);
+    expect(game.getWorld()).not.toBe(world);
     game.tick();
     game.tick();
     expect(game.getWorld().tick).toBe(2);
@@ -28,7 +29,9 @@ describe("GameEngine", () => {
 
   it("stops extraction when the buffer is full", () => {
     engine.placeMachine(1, 1, "iron-mine");
-    engine.getWorld().machines[0].buffer.iron = 100;
+    const initial = engine.getWorld();
+    initial.machines[0].buffer.iron = 100;
+    engine = new GameEngine(initial);
     for (let i = 0; i < 20; i++) engine.tick();
     expect(engine.getWorld().machines[0].buffer.iron).toBe(100);
     expect(engine.getWorld().machines[0].active).toBe(false);

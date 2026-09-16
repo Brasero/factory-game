@@ -1,6 +1,7 @@
 import {describe, it, expect} from "vitest";
 import {runConveyors} from "./ConveyorSystem";
 import {runOutputMachine} from "./MachineOutputSystem";
+import {runStorageOutputs} from "./StorageOutputSystem";
 import {createTestWorld} from "@engine/test/createTestWorld";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor";
 import {GameEngine} from "@engine/core/GameEngine";
@@ -81,8 +82,8 @@ describe("Conveyor transfers", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(3, 1, "water-pump");
     engine.placeConveyor(4, 1, "right");
-    engine.getWorld().machines[0].buffer.water = 5;
     let world = engine.getWorld();
+    world.machines[0].buffer.water = 5;
     for (let i = 0; i < 5; i++) world = runOutputMachine(world);
     expect(world.conveyors[0].carrying).toHaveLength(3);
     expect(world.machines[0].buffer.water).toBe(2);
@@ -91,10 +92,41 @@ describe("Conveyor transfers", () => {
   it("updates HUD totals in the transfer tick and after destruction", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeStorage(2, 1);
-    engine.getWorld().conveyors = [belt(1, 1, "right")];
-    engine.tick();
-    expect(engine.getWorld().resources.iron).toBe(1);
-    engine.destroyEntityAt(2, 1);
-    expect(engine.getWorld().resources.iron).toBe(0);
+    const initial = engine.getWorld();
+    initial.conveyors = [belt(1, 1, "right")];
+    const loaded = new GameEngine(initial);
+    loaded.tick();
+    expect(loaded.getSnapshot().resources.iron).toBe(1);
+    loaded.destroyEntityAt(2, 1);
+    expect(loaded.getSnapshot().resources.iron).toBe(0);
+  });
+
+  it("lets adjacent machines pull ingredients from storage and produce iron plates", () => {
+    const engine = new GameEngine(createTestWorld());
+    expect(engine.placeStorage(0, 0)).toBe(true);
+    expect(engine.placeMachine(1, 0, "iron-smelter")).toBe(true);
+    let world = engine.getWorld();
+    world.storages[0].stored.iron = 1;
+    const loaded = new GameEngine(world);
+    for (let i = 0; i < 20; i++) loaded.tick();
+    world = loaded.getWorld();
+    expect(world.storages[0].stored.iron).toBe(0);
+    expect(world.machines[0].buffer.ironPlate).toBe(1);
+  });
+
+  it("exports storage resources only to belts that do not point back into the chest", () => {
+    const outward = createTestWorld();
+    outward.storages = [{id: "storage", entityType: "storage", x: 0, y: 0, capacity: 200, stored: {iron: 1, coal: 0, water: 0, ironPlate: 0}}];
+    outward.conveyors = [belt(1, 0, "right", false)];
+    const exported = runStorageOutputs(outward);
+    expect(exported.storages[0].stored.iron).toBe(0);
+    expect(exported.conveyors[0].carrying).toEqual([{type: "iron", amount: 1, progress: 0}]);
+
+    const inward = createTestWorld();
+    inward.storages = [{id: "storage", entityType: "storage", x: 0, y: 0, capacity: 200, stored: {iron: 1, coal: 0, water: 0, ironPlate: 0}}];
+    inward.conveyors = [belt(1, 0, "left", false)];
+    const blocked = runStorageOutputs(inward);
+    expect(blocked.storages[0].stored.iron).toBe(1);
+    expect(blocked.conveyors[0].carrying).toHaveLength(0);
   });
 });

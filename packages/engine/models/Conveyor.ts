@@ -10,7 +10,8 @@ export type ResourceCarryingType = {
 
 export interface Conveyor extends BaseEntity {
   entityType: 'conveyor';
-  type: "conveyor";
+  type: "conveyor" | "splitter" | "merger";
+  routingCursor?: number;
   direction: DirectionType;
   carrying: ResourceCarryingType[];
   speed: number;

@@ -1,7 +1,7 @@
 import type {Position} from "@engine/models/Position";
 import type {GridCell} from "@engine/models/GridCell";
 import type {MachineType} from "@engine/models/Machine.ts";
-import type {TileMap} from "@engine/world/TileMap.ts";
+import {TileMap} from "@engine/world/TileMap.ts";
 import type {TileData} from "@engine/models/Tile.ts";
 
 // Classe représentant une grille 2D pour la gestion des positions occupées
@@ -59,6 +59,18 @@ export class Grid {
     );
   }
   
+  /** Independent copy, including occupancy, for engine ownership boundaries. */
+  clone(): Grid {
+    const copy = new Grid(this.width, this.height, new TileMap(this.width, this.height, []));
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        copy.cells[y][x] = structuredClone(this.cells[y][x]);
+      }
+    }
+    copy.terrainVersion = this.terrainVersion;
+    return copy;
+  }
+
   /**
    * Renvoie les données de la tuile à la position spécifiée si elle existe dans la grille.
    * @param {number} x - La coordonnée x de la tuile.
@@ -155,6 +167,8 @@ export class Grid {
     if (cell.decoration) return false;
     
     switch(machineType) {
+      case "miner":
+        return cell.resource === "iron" || cell.resource === "coal";
       case "iron-mine":
         return cell.resource === "iron";
       case "coal-mine":

@@ -17,6 +17,12 @@ export function pauseGame() {
     loop.stop()
 }
 
+export function placeMiner(x: number, y: number) {
+    if (session.canPlaceMachine(x, y, "iron-mine")) return placeIronMine(x, y);
+    if (session.canPlaceMachine(x, y, "coal-mine")) return placeCoalMine(x, y);
+    return false;
+}
+
 export function placeIronMine(x: number, y: number) {
     const success = session.dispatch({
         type: "place-machine",
@@ -56,12 +62,26 @@ export function placeWaterPump(x: number, y: number) {
     return success;
 }
 
-export function placeConveyor(x: number, y: number, direction: DirectionType) {
+export function placeIronSmelter(x: number, y: number) {
+    const success = session.dispatch({
+        type: "place-machine",
+        x,
+        y,
+        machineType: "iron-smelter"
+    });
+    if (success) {
+        updateWorld()
+    }
+    return success;
+}
+
+export function placeConveyor(x: number, y: number, direction: DirectionType, conveyorType: "conveyor" | "splitter" | "merger" = "conveyor") {
     const success = session.dispatch({
         type: "place-conveyor",
         x,
         y,
-        direction
+        direction,
+        conveyorType
     })
     if (success) {
         updateWorld();

@@ -1,6 +1,6 @@
 import type {World} from "@engine/models/World";
 import type {Position} from "@engine/models/Position";
-import type {DirectionType} from "@engine/models/Conveyor";
+import type {Conveyor, DirectionType} from "@engine/models/Conveyor";
 
 export function nextPosition({x, y}: Position, direction: DirectionType): Position {
   switch (direction) {
@@ -11,9 +11,10 @@ export function nextPosition({x, y}: Position, direction: DirectionType): Positi
   }
 }
 export const positionKey = ({x, y}: Position) => `${x},${y}`;
-type Target = {kind: "machine" | "storage" | "belt"; index: number};
+export type Target = {kind: "machine" | "storage" | "belt"; index: number};
 export interface NetworkTopology {
   targets: (Target | undefined)[];
+  outputs: (Target | undefined)[][];
   machineOutputs: (number | undefined)[];
   beltOrder: number[];
   machineOrder: number[];
@@ -28,21 +29,50 @@ export function buildNetworkTopology(world: World): NetworkTopology {
   world.storages.forEach((s, index) => occupied.set(positionKey(s), {kind: "storage", index}));
   world.machines.forEach((m, index) => occupied.set(positionKey(m), {kind: "machine", index}));
   const incoming = new Map<string, number>();
-  const destinations = world.conveyors.map(c => positionKey(nextPosition(c, c.direction)));
-  destinations.forEach(key => incoming.set(key, (incoming.get(key) ?? 0) + 1));
+  const destinations = world.conveyors.map(c => outputDirections(c).map(direction => nextPosition(c, direction)));
+  destinations.flat().forEach(pos => {
+    const key = positionKey(pos);
+    incoming.set(key, (incoming.get(key) ?? 0) + 1);
+  });
+  const outputs = destinations.map((positions, index) => positions.map(pos => {
+    const target = occupied.get(positionKey(pos));
+    if (target?.kind === "belt") {
+      const receiver = world.conveyors[target.index];
+      if (!acceptsInput(receiver, world.conveyors[index])) return undefined;
+      // Seul un merger autorise plusieurs arrivees sur une meme case.
+      if (receiver.type !== "merger" && incoming.get(positionKey(pos))! > 1) return undefined;
+    }
+    return target;
+  }));
   return {
-    targets: destinations.map(key => {
-      const target = occupied.get(key);
-      // Simple belts never merge implicitly, even if a branch is empty.
-      return target?.kind === "belt" && incoming.get(key)! > 1 ? undefined : target;
-    }),
+    targets: outputs.map(targets => targets[0]),
+    outputs,
     machineOutputs: world.machines.map(m => {
       const pump = m.type === "water-pump";
       const target = occupied.get(positionKey({x: m.x + (pump ? 1 : 0), y: m.y + (pump ? 0 : 1)}));
       if (target?.kind !== "belt") return undefined;
+      if (!acceptsInput(world.conveyors[target.index], m)) return undefined;
       return world.conveyors[target.index].direction === (pump ? "left" : "up") ? undefined : target.index;
     }),
     beltOrder: spatialOrder(world.conveyors),
     machineOrder: spatialOrder(world.machines)
   };
+}
+
+export const directions: DirectionType[] = ["right", "down", "left", "up"];
+export function outputDirections(belt: Conveyor): DirectionType[] {
+  const forward = directions.indexOf(belt.direction);
+  return belt.type === "splitter"
+    ? [belt.direction, directions[(forward + 1) % 4], directions[(forward + 3) % 4]]
+    : [belt.direction];
+}
+export function inputPort(belt: Conveyor, source: Position): number {
+  const dx = source.x - belt.x, dy = source.y - belt.y;
+  return directions.indexOf(dx > 0 ? "right" : dx < 0 ? "left" : dy > 0 ? "down" : "up");
+}
+export function acceptsInput(belt: Conveyor, source: Position): boolean {
+  if (belt.type === "conveyor") return true;
+  const forward = directions.indexOf(belt.direction);
+  const port = inputPort(belt, source);
+  return belt.type === "splitter" ? port === (forward + 2) % 4 : port !== forward;
 }

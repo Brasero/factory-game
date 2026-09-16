@@ -5,7 +5,6 @@ import type {
   SelectedItem,
   WorldSnapshot
 } from "@engine/api/types.ts";
-import {buildWorldSnapshot} from "@engine/api/worldSnapshot.ts";
 
 export class GameSession {
   private engine: GameEngine;
@@ -30,7 +29,8 @@ export class GameSession {
         return this.engine.placeConveyor(
           command.x,
           command.y,
-          command.direction
+          command.direction,
+          command.conveyorType
         );
       case "place-storage":
         return this.engine.placeStorage(command.x, command.y);
@@ -43,20 +43,11 @@ export class GameSession {
   }
 
   canPlaceMachine(x: number, y: number, machineType: SelectedItem): boolean {
-    const world = this.engine.getWorld();
-    if (machineType === "conveyor") {
-      const blocked =
-        world.machines.some(m => m.x === x && m.y === y) ||
-        world.storages.some(s => s.x === x && s.y === y);
-      if (blocked) return false;
-      if (world.conveyors.some(c => c.x === x && c.y === y)) return true;
-    }
-    if (!world.grid) return false;
-    return world.grid.canPlaceMachine({x, y}, machineType);
+    return this.engine.canPlaceMachine(x, y, machineType);
   }
 
   getSnapshot(): WorldSnapshot {
-    return buildWorldSnapshot(this.engine.getWorld());
+    return this.engine.getSnapshot();
   }
 }
 

@@ -7,18 +7,19 @@ import {setSelectedItem, setToolMode, togglePause} from "@web/store/controlSlice
 import {formatTicks} from "@web/utils/utils.ts";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
-import {useState} from "react";
+
 
 export function Hud() {
   const iron = useWorldSelector((world) => world.resources.iron);
   const water = useWorldSelector((world) => world.resources.water);
   const coal = useWorldSelector((world) => world.resources.coal);
+  const ironPlate = useWorldSelector((world) => world.resources.ironPlate);
   const tick = useWorldSelector((world) => world.tick);
   const selectedItem = useAppSelector(selectSelectedItem);
   const paused = useAppSelector(selectGamePaused);
   const dispatch = useAppDispatch();
   const currentTool = useAppSelector(selectCurentTool);
-  const [openMineOptions, setOpenMineOptions] = useState(false);
+
   
   const handleClick = (item: SelectedItem) => {
     if (currentTool !== "build") return
@@ -28,12 +29,6 @@ export function Hud() {
     }
     dispatch(setSelectedItem(item));
   };
-  const openMineOption = () => {
-    setOpenMineOptions(true);
-  }
-  const closeMineOption = () => {
-    setOpenMineOptions(false);
-  }
   const toggleGamePause = () => {
     const isPaused = !!paused;
     dispatch(togglePause());
@@ -60,14 +55,23 @@ export function Hud() {
   const destroyButtonClass = () => {
     return "destroyBtn " + (currentTool === "destroy" ? "selected" : "")
   }
+  const resources = [
+    {type: "iron", value: iron, icon: "ore.ironOre"},
+    {type: "coal", value: coal, icon: "ore.coalOre"},
+    {type: "water", value: water, icon: "ore.waterOre"},
+    {type: "ironPlate", value: ironPlate, icon: "ore.ironPlate"}
+  ] as const;
   
   return (<div id="hud_container">
       <div id="hud_info">
-        <div id="hud_resources">
-          <div className={`hud_resource iron ${(iron > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.ironOre").src} width={16} height={16} /> {iron}</div>
-          <div className={`hud_resource coal ${(coal > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.coalOre").src} width={16} height={16}/> {coal}</div>
-          <div className={`hud_resource water ${(water > 0 && !paused) ? 'pulse' : ''}`}><img src={assetManager.getImage("ore.waterOre").src} /> {water}</div>
-        </div>
+        {resources.some(resource => resource.value > 0) && <div id="hud_resources">
+          {resources.filter(resource => resource.value > 0).map(resource => (
+            <div key={resource.type} className={`hud_resource ${resource.type} ${!paused ? 'pulse' : ''}`}>
+              <span className={`resource-icon ${resource.type}`} style={{backgroundImage: `url(${assetManager.getImage(resource.icon).src})`}} />
+              {resource.value}
+            </div>
+          ))}
+        </div>}
         <div id="hud_tick_container">
           <button id="hud_pause_btn" onClick={toggleGamePause}>
             {paused ? "▶" : "⏸"}
@@ -80,25 +84,24 @@ export function Hud() {
     
     <div id="hud_commands">
       <div id="hud_commands_extractor">
-        <div className={"miner"} onMouseEnter={openMineOption} onMouseLeave={closeMineOption}>
-          {
-            openMineOptions ? (
-              <div className={"mine-options"}>
-                <button className={buttonMachineStyle("iron-mine")} onClick={() => handleClick("iron-mine")}><img
-                  src={assetManager.getImage("ore.ironOre").src} width={20} height={20}/></button>
-                <button className={buttonMachineStyle("coal-mine")} onClick={() => handleClick("coal-mine")}><img
-                  src={assetManager.getImage("ore.coalOre").src} width={20} height={20}/></button>
-              </div>
-            ) : ""
-          }
+        <button aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
           <img src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>
-        </div>
+        </button>
         <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
           <img src={assetManager.getImage("machine.pump.water.idle").src}/>
         </button>
+        <button aria-label="Fonderie de fer" title="Fonderie de fer — minerai vers lingot" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
+          <span className="automation-machine-icon" style={{backgroundImage: `url(${assetManager.getImage("machine.automation.ironSmelter.idle").src})`}} />
+        </button>
       </div>
       <div id="hud_commands_logistique">
-        <button className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>
+        {(["merger", "splitter"] as const).map(type => <button key={type}
+          aria-label={type === "merger" ? "Merger" : "Splitter"}
+          title={type === "merger" ? "Merger — 3 entrées, 1 sortie" : "Splitter — 1 entrée, 3 sorties"}
+          className={buttonMachineStyle(type)} onClick={() => handleClick(type)}>
+          <span className={`router-icon ${type}`} style={{backgroundImage: `url(${assetManager.getImage(`router.${type}`).src})`}} />
+        </button>)}
+        <button aria-label="Tapis roulant" className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>
           <img src={assetManager.getImage("conveyor.right").src} />
         </button>
         <button className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>
