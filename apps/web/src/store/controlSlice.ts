@@ -18,6 +18,9 @@ const controlSlice = createSlice({
 		togglePause(state) {
 			state.paused = !state.paused
 		},
+		setPaused(state, action: PayloadAction<boolean>) {
+			state.paused = action.payload
+		},
 		setToolMode(state, action: PayloadAction<ToolMode>) {
 			state.currentTool = action.payload
 		}
@@ -27,6 +30,7 @@ const controlSlice = createSlice({
 export const {
 	setSelectedItem,
 	togglePause,
+	setPaused,
 	setToolMode
 } = controlSlice.actions;
 

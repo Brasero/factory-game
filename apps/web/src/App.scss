@@ -1,3 +1,5 @@
+@use "theme/main" as c;
+
 #root {
   width: 100%;
   height: 100dvh;
@@ -15,10 +17,164 @@ canvas {
 }
 
 .gameView {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 40px;
+}
+
+.menu-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(c.$state-primary, 0.26), transparent 34%),
+    radial-gradient(circle at 80% 75%, rgba(c.$state-secondary, 0.18), transparent 30%),
+    linear-gradient(145deg, #090b13 0%, c.$ui-background 55%, #12172b 100%);
+
+  &.pause-menu {
+    background: rgba(8, 10, 18, 0.82);
+    backdrop-filter: blur(6px);
+  }
+}
+
+.menu-panel {
+  width: min(520px, 100%);
+  padding: 42px;
+  border: 1px solid c.$ui-border;
+  border-radius: 18px;
+  background: c.$ui-surface;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+
+  h1 {
+    margin: 6px 0 10px;
+    color: c.$text-primary;
+    font-size: clamp(42px, 8vw, 70px);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+  }
+
+  > p { color: c.$text-secondary; font-size: 17px; }
+  > small { display: block; margin-top: 26px; color: c.$text-muted; text-align: center; }
+}
+
+.menu-kicker,
+.tutorial-eyebrow {
+  color: c.$state-accent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.menu-actions {
+  display: grid;
+  gap: 10px;
+  margin: 30px 0;
+}
+
+button.primary-button,
+button.secondary-button,
+button.text-button {
+  min-height: 42px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled { cursor: not-allowed; opacity: 0.45; }
+}
+
+button.primary-button {
+  border: 1px solid c.$state-primary;
+  background: c.$state-primary;
+  color: white;
+  box-shadow: 0 8px 24px rgba(c.$state-primary, 0.28);
+}
+
+button.secondary-button {
+  border: 1px solid c.$ui-border;
+  background: c.$ui-surface-alt;
+  color: c.$text-primary;
+}
+
+button.text-button {
+  border: 0;
+  background: transparent;
+  color: c.$text-secondary;
+}
+
+.menu-primary { min-height: 52px !important; font-size: 18px !important; }
+
+.goal-preview {
+  padding: 16px 18px;
+  border: 1px dashed c.$ui-border;
+  border-radius: 10px;
+  background: c.$ui-background;
+
+  span { color: c.$text-muted; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
+  strong { display: block; margin: 3px 0; color: c.$text-primary; }
+  p { color: c.$text-muted; font-size: 13px; }
+}
+
+.tutorial-card {
+  position: fixed;
+  z-index: 400;
+  top: 24px;
+  left: 24px;
+  width: min(440px, calc(100vw - 48px));
+  overflow: hidden;
+  border: 1px solid c.$ui-border;
+  border-radius: 14px;
+  background: c.$ui-surface;
+  color: c.$text-primary;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
+  padding: 24px;
+
+  h2 { margin-top: 4px; font-size: 25px; line-height: 1.15; }
+  > p { margin-top: 14px; color: c.$text-secondary; line-height: 1.55; }
+  .tutorial-tip { padding: 10px 12px; border-radius: 8px; background: c.$ui-background; color: c.$text-secondary; font-size: 13px; }
+  .tutorial-action { color: c.$state-accent; font-size: 13px; font-weight: 700; }
+}
+
+.tutorial-progress {
+  height: 4px;
+  margin: -24px -24px 22px;
+  background: c.$ui-background;
+
+  span { display: block; height: 100%; background: c.$state-secondary; transition: width 0.25s ease; }
+}
+
+.tutorial-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.tutorial-count { color: c.$text-muted; font-size: 12px; font-weight: 700; }
+.tutorial-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.tutorial-actions > div { display: flex; gap: 8px; }
+
+.tutorial-target {
+  position: relative;
+  z-index: 450 !important;
+  outline: 3px solid c.$state-accent !important;
+  outline-offset: 4px;
+  animation: tutorialPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes tutorialPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(c.$state-accent, 0.15), 0 0 18px rgba(c.$state-accent, 0.25); }
+  50% { box-shadow: 0 0 0 7px rgba(c.$state-accent, 0.12), 0 0 28px rgba(c.$state-accent, 0.55); }
+}
+
+@media (max-width: 700px) {
+  .menu-panel { padding: 28px; }
+  .tutorial-card { top: 12px; left: 12px; width: calc(100vw - 24px); padding: 18px; }
+  .tutorial-progress { margin: -18px -18px 16px; }
 }
 
 .destroy {
