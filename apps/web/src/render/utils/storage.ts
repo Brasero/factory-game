@@ -8,7 +8,11 @@ const resourceIcon: Record<ResourcesType, string> = {
   iron: "ore.ironOre",
   coal: "ore.coalOre",
   water: "ore.waterOre",
-  ironPlate: "ore.ironPlate"
+  ironPlate: "ore.ironPlate",
+  steel: "ore.ironPlate",
+  copper: "ore.copperOre",
+  copperWire: "ore.ironPlate",
+  circuit: "ore.ironPlate"
 }
 const CELL_SIZE = GridConfig.CELL_SIZE
 export function drawStorageTooltip(

@@ -9,19 +9,21 @@ import {setWorldSnapshot} from "@web/game/worldStore";
 import {GameCanvas} from "./GameCanvas";
 import {render} from "./CanvasRenderer";
 import * as controller from "@web/game/GameController";
+import {emptyResources} from "@engine/models/Resources";
+import {createTestCampaign} from "@engine/test/createTestWorld";
 
 vi.mock("./CanvasRenderer", () => ({render: vi.fn()}));
 vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
-  placeWaterPump: vi.fn(), placeConveyorLine: vi.fn()
+  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
 let host: HTMLDivElement;
 let canvas: HTMLCanvasElement;
-const world = (tick = 0) => ({tick, machines: [], conveyors: [], storages: [], resources: {iron: 0, coal: 0, water: 0, ironPlate: 0}});
+const world = (tick = 0) => ({tick, machines: [], conveyors: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()});
 const tree = (width = 640, height = 480) => createElement(Provider, {store, children: createElement(GameCanvas, {width, height, cellSize: 32})});
 const mouse = (target: EventTarget, type: string, x: number, y: number, buttons = 0) => {
   act(() => { target.dispatchEvent(new MouseEvent(type, {bubbles: true, clientX: x, clientY: y, button: 0, buttons})); });
@@ -74,7 +76,7 @@ describe("Canvas interactions (DOM)", () => {
     expect(host.textContent).not.toContain("Rotation horaire");
     rotate();
     mouse(canvas, "click", 48, 48);
-    expect(controller.placeMiner).toHaveBeenCalledWith(1, 1);
+    expect(controller.placeMiner).toHaveBeenCalledWith(1, 1, "standard");
     act(() => store.dispatch(setSelectedItem("conveyor")));
     place("up");
   });

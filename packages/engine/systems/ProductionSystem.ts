@@ -1,60 +1,62 @@
 import type {World} from "../models/World";
-import {MACHINE_RECIPES} from "@engine/config/recipeConfig";
+import type {Machine} from "@engine/models/Machine";
+import type {ResourcesType} from "@engine/models/Resources";
+import {MACHINE_BASE_POLLUTION, MACHINE_VARIANTS} from "@engine/config/machineConfig";
+import {recipeFor, recipeInputs, recipeOutputs} from "@engine/config/recipeConfig";
+import {campaignLevelAt, NATURAL_POLLUTION_RECOVERY} from "@engine/config/campaignConfig";
+
+const extractorResource = (machine: Machine): ResourcesType | undefined =>
+  machine.type === "iron-mine" ? "iron" : machine.type === "coal-mine" ? "coal" :
+    machine.type === "copper-mine" ? "copper" : machine.type === "water-pump" ? "water" : undefined;
 
 export function runProduction(world: World): World {
-    /* todo : a modifier, il est necessaire de mettre en place un systeme de production plus maintenable et permettant d'ajouter simplement d'autres machines (ex: centrale électrique, etc)
-    le design pattern "Strategy" pourrait être une bonne solution : chaque machine aurait sa propre logique de production, et on pourrait facilement ajouter de nouvelles machines en créant de nouvelles stratégies de production
-    */
-    const machines = world.machines.map((m) => {
-        const recipe = MACHINE_RECIPES[m.type];
-        if (recipe) {
-            const buffer = {...(m.buffer ?? {})};
-            // Sans ingredient ou sortie pleine, la cuisson attend sans avancer.
-            // Seule la sortie compte : un tampon rempli d'ingredients doit rester transformable.
-            const totalStored = buffer[recipe.output] || 0;
-            if ((buffer[recipe.input] ?? 0) <= 0 || totalStored >= m.capacity) {
-                return {...m, active: false};
-            }
-            const progress = m.progress + m.efficiency;
-            if (progress < recipe.duration) {
-                return {...m, buffer, progress, active: true};
-            }
-            buffer[recipe.input] = (buffer[recipe.input] ?? 1) - 1;
-            buffer[recipe.output] = (buffer[recipe.output] ?? 0) + m.production;
-            return {...m, buffer, progress: 0, active: true};
-        }
-        if (
-          m.type !== "iron-mine" &&
-          m.type !== "coal-mine" &&
-          m.type !== "water-pump"
-        ) return m;
-        const buffer = {...(m.buffer ?? {})};
-        let progress = m.progress;
-        const resource =
-          m.type === "iron-mine" ? "iron" :
-            m.type === "coal-mine" ? "coal" :
-              "water";
-        
-        const current = buffer[resource] || 0;
-        const totalStored = Object.values(buffer).reduce((a,b) => a+b, 0);
+  const campaign = structuredClone(world.campaign);
 
-        // buffer plein, on arrête la production
-        if (totalStored >= m.capacity) {
-            return {...m, active: false};
-        }
-        progress += m.efficiency;
+  const recordCycle = (machine: Machine, outputs: [ResourcesType, number][], extraction: boolean) => {
+    const pollution = MACHINE_BASE_POLLUTION[machine.type] * MACHINE_VARIANTS[machine.variant ?? "standard"].pollution;
+    campaign.pollution += pollution;
+    const level = campaignLevelAt(machine.x, machine.y);
+    const progress = campaign.levels.find(item => item.id === level?.id);
+    if (progress) progress.pollution += pollution;
+    for (const [resource, amount] of outputs) {
+      const statistics = extraction ? campaign.statistics.extracted : campaign.statistics.produced;
+      statistics[resource] += amount;
+    }
+  };
 
-        if (progress >= 10) {
-            buffer[resource] = current + Math.min(m.production, m.capacity - totalStored);
-            progress = 0;
-        }
+  const machines = world.machines.map(machine => {
+    if (machine.paused) return {...machine, active: false};
+    const recipe = recipeFor(machine);
+    if (recipe) {
+      const buffer = {...machine.buffer};
+      const inputs = recipeInputs(machine);
+      const outputs = recipeOutputs(machine);
+      const canConsume = inputs.every(([resource, amount]) => (buffer[resource] ?? 0) >= amount);
+      const outputAmount = outputs.reduce((sum, [resource, amount]) => sum + (buffer[resource] ?? 0) + amount * machine.production, 0);
+      if (!canConsume || outputAmount > machine.capacity) return {...machine, active: false};
+      const progress = machine.progress + machine.efficiency;
+      if (progress < recipe.duration) return {...machine, buffer, progress, active: true};
+      for (const [resource, amount] of inputs) buffer[resource] = (buffer[resource] ?? 0) - amount;
+      const produced = outputs.map(([resource, amount]) => [resource, amount * machine.production] as [ResourcesType, number]);
+      for (const [resource, amount] of produced) buffer[resource] = (buffer[resource] ?? 0) + amount;
+      recordCycle(machine, produced, false);
+      return {...machine, buffer, progress: 0, active: true};
+    }
 
-        return {
-            ...m,
-            buffer,
-            progress,
-            active: true
-        };
-    })
-    return {...world, machines};
+    const resource = extractorResource(machine);
+    if (!resource) return machine;
+    const buffer = {...machine.buffer};
+    const totalStored = Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
+    if (totalStored >= machine.capacity) return {...machine, active: false};
+    const progress = machine.progress + machine.efficiency;
+    if (progress < 10) return {...machine, buffer, progress, active: true};
+    const amount = Math.min(machine.production, machine.capacity - totalStored);
+    buffer[resource] = (buffer[resource] ?? 0) + amount;
+    recordCycle(machine, [[resource, amount]], true);
+    return {...machine, buffer, progress: 0, active: true};
+  });
+
+  if (campaign.pollution >= campaign.pollutionLimit) campaign.status = "game-over";
+  else campaign.pollution = Math.max(0, campaign.pollution - NATURAL_POLLUTION_RECOVERY);
+  return {...world, machines, campaign};
 }

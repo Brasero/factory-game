@@ -12,7 +12,7 @@ describe("WorldFactory", () => {
     expect(world.machines).toEqual([]);
     expect(world.conveyors).toEqual([]);
     expect(world.storages).toEqual([]);
-    expect(world.resources).toEqual({iron: 0, coal: 0, water: 0, ironPlate: 0});
+    expect(world.resources).toEqual({iron: 0, coal: 0, water: 0, ironPlate: 0, steel: 0, copper: 0, copperWire: 0, circuit: 0});
     const grid = world.grid!;
     expect(grid.getResourceMap().length).toBeGreaterThan(0);
     for (let y = 0; y < grid.height; y++) {

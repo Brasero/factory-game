@@ -1,10 +1,10 @@
-import {MACHINE_RECIPES} from "@engine/config/recipeConfig";
+import {recipeInputs} from "@engine/config/recipeConfig";
 import type {ResourcesType} from "@engine/models/Resources";
 import type {Storage} from "@engine/models/Storage";
 import type {World} from "@engine/models/World";
 import {acceptsInput, directions, nextPosition, positionKey} from "@engine/systems/NetworkTopology";
 
-const usedCapacity = (buffer: Record<ResourcesType, number>) =>
+const usedCapacity = (buffer: Partial<Record<ResourcesType, number>>) =>
   Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
 
 function firstStoredResource(storage: Storage): ResourcesType | undefined {
@@ -24,11 +24,11 @@ export function runStorageOutputs(world: World): World {
       const machineIndex = machinesByPosition.get(positionKey(pos));
       if (machineIndex !== undefined) {
         const machine = machines[machineIndex];
-        const recipe = MACHINE_RECIPES[machine.type];
-        if (!recipe || (storage.stored[recipe.input] ?? 0) <= 0) continue;
+        const input = recipeInputs(machine).find(([resource]) => (storage.stored[resource] ?? 0) > 0)?.[0];
+        if (!input) continue;
         if (usedCapacity(machine.buffer) >= machine.capacity) continue;
-        storage.stored[recipe.input] -= 1;
-        machine.buffer[recipe.input] = (machine.buffer[recipe.input] ?? 0) + 1;
+        storage.stored[input] = (storage.stored[input] ?? 0) - 1;
+        machine.buffer[input] = (machine.buffer[input] ?? 0) + 1;
         continue;
       }
 
@@ -40,11 +40,10 @@ export function runStorageOutputs(world: World): World {
       if (conveyor.carrying.length >= conveyor.capacity) continue;
       const resource = firstStoredResource(storage);
       if (!resource) continue;
-      storage.stored[resource] -= 1;
+      storage.stored[resource] = (storage.stored[resource] ?? 0) - 1;
       conveyor.carrying.push({type: resource, amount: 1, progress: 0});
     }
   }
 
   return {...world, storages, machines, conveyors};
 }
-

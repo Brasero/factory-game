@@ -51,6 +51,10 @@
       &.coal { background-color: rgba(c.$resource-coal, 0.2); color: c.$resource-coal; }
       &.water { background-color: rgba(c.$resource-water, 0.2); color: c.$resource-water; }
       &.ironPlate { background-color: rgba(c.$resource-iron-plate, 0.2); color: c.$resource-iron-plate; }
+      &.steel { background-color: rgba(c.$resource-steel, 0.2); color: c.$resource-steel; }
+      &.copper { background-color: rgba(c.$resource-copper, 0.2); color: c.$resource-copper; }
+      &.copperWire { background-color: rgba(c.$resource-copper-wire, 0.2); color: c.$resource-copper-wire; }
+      &.circuit { background-color: rgba(c.$resource-circuit, 0.2); color: c.$resource-circuit; }
 
       &.pulse {
         animation: pulse 1s infinite alternate;
@@ -227,6 +231,31 @@
   width: 32px;
   height: 48px;
   background-position: 0 0;
+}
+
+.processor-label {
+  min-width: 36px;
+  color: c.$text-primary;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.machine-variants {
+  display: flex;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 1px solid c.$ui-border;
+
+  button {
+    padding: 4px 7px;
+    border: 1px solid c.$ui-border;
+    border-radius: 5px;
+    background: c.$ui-surface-alt;
+    color: c.$text-secondary;
+    font-size: 10px;
+    cursor: pointer;
+    &.selected { border-color: c.$state-accent; color: c.$state-accent; }
+  }
 }
 
 .resource-icon {

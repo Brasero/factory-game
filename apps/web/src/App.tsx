@@ -1,6 +1,6 @@
 import './App.scss'
 import {useEffect, useState} from "react";
-import {startGame, pauseGame} from "./game/GameController.ts";
+import {hasSavedGame, startGame, pauseGame, startNewCampaign} from "./game/GameController.ts";
 import {Hud} from "./ui/Hud.tsx";
 import {GameCanvas} from "@web/render/GameCanvas.tsx";
 import {config} from "@web/config/gridConfig.ts";
@@ -10,6 +10,7 @@ import {selectCurentTool} from "@web/store/selectors.ts";
 import {setPaused} from "@web/store/controlSlice.ts";
 import {GameMenu} from "@web/ui/GameMenu.tsx";
 import {Tutorial} from "@web/ui/Tutorial.tsx";
+import {CampaignHud} from "@web/ui/CampaignHud.tsx";
 
 type AppScreen = "main" | "game" | "pause";
 
@@ -20,6 +21,7 @@ function App() {
     const [screen, setScreen] = useState<AppScreen>("main");
     const [hasStarted, setHasStarted] = useState(false);
     const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+    const [hasSave, setHasSave] = useState(hasSavedGame());
     const currentTool = useAppSelector(selectCurentTool)
     const dispatch = useAppDispatch();
     useEffect(() => {
@@ -66,8 +68,21 @@ function App() {
       play();
       setTutorialStep(0);
     };
+    const newCampaign = () => {
+      startNewCampaign();
+      setHasSave(false);
+      play();
+      setTutorialStep(0);
+    };
+    const restartCampaign = () => {
+      startNewCampaign();
+      setHasSave(false);
+      setTutorialStep(null);
+      play();
+    };
     const openMainMenu = () => {
       pauseGame();
+      setHasSave(true);
       dispatch(setPaused(true));
       setTutorialStep(null);
       setScreen("main");
@@ -86,9 +101,10 @@ function App() {
   return <div className={gameViewClass()}>
     {hasStarted && <>
       <Hud />
+      <CampaignHud onRestart={restartCampaign} />
       <GameCanvas width={size.width} height={size.height} cellSize={config.CELL_SIZE} />
     </>}
-    {screen === "main" && <GameMenu mode="main" onPlay={play} onTutorial={openTutorial} />}
+    {screen === "main" && <GameMenu mode="main" hasSave={hasSave} onPlay={play} onNewCampaign={newCampaign} onTutorial={openTutorial} />}
     {screen === "pause" && <GameMenu mode="pause" onPlay={play} onTutorial={() => {
       play();
       setTutorialStep(0);

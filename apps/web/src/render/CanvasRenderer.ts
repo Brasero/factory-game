@@ -17,6 +17,7 @@ import {drawResourceNodes} from "@web/render/utils/node.ts";
 import {connectedRouterIds, drawConveyorAt, getIncomingDirection} from "@web/render/utils/conveyor.ts";
 import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
+import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 
 const CELL_SIZE = config.CELL_SIZE;
 export function render(
@@ -48,10 +49,36 @@ export function render(
     drawLayer("resources", () => drawResourceNodes(ctx, world.grid!, bounds));
     drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds));
     drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
+    drawLayer("fog", () => drawCampaignFog(ctx, world));
+    drawLayer("pollution", () => drawPollutionHaze(ctx, world));
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
     }
+}
+
+export function pollutionHazeOpacity(pollution: number, limit: number): number {
+  const ratio = limit > 0 ? Math.min(1, Math.max(0, pollution / limit)) : 0;
+  const visibleRatio = Math.max(0, (ratio - 0.1) / 0.9);
+  return 0.52 * Math.pow(visibleRatio, 1.35);
+}
+
+function drawPollutionHaze(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
+  const opacity = pollutionHazeOpacity(world.campaign.pollution, world.campaign.pollutionLimit);
+  if (opacity === 0) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = `rgba(78, 68, 54, ${opacity})`;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const vignette = ctx.createRadialGradient(
+    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.min(ctx.canvas.width, ctx.canvas.height) * 0.18,
+    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.max(ctx.canvas.width, ctx.canvas.height) * 0.72
+  );
+  vignette.addColorStop(0, "rgba(52, 57, 50, 0)");
+  vignette.addColorStop(1, `rgba(35, 31, 25, ${Math.min(0.38, opacity * 0.8)})`);
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
 }
 
 /* ========================= */
@@ -133,6 +160,11 @@ function drawDynamicEntities(
     });
   });
 
+  world.tunnels.forEach(tunnel => {
+    if (!isVisible(tunnel, bounds)) return;
+    drawCalls.push({x: tunnel.x, y: tunnel.y, layer: 2, draw: () => drawTunnel(ctx, tunnel)});
+  });
+
   drawCallsSorted(drawCalls);
 }
 
@@ -172,7 +204,7 @@ function drawMachineAt(
   machine: WorldSnapshot["machines"][number]
 ) {
     const isWorking = machine.active;
-    if (machine.type === "iron-smelter") {
+    if (machine.type === "iron-smelter" || machine.type === "steel-smelter") {
         const sprite = isWorking ? assetManager.getImage("machine.automation.ironSmelter.running") : assetManager.getImage("machine.automation.ironSmelter.idle");
         const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % machineConfig.IRON_SMELTER_FRAME_COUNT : 0;
         const frameWidth = isWorking ? machineConfig.IRON_SMELTER_RUNNING_CELL_WIDTH : machineConfig.IRON_SMELTER_IDLE_CELL_WIDTH
@@ -213,6 +245,16 @@ function drawMachineAt(
         }
         return;
     }
+    if (machine.type === "wire-mill" || machine.type === "assembler") {
+        const variant = machine.variant ?? "standard";
+        const sprite = assetManager.getImage(`machine.automation.assembler.${variant}.${isWorking ? "running" : "idle"}`);
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % 4 : 0;
+        const frameWidth = variant === "eco" ? 32 : 48;
+        const frameHeight = 48;
+        ctx.drawImage(sprite, frame * frameWidth, 0, frameWidth, frameHeight,
+          machine.x * CELL_SIZE - (frameWidth - CELL_SIZE) / 2, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
+        return;
+    }
     const spritePrefix = machine.spriteName!
     const state = isWorking ? "running": "idle";
     const type = machine.type === "water-pump" ? "pump" : "miner"
@@ -248,6 +290,48 @@ function drawMachineAt(
     )
 }
 
+function drawTunnel(ctx: CanvasRenderingContext2D, tunnel: WorldSnapshot["tunnels"][number]) {
+  const x = tunnel.x * CELL_SIZE;
+  const y = tunnel.y * CELL_SIZE;
+  ctx.fillStyle = tunnel.type === "output" ? "#24324d" : "#193f43";
+  ctx.fillRect(x, y + 4, CELL_SIZE, CELL_SIZE - 4);
+  ctx.fillStyle = tunnel.type === "output" ? "#fdcb6e" : "#00cec9";
+  ctx.fillRect(x + 5, y + 9, CELL_SIZE - 10, CELL_SIZE - 9);
+  ctx.fillStyle = "#0e111b";
+  ctx.fillRect(x + 9, y + 13, CELL_SIZE - 18, CELL_SIZE - 13);
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillText(tunnel.type === "output" ? "→" : "⇥", x + 10, y + 27);
+}
+
+function drawCampaignFog(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
+  for (const definition of CAMPAIGN_LEVELS) {
+    const status = world.campaign.levels.find(level => level.id === definition.id)?.status;
+    if (status !== "locked") continue;
+    const radius = definition.radius * CELL_SIZE;
+    const x = definition.center.x * CELL_SIZE;
+    const y = definition.center.y * CELL_SIZE;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(15, 20, 35, 0.74)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(184, 193, 236, 0.45)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 8]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.textAlign = "center";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText("ÎLE VERROUILLÉE", x, y - 4);
+    ctx.font = "13px sans-serif";
+    ctx.fillStyle = "rgba(184,193,236,0.9)";
+    ctx.fillText(definition.name, x, y + 19);
+    ctx.restore();
+  }
+}
+
 
 
 /* ========================= */
@@ -278,7 +362,11 @@ const resourceSprites: Record<ResourcesType, string> = {
   iron: "ore.ironOre",
   coal: "ore.coalOre",
   water: "ore.waterOre",
-  ironPlate: "ore.ironPlate"
+  ironPlate: "ore.ironPlate",
+  steel: "ore.ironPlate",
+  copper: "ore.copperOre",
+  copperWire: "ore.ironPlate",
+  circuit: "ore.ironPlate"
 };
 
 function drawResourceIcon(

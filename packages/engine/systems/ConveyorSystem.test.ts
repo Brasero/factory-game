@@ -100,6 +100,23 @@ describe("Conveyor transfers", () => {
     expect(exported.machines[0].buffer.water).toBe(5);
   });
 
+  it("keeps recipe ingredients inside production machines", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(3, 1, "iron-smelter");
+    engine.placeConveyor(3, 2, "down");
+    const world = engine.getWorld();
+    world.machines[0].buffer.iron = 2;
+
+    const withoutProduct = runOutputMachine(world);
+    expect(withoutProduct.conveyors[0].carrying).toHaveLength(0);
+    expect(withoutProduct.machines[0].buffer.iron).toBe(2);
+
+    withoutProduct.machines[0].buffer.ironPlate = 1;
+    const withProduct = runOutputMachine(withoutProduct);
+    expect(withProduct.conveyors[0].carrying).toEqual([{type: "ironPlate", amount: 1, progress: 0}]);
+    expect(withProduct.machines[0].buffer).toMatchObject({iron: 2, ironPlate: 0});
+  });
+
   it("feeds machines only with their recipe ingredient", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(5, 5, "iron-smelter");

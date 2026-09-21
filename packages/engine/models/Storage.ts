@@ -5,7 +5,7 @@ export interface Storage extends BaseEntity {
   id: string;
   entityType: 'storage';
   capacity: number;
-  stored: Record<ResourcesType, number>;
+  stored: Partial<Record<ResourcesType, number>>;
 }
 
 export function isStorageType(entity: unknown): entity is Storage {

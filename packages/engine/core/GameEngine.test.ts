@@ -46,6 +46,56 @@ describe("GameEngine", () => {
     const stored = world.storages[0].stored.iron ?? 0;
     const carried = world.conveyors[0].carrying.reduce((sum, item) => sum + item.amount, 0);
     expect(stored).toBeGreaterThan(0);
-    expect(stored + carried + world.machines[0].buffer.iron).toBe(10);
+    expect(stored + carried + (world.machines[0].buffer.iron ?? 0)).toBe(10);
+  });
+
+  it("changes a machine recipe and clears incompatible input buffers", () => {
+    engine.placeMachine(0, 0, "iron-smelter");
+    const world = engine.getWorld();
+    world.campaign.levels[1].status = "active";
+    world.machines[0].recipeId = "steel-smelting";
+    world.machines[0].buffer = {ironPlate: 4, coal: 3, steel: 2};
+    engine = new GameEngine(world);
+
+    expect(engine.selectMachineRecipe(world.machines[0].id, "iron-smelting")).toBe(true);
+    expect(engine.getWorld().machines[0]).toMatchObject({
+      recipeId: "iron-smelting",
+      buffer: {ironPlate: 0, coal: 0, steel: 2},
+      progress: 0,
+      active: false
+    });
+    expect(engine.selectMachineRecipe(world.machines[0].id, "circuit-assembly")).toBe(false);
+  });
+
+  it("unlocks the steel recipe on the existing foundry with level two", () => {
+    const lockedWorld = createTestWorld();
+    lockedWorld.campaign.levels[1].status = "locked";
+    engine = new GameEngine(lockedWorld);
+    engine.placeMachine(0, 0, "iron-smelter");
+    const machineId = engine.getWorld().machines[0].id;
+    expect(engine.selectMachineRecipe(machineId, "steel-smelting")).toBe(false);
+    const world = engine.getWorld();
+    world.campaign.levels[1].status = "active";
+    engine = new GameEngine(world);
+    expect(engine.selectMachineRecipe(machineId, "steel-smelting")).toBe(true);
+    expect(engine.getWorld().machines[0].recipeId).toBe("steel-smelting");
+  });
+
+  it("pauses and resumes a machine after its island is finalized", () => {
+    engine.placeMachine(1, 1, "iron-mine");
+    const world = engine.getWorld();
+    world.campaign.levels[0].status = "completed";
+    engine = new GameEngine(world);
+    expect(engine.finalizeLevel("level-1")).toBe(true);
+    const machineId = engine.getWorld().machines[0].id;
+
+    expect(engine.setMachinePaused(machineId, true)).toBe(true);
+    for (let tick = 0; tick < 20; tick++) engine.tick();
+    expect(engine.getWorld().machines[0]).toMatchObject({paused: true, active: false, progress: 0});
+    expect(engine.getWorld().machines[0].buffer.iron ?? 0).toBe(0);
+
+    expect(engine.setMachinePaused(machineId, false)).toBe(true);
+    for (let tick = 0; tick < 10; tick++) engine.tick();
+    expect(engine.getWorld().machines[0].buffer.iron).toBe(1);
   });
 });

@@ -37,6 +37,8 @@ describe("Tutorial", () => {
   it("progresses through explanatory steps and gates interactive steps", () => {
     const continueButton = () => [...host.querySelectorAll("button")].find(button => button.textContent === "Continuer")!;
     act(() => continueButton().click());
+    expect(host.textContent).toContain("Objectifs et pollution");
+    act(() => continueButton().click());
     expect(host.textContent).toContain("Déplace-toi sur la carte");
     act(() => continueButton().click());
     expect(host.textContent).toContain("Le mineur");
@@ -47,6 +49,7 @@ describe("Tutorial", () => {
   });
 
   it("removes the highlight when the tutorial is unmounted", () => {
+    act(() => [...host.querySelectorAll("button")].find(button => button.textContent === "Continuer")!.click());
     act(() => [...host.querySelectorAll("button")].find(button => button.textContent === "Continuer")!.click());
     act(() => [...host.querySelectorAll("button")].find(button => button.textContent === "Continuer")!.click());
     const target = host.querySelector('[data-tutorial="miner"]')!;
