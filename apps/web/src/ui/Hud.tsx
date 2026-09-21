@@ -73,7 +73,7 @@ export function Hud() {
           ))}
         </div>}
         <div id="hud_tick_container">
-          <button id="hud_pause_btn" onClick={toggleGamePause}>
+          <button id="hud_pause_btn" data-tutorial="pause" aria-label={paused ? "Reprendre la simulation" : "Mettre la simulation en pause"} onClick={toggleGamePause}>
             {paused ? "▶" : "⏸"}
           </button>
           <span id="hud_tick" className={paused ? "paused" : ""}>
@@ -84,30 +84,30 @@ export function Hud() {
     
     <div id="hud_commands">
       <div id="hud_commands_extractor">
-        <button aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
+        <button data-tutorial="miner" aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
           <img src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>
         </button>
-        <button className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
-          <img src={assetManager.getImage("machine.pump.water.idle").src}/>
+        <button data-tutorial="water-pump" aria-label="Pompe à eau" className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
+          <img src={assetManager.getImage("machine.pump.water.idle").src} alt=""/>
         </button>
-        <button aria-label="Fonderie de fer" title="Fonderie de fer — minerai vers lingot" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
+        <button data-tutorial="iron-smelter" aria-label="Fonderie de fer" title="Fonderie de fer — minerai vers lingot" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
           <span className="automation-machine-icon" style={{backgroundImage: `url(${assetManager.getImage("machine.automation.ironSmelter.idle").src})`}} />
         </button>
       </div>
       <div id="hud_commands_logistique">
-        {(["merger", "splitter"] as const).map(type => <button key={type}
+        {(["merger", "splitter"] as const).map(type => <button key={type} data-tutorial={type}
           aria-label={type === "merger" ? "Merger" : "Splitter"}
           title={type === "merger" ? "Merger — 3 entrées, 1 sortie" : "Splitter — 1 entrée, 3 sorties"}
           className={buttonMachineStyle(type)} onClick={() => handleClick(type)}>
           <span className={`router-icon ${type}`} style={{backgroundImage: `url(${assetManager.getImage(`router.${type}`).src})`}} />
         </button>)}
-        <button aria-label="Tapis roulant" className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>
-          <img src={assetManager.getImage("conveyor.right").src} />
+        <button data-tutorial="conveyor" aria-label="Tapis roulant" className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>
+          <img src={assetManager.getImage("conveyor.right").src} alt="" />
         </button>
-        <button className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>
-          <img src={assetManager.getImage("storage.crate").src} width={32} height={32}/>
+        <button data-tutorial="storage" aria-label="Coffre" className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>
+          <img src={assetManager.getImage("storage.crate").src} width={32} height={32} alt=""/>
         </button>
-        <button className={destroyButtonClass()} onClick={toggleDestroyMode}>X</button>
+        <button data-tutorial="destroy" aria-label="Mode destruction" className={destroyButtonClass()} onClick={toggleDestroyMode}>X</button>
       </div>
     </div>
   </div>);
