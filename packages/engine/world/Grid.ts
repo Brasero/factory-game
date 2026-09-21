@@ -168,11 +168,13 @@ export class Grid {
     
     switch(machineType) {
       case "miner":
-        return cell.resource === "iron" || cell.resource === "coal";
+        return cell.resource === "iron" || cell.resource === "coal" || cell.resource === "copper";
       case "iron-mine":
         return cell.resource === "iron";
       case "coal-mine":
         return cell.resource === "coal";
+      case "copper-mine":
+        return cell.resource === "copper";
       case "water-pump":
         return cell.resource === "water";
       

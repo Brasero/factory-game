@@ -14,8 +14,14 @@ export const tutorialSteps: TutorialStep[] = [
   {
     eyebrow: "Bienvenue dans Factstories",
     title: "Construis une chaîne de production",
-    description: "Extrais les ressources de l’île, transporte-les et transforme-les avec tes machines. Le jeu n’a pas encore de condition de victoire : les futurs objectifs seront ajoutés à cette progression.",
+    description: "Extrais les ressources de chaque île, transporte-les et transforme-les pour atteindre son objectif. Termine les trois niveaux rapidement sans dépasser la limite de pollution.",
     tip: "Le tutoriel reste accessible à tout moment depuis le menu de pause."
+  },
+  {
+    eyebrow: "Campagne",
+    title: "Objectifs et pollution",
+    description: "La progression du niveau et la pollution globale sont affichées en haut. Une machine pollue lorsqu’elle termine un cycle : les versions industrielles vont plus vite, tandis que les versions écologiques peuvent laisser la nature absorber progressivement la pollution.",
+    tip: "Clique sur une machine pour la mettre en pause, même sur une île finalisée, et laisse la pollution redescendre. Si la jauge atteint sa limite, la campagne se termine."
   },
   {
     eyebrow: "Explorer",
@@ -89,7 +95,7 @@ export const tutorialSteps: TutorialStep[] = [
   {
     eyebrow: "Prêt à construire",
     title: "Crée ta première usine",
-    description: "Commence par un mineur, transporte le fer vers une fonderie, puis récupère les lingots dans un coffre. Cette chaîne servira de base aux futurs objectifs du jeu.",
+    description: "Commence par un mineur, transporte le fer vers une fonderie, puis dirige les lingots vers le tunnel de sortie. Ils seront disponibles sur l’île suivante.",
     tip: "Échap ouvre le menu. Tu pourras relancer ce tutoriel quand tu veux."
   }
 ];

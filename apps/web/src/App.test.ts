@@ -8,8 +8,9 @@ import App from "./App.tsx";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
 
 vi.mock("@web/render/manager/AssetManager.ts", () => ({loadGameAssets: vi.fn(() => Promise.resolve())}));
-vi.mock("@web/game/GameController.ts", () => ({startGame: vi.fn(), pauseGame: vi.fn()}));
+vi.mock("@web/game/GameController.ts", () => ({startGame: vi.fn(), pauseGame: vi.fn(), startNewCampaign: vi.fn(), hasSavedGame: vi.fn(() => false)}));
 vi.mock("@web/ui/Hud.tsx", () => ({Hud: () => createElement("div", {"data-testid": "hud"}, "HUD")}));
+vi.mock("@web/ui/CampaignHud.tsx", () => ({CampaignHud: () => createElement("div", {"data-testid": "campaign"}, "Campaign")}));
 vi.mock("@web/render/GameCanvas.tsx", () => ({GameCanvas: () => createElement("div", {"data-testid": "canvas"}, "Canvas")}));
 
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});

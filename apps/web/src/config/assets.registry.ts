@@ -27,10 +27,18 @@ import waterPumpRunning from "../assets/machines/Water_Pump_Running.png";
 import ironSmelterIdle from "../assets/machines/Stone_Furnace.png";
 import ironSmelterRunning from "../assets/machines/Stone_Furnace_Active.png";
 import ironSmelterParticles from "../assets/logistic/automation/iron-smelter-particles.png";
+import assemblerIdle from "../assets/machines/Assembler_Machine_1.png";
+import assemblerRunning from "../assets/machines/Assembler_Machine_1_Running.png";
+import assemblerStandardIdle from "../assets/machines/Assembler_Machine_2.png";
+import assemblerStandardRunning from "../assets/machines/Assembler_Machine_2_Running.png";
+import assemblerIndustrialIdle from "../assets/machines/Assembler_Machine_3.png";
+import assemblerIndustrialRunning from "../assets/machines/Assembler_Machine_3_Running.png";
 import crate from "../assets/logistic/storage/crate.png";
 import waterNode from "../assets/ore-nodeTiles/Materials/Water/Tiles/Water_Tileset.png";
 import ironNode from "../assets/ore-nodeTiles/Materials/Iron/Tiles/Tile-0003.png";
 import coalNode from "../assets/ore-nodeTiles/Materials/Coal/Tiles/Tile-0003.png";
+import copperNode from "../assets/ore-nodeTiles/Materials/Copper/Tiles/Tile-0003.png";
+import copperOre from "../assets/ore-nodeTiles/Materials/Copper/Ores/Ore-0003.png";
 import environmentTileset from "../assets/ore-nodeTiles/Materials/Tiles/Environment_Tileset.png";
 import treesTileset from "../assets/ore-nodeTiles/Materials/Tiles/Trees.png";
 import waterTileset from "../assets/ore-nodeTiles/Materials/Tiles/Water_Tileset.png";
@@ -40,6 +48,7 @@ export const imagePath = {
   ore: {
     ironOre,
     coalOre,
+    copperOre,
     waterOre,
     ironPlate
   },
@@ -83,7 +92,12 @@ export const imagePath = {
         idle: ironSmelterIdle,
         running: ironSmelterRunning
       },
-      ironSmelterParticles
+      ironSmelterParticles,
+      assembler: {
+        eco: {idle: assemblerIdle, running: assemblerRunning},
+        standard: {idle: assemblerStandardIdle, running: assemblerStandardRunning},
+        industrial: {idle: assemblerIndustrialIdle, running: assemblerIndustrialRunning}
+      }
     }
   },
   storage: {
@@ -92,7 +106,8 @@ export const imagePath = {
   node: {
     water: waterNode,
     iron: ironNode,
-    coal: coalNode
+    coal: coalNode,
+    copper: copperNode
   },
   tileset: {
     environment: environmentTileset,

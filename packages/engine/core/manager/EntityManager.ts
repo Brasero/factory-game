@@ -1,5 +1,5 @@
 import {isMachineType} from "../../models/Machine";
-import type { Machine, MachineType } from "@engine/models/Machine";
+import type {Machine, MachineType, MachineVariant} from "@engine/models/Machine";
 import type {World} from "../../models/World";
 import type {ResourcesType} from "../../models/Resources";
 import {MACHINE_CAPACITY, MACHINE_SPRITE_SHEET} from "../../config/machineConfig";
@@ -10,9 +10,11 @@ import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 import {isStorageType} from "@engine/models/Storage.ts";
 import {isConveyorType} from "@engine/models/Conveyor.ts";
 import type {Position} from "@engine/models/Position.ts";
+import {MACHINE_VARIANTS} from "@engine/config/machineConfig";
+import {defaultRecipe} from "@engine/config/recipeConfig";
 
 class EntityManager implements EntityManagerType {
-  placeMachine(x: number, y: number, type: MachineType, world: World): World | false {
+  placeMachine(x: number, y: number, type: MachineType, world: World, variant: MachineVariant = "standard"): World | false {
     const {grid, machines} = world;
     if (!grid) throw new Error("Le monde n'a pas de grille définie.");
     
@@ -30,10 +32,13 @@ class EntityManager implements EntityManagerType {
         capacity: MACHINE_CAPACITY[type],
         progress: 0,
         active: false,
-        spriteName: MACHINE_SPRITE_SHEET[type],
+        spriteName: (type === "iron-mine" || type === "coal-mine" || type === "copper-mine") && variant === "eco"
+          ? "miner1" : MACHINE_SPRITE_SHEET[type],
         entityType: 'machine',
-        efficiency: 1,
-        production: 1
+        efficiency: MACHINE_VARIANTS[variant].speed,
+        production: MACHINE_VARIANTS[variant].production,
+        variant,
+        recipeId: defaultRecipe(type)
       }
       world = {
         ...world,

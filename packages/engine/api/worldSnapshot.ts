@@ -29,6 +29,8 @@ export function buildWorldSnapshot(world: World): WorldSnapshot {
       ...storage,
       stored: {...storage.stored}
     })),
+    tunnels: world.tunnels.map(tunnel => ({...tunnel, stored: {...tunnel.stored}})),
+    campaign: structuredClone(world.campaign),
     grid: gridSnapshot
   };
 }

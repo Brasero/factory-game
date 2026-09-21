@@ -7,3 +7,4 @@ export const selectSelectedItem = (state: RootState) => state.control.selectedIt
 export const selectGamePaused = (state: RootState) => state.control.paused;
 
 export const selectCurentTool = (state: RootState) => state.control.currentTool;
+export const selectSelectedVariant = (state: RootState) => state.control.selectedVariant;

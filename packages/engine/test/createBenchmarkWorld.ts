@@ -2,6 +2,8 @@ import {Grid} from "@engine/world/Grid";
 import {TileMap} from "@engine/world/TileMap";
 import type {World} from "@engine/models/World";
 import type {TileData} from "@engine/models/Tile";
+import {emptyResources} from "@engine/models/Resources";
+import {createTestCampaign} from "./createTestWorld";
 
 /** Fixed mixed scene: production rows, loaded belts, storage and scenery. */
 export function createBenchmarkWorld(count: number): World {
@@ -9,7 +11,7 @@ export function createBenchmarkWorld(count: number): World {
     Array.from({length: 250}, (_, x) => ({biome: "grass", variant: 3,
       decoration: y % 4 === 2 && x % 7 === 0 ? {type: "tree", variant: 0} : undefined})));
   const grid = new Grid(250, 190, new TileMap(250, 190, tiles));
-  const world: World = {tick: 0, grid, machines: [], conveyors: [], storages: [], resources: {iron: 0, coal: 0, water: 0, ironPlate: 0}};
+  const world: World = {tick: 0, grid, machines: [], conveyors: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()};
   for (let i = 0; i < count; i++) {
     const x = i % 200, y = Math.floor(i / 200) * 4 + 1;
     world.conveyors.push({id: `belt-${i}`, x, y, type: "conveyor", entityType: "conveyor",

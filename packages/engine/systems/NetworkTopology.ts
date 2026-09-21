@@ -11,7 +11,7 @@ export function nextPosition({x, y}: Position, direction: DirectionType): Positi
   }
 }
 export const positionKey = ({x, y}: Position) => `${x},${y}`;
-export type Target = {kind: "machine" | "storage" | "belt"; index: number};
+export type Target = {kind: "machine" | "storage" | "belt" | "tunnel"; index: number};
 export interface NetworkTopology {
   targets: (Target | undefined)[];
   outputs: (Target | undefined)[][];
@@ -28,6 +28,9 @@ export function buildNetworkTopology(world: World): NetworkTopology {
   world.conveyors.forEach((c, index) => occupied.set(positionKey(c), {kind: "belt", index}));
   world.storages.forEach((s, index) => occupied.set(positionKey(s), {kind: "storage", index}));
   world.machines.forEach((m, index) => occupied.set(positionKey(m), {kind: "machine", index}));
+  world.tunnels.forEach((tunnel, index) => {
+    if (tunnel.type === "output") occupied.set(positionKey(tunnel), {kind: "tunnel", index});
+  });
   // Seules les entrees acceptees comptent : un tapis refuse par son receveur ne cree pas de jonction.
   const incoming = new Map<string, number>();
   const connections = world.conveyors.map(source => outputDirections(source).map(direction => {

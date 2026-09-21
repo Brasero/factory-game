@@ -1,196 +1,35 @@
 import type {LevelDefinition} from "../models/LevelDefinition";
+import {CAMPAIGN_LEVELS, CAMPAIGN_MAP} from "./campaignConfig";
 
 export const levels: LevelDefinition[] = [
   {
-    id: "level-1",
-    seed: 12345,
-    map: {
-      width: 200,
-      height: 200,
-    },
-    islands: [
-      {
-        biome: "grass",
-        center:{
-          x: 45,
-          y: 15,
-        },
-        shape: {
-          type: "organique",
-          size: 15,
-        },
-        clearings: [
-          {
-            x: -5,
-            y: -2,
-            radius: 3,
-            resources: [
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" }
-            ],
-          },
-          {
-            x: 4,
-            y: 3,
-            radius: 1,
-            resources: [
-              { type: "iron" },
-            ],
-          },
-          {
-            x: 5,
-            y: -10,
-            radius: 2,
-            resources: [
-              { type: "water" },
-              { type: "water" },
-              { type: "water" },
-            ]
-          }
-        ],
-      }
-    ],
+    id: "level-1", seed: 12345, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "grass", center: CAMPAIGN_LEVELS[0].center, shape: {type: "organique", size: 18},
+      clearings: [
+        {x: -6, y: -3, radius: 4, resources: Array.from({length: 8}, () => ({type: "iron" as const}))},
+        {x: 6, y: 6, radius: 3, resources: Array.from({length: 5}, () => ({type: "water" as const}))}
+      ]
+    }]
   },
   {
-    id: "level-2",
-    seed: 128376,
-    map: {
-      width: 200,
-      height: 200,
-    },
-    islands: [
-      {
-        biome: "desert",
-        center:{
-          x: 45,
-          y: 45,
-        },
-        shape: {
-          type: "smoothSquare",
-          size: 20,
-        },
-        clearings: [
-          {
-            x: -10,
-            y: -2,
-            radius: 3,
-            resources: [
-              { type: "coal" },
-              { type: "coal" },
-              { type: "coal" },
-              { type: "coal" }
-            ],
-          },
-          {
-            x: 8,
-            y: -7,
-            radius: 2,
-            resources: [
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" },
-            ],
-          }
-        ],
-      }
-    ],
+    id: "level-2", seed: 128376, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "desert", center: CAMPAIGN_LEVELS[1].center, shape: {type: "smoothSquare", size: 19},
+      clearings: [
+        {x: -5, y: -4, radius: 4, resources: Array.from({length: 8}, () => ({type: "coal" as const}))},
+        {x: 6, y: 5, radius: 3, resources: Array.from({length: 4}, () => ({type: "iron" as const}))}
+      ]
+    }]
   },
   {
-    id: "level-3",
-    seed: 128376,
-    map: {
-      width: 200,
-      height: 200,
-    },
-    islands: [
-      {
-        biome: "snow",
-        center:{
-          x: 45,
-          y: 45,
-        },
-        shape: {
-          type: "smoothSquare",
-          size: 20,
-        },
-        clearings: [
-          {
-            x: 10,
-            y: 2,
-            radius: 3,
-            resources: [
-              { type: "coal" },
-              { type: "coal" },
-              { type: "coal" },
-              { type: "coal" }
-            ],
-          },
-          {
-            x: 8,
-            y: -7,
-            radius: 2,
-            resources: [
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" },
-            ],
-          },
-          {
-            x: -8,
-            y: 7,
-            radius: 3,
-            resources: [
-              { type: "water" },
-              { type: "water" },
-              { type: "water" },
-            ],
-          }
-        ],
-      },
-      {
-        biome: "grass",
-        center:{
-          x: 45,
-          y: 15,
-        },
-        shape: {
-          type: "organique",
-          size: 15,
-        },
-        clearings: [
-          {
-            x: -5,
-            y: -2,
-            radius: 3,
-            resources: [
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" },
-              { type: "iron" }
-            ],
-          },
-          {
-            x: 4,
-            y: 3,
-            radius: 1,
-            resources: [
-              { type: "iron" },
-            ],
-          },
-          {
-            x: 5,
-            y: -10,
-            radius: 2,
-            resources: [
-              { type: "water" },
-              { type: "water" },
-              { type: "water" },
-            ]
-          }
-        ],
-      }
-    ],
+    id: "level-3", seed: 829104, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "snow", center: CAMPAIGN_LEVELS[2].center, shape: {type: "organique", size: 19},
+      clearings: [
+        {x: -6, y: -4, radius: 4, resources: Array.from({length: 8}, () => ({type: "copper" as const}))},
+        {x: 7, y: 4, radius: 3, resources: Array.from({length: 4}, () => ({type: "water" as const}))}
+      ]
+    }]
   }
-]
+];

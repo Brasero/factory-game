@@ -1,5 +1,5 @@
 import type {World} from "@engine/models/World.ts";
-import type {MachineType} from "@engine/models/Machine.ts";
+import type {MachineType, MachineVariant} from "@engine/models/Machine.ts";
 import type {DirectionType, Conveyor} from "@engine/models/Conveyor.ts";
 import type {Position} from "@engine/models/Position.ts";
 import type {Storage} from "@engine/models/Storage.ts";
@@ -7,6 +7,7 @@ import type {SelectedItem, ToolMode, Controls} from "@engine/models/Controls.ts"
 import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {ConveyorPlacement} from "@engine/models/ConveyorPlacement.ts";
 import type {TileData} from "@engine/models/Tile.ts";
+import type {RecipeId} from "@engine/config/recipeConfig";
 
 export interface ResourceNodeSnapshot extends TileData {
   resource: ResourcesType;
@@ -42,6 +43,7 @@ export type PlaceMachineCommand = {
   x: number;
   y: number;
   machineType: MachineType;
+  variant?: MachineVariant;
 };
 
 export type PlaceConveyorCommand = {
@@ -64,8 +66,17 @@ export type DestroyEntityCommand = {
   y: number;
 };
 
+export type ActivateLevelCommand = {type: "activate-level"; levelId: string};
+export type FinalizeLevelCommand = {type: "finalize-level"; levelId: string};
+export type SelectMachineRecipeCommand = {type: "select-machine-recipe"; machineId: string; recipeId: RecipeId};
+export type SetMachinePausedCommand = {type: "set-machine-paused"; machineId: string; paused: boolean};
+
 export type EngineCommand =
   | PlaceMachineCommand
   | PlaceConveyorCommand
   | PlaceStorageCommand
-  | DestroyEntityCommand;
+  | DestroyEntityCommand
+  | ActivateLevelCommand
+  | FinalizeLevelCommand
+  | SelectMachineRecipeCommand
+  | SetMachinePausedCommand;
