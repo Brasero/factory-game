@@ -7,7 +7,7 @@ import {config} from "@web/config/gridConfig.ts";
 import {loadGameAssets} from "@web/render/manager/AssetManager.ts";
 import {useAppDispatch, useAppSelector} from "@web/store/hooks.ts";
 import {selectCurentTool} from "@web/store/selectors.ts";
-import {setPaused} from "@web/store/controlSlice.ts";
+import {setPaused, setSelectedItem, setSelectedVariant, setToolMode} from "@web/store/controlSlice.ts";
 import {GameMenu} from "@web/ui/GameMenu.tsx";
 import {Tutorial} from "@web/ui/Tutorial.tsx";
 import {CampaignHud} from "@web/ui/CampaignHud.tsx";
@@ -70,12 +70,18 @@ function App() {
     };
     const newCampaign = () => {
       startNewCampaign();
+      dispatch(setSelectedItem(""));
+      dispatch(setSelectedVariant("standard"));
+      dispatch(setToolMode("build"));
       setHasSave(false);
       play();
       setTutorialStep(0);
     };
     const restartCampaign = () => {
       startNewCampaign();
+      dispatch(setSelectedItem(""));
+      dispatch(setSelectedVariant("standard"));
+      dispatch(setToolMode("build"));
       setHasSave(false);
       setTutorialStep(null);
       play();

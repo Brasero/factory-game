@@ -1,7 +1,7 @@
 import type {World} from "@engine/models/World";
 import type {ResourcesType} from "@engine/models/Resources";
 import {buildNetworkTopology, type NetworkTopology} from "./NetworkTopology";
-import {recipeOutputs} from "@engine/config/recipeConfig";
+import {recipeFor, recipeOutputs} from "@engine/config/recipeConfig";
 
 export function runOutputMachine(world: World, network: NetworkTopology = buildNetworkTopology(world)): World {
   const conveyors = world.conveyors.map(c => ({...c, carrying: [...c.carrying]}));
@@ -12,7 +12,7 @@ export function runOutputMachine(world: World, network: NetworkTopology = buildN
     const target = targetIndex === undefined ? undefined : conveyors[targetIndex];
     if (!target || target.carrying.length >= target.capacity) continue;
     const outputs = recipeOutputs(m);
-    const resource = outputs.length > 0
+    const resource = recipeFor(m)
       ? outputs.find(([output]) => (m.buffer[output] ?? 0) > 0)?.[0]
       : (Object.keys(m.buffer) as ResourcesType[]).find(key => (m.buffer[key] ?? 0) > 0);
     if (!resource) continue;

@@ -255,6 +255,15 @@ function drawMachineAt(
           machine.x * CELL_SIZE - (frameWidth - CELL_SIZE) / 2, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
         return;
     }
+    if (machine.type === "boiler") {
+        const sprite = assetManager.getImage(`machine.automation.boiler.${isWorking ? "running" : "idle"}`);
+        const frameWidth = 64;
+        const frameHeight = 48;
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % 2 : 0;
+        ctx.drawImage(sprite, frame * frameWidth, 0, frameWidth, frameHeight,
+          machine.x * CELL_SIZE - 16, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
+        return;
+    }
     const spritePrefix = machine.spriteName!
     const state = isWorking ? "running": "idle";
     const type = machine.type === "water-pump" ? "pump" : "miner"
@@ -263,30 +272,33 @@ function drawMachineAt(
     if (!sprite) return;
     const baseX = machine.x * CELL_SIZE;
     const baseY = machine.y * CELL_SIZE;
-    
-    const drawX = machine.type === "water-pump" ? baseX : baseX - OFFSET;
+    const minerFrameWidth = spritePrefix === "miner1"
+      ? machineConfig.MINER_ECO_FRAME_WIDTH : machineConfig.MINER_STANDARD_FRAME_WIDTH;
+    const frameWidth = machine.type === "water-pump" ? SPRITE_SIZE : minerFrameWidth;
+    const frameHeight = machine.type === "water-pump" ? SPRITE_SIZE : machineConfig.MINER_FRAME_HEIGHT;
+    const drawX = machine.type === "water-pump" ? baseX : baseX - (frameWidth - CELL_SIZE) / 2;
     const drawY = baseY - OFFSET;
     
     if (!isWorking) {
         ctx.drawImage(
           sprite,
           0, 0,
-          SPRITE_SIZE, SPRITE_SIZE,
+          frameWidth, frameHeight,
           drawX, drawY,
-          SPRITE_SIZE, SPRITE_SIZE
+          frameWidth, frameHeight
         )
         return;
     }
     const frameCount = machine.type === "water-pump" ? machineConfig.PUMP_FRAME_COUNT : machineConfig.MINER_FRAME_COUNT
-    const frameIndex = (Math.floor(machineConfig.ANIMATION_SPEED * world.tick)% SPRITE_SIZE) % frameCount;
-    const sx = frameIndex * SPRITE_SIZE;
+    const frameIndex = Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % frameCount;
+    const sx = frameIndex * frameWidth;
     
     ctx.drawImage(
       sprite,
       sx, 0,
-      SPRITE_SIZE, SPRITE_SIZE,
+      frameWidth, frameHeight,
       drawX, drawY,
-      SPRITE_SIZE, SPRITE_SIZE
+      frameWidth, frameHeight
     )
 }
 

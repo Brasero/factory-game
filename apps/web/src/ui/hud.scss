@@ -34,34 +34,6 @@
   align-items: center;
   gap: 15px;
 
-  #hud_resources {
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-
-    .hud_resource {
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-
-      &.iron { background-color: rgba(c.$resource-iron, 0.2); color: c.$resource-iron; }
-      &.coal { background-color: rgba(c.$resource-coal, 0.2); color: c.$resource-coal; }
-      &.water { background-color: rgba(c.$resource-water, 0.2); color: c.$resource-water; }
-      &.ironPlate { background-color: rgba(c.$resource-iron-plate, 0.2); color: c.$resource-iron-plate; }
-      &.steel { background-color: rgba(c.$resource-steel, 0.2); color: c.$resource-steel; }
-      &.copper { background-color: rgba(c.$resource-copper, 0.2); color: c.$resource-copper; }
-      &.copperWire { background-color: rgba(c.$resource-copper-wire, 0.2); color: c.$resource-copper-wire; }
-      &.circuit { background-color: rgba(c.$resource-circuit, 0.2); color: c.$resource-circuit; }
-
-      &.pulse {
-        animation: pulse 1s infinite alternate;
-      }
-    }
-  }
-
   #hud_tick {
     font-weight: bold;
     font-size: 16px;
@@ -196,11 +168,6 @@
 }
 
 /* Animations */
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.1); opacity: 1; }
-}
-
 @keyframes tickGlow {
   0% { text-shadow: 0 0 2px c.$state-accent; }
   100% { text-shadow: 0 0 10px c.$state-accent; }
@@ -233,11 +200,12 @@
   background-position: 0 0;
 }
 
-.processor-label {
-  min-width: 36px;
-  color: c.$text-primary;
-  font-size: 10px;
-  font-weight: 800;
+.processor-machine-icon {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .machine-variants {

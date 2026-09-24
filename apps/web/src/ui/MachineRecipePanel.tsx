@@ -42,16 +42,18 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
         return <button key={recipeId} className={`recipe-choice ${selected === recipeId ? "selected" : ""}`}
           onClick={() => selectMachineRecipe(machine.id, recipeId as RecipeId)}>
           <strong>{recipe.name}</strong>
-          <span>{ingredients(recipe.inputs)} → {ingredients(recipe.outputs)}</span>
+          <span>{ingredients(recipe.inputs)} → {recipe.pollutionReduction
+            ? `−${recipe.pollutionReduction} pollution`
+            : ingredients(recipe.outputs)}</span>
           <small>{recipe.duration} ticks</small>
         </button>;
       })}
     </div>
 
     <div className="machine-panel-section">
-      <h3>Buffers <span>{Object.values(machine.buffer).reduce((sum, amount) => sum + (amount ?? 0), 0)} / {machine.capacity}</span></h3>
+      <h3>Buffers <span>{machine.capacity} max par ressource</span></h3>
       {buffer.length === 0 ? <p>Vide</p> : <ul>{buffer.map(([resource, amount]) =>
-        <li key={resource}><span>{resourceNames[resource]}</span><strong>{amount}</strong></li>)}</ul>}
+        <li key={resource}><span>{resourceNames[resource]}</span><strong>{amount} / {machine.capacity}</strong></li>)}</ul>}
     </div>
   </section>;
 }

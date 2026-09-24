@@ -29,8 +29,8 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     radius: 24,
     objective: {type: "export", resource: "steel", amount: 40},
     unlocks: {
-      machines: ["coal-mine"],
-      recipes: ["steel-smelting"],
+      machines: ["coal-mine", "boiler"],
+      recipes: ["steel-smelting", "water-purification"],
       variants: ["eco", "industrial"],
       resources: ["coal", "steel"]
     },
@@ -47,7 +47,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     radius: 24,
     objective: {type: "export", resource: "circuit", amount: 30},
     unlocks: {
-      machines: ["copper-mine", "wire-mill", "assembler"],
+      machines: ["copper-mine", "assembler"],
       recipes: ["copper-wire", "circuit-assembly"],
       variants: ["eco"],
       resources: ["copper", "copperWire", "circuit"]

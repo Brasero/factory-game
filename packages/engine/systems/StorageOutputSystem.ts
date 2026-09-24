@@ -1,11 +1,8 @@
-import {recipeInputs} from "@engine/config/recipeConfig";
+import {machineInputSpace, recipeInputs} from "@engine/config/recipeConfig";
 import type {ResourcesType} from "@engine/models/Resources";
 import type {Storage} from "@engine/models/Storage";
 import type {World} from "@engine/models/World";
 import {acceptsInput, directions, nextPosition, positionKey} from "@engine/systems/NetworkTopology";
-
-const usedCapacity = (buffer: Partial<Record<ResourcesType, number>>) =>
-  Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
 
 function firstStoredResource(storage: Storage): ResourcesType | undefined {
   return (Object.keys(storage.stored) as ResourcesType[]).find(resource => (storage.stored[resource] ?? 0) > 0);
@@ -24,9 +21,9 @@ export function runStorageOutputs(world: World): World {
       const machineIndex = machinesByPosition.get(positionKey(pos));
       if (machineIndex !== undefined) {
         const machine = machines[machineIndex];
-        const input = recipeInputs(machine).find(([resource]) => (storage.stored[resource] ?? 0) > 0)?.[0];
+        const input = recipeInputs(machine).find(([resource]) =>
+          (storage.stored[resource] ?? 0) > 0 && machineInputSpace(machine, resource) > 0)?.[0];
         if (!input) continue;
-        if (usedCapacity(machine.buffer) >= machine.capacity) continue;
         storage.stored[input] = (storage.stored[input] ?? 0) - 1;
         machine.buffer[input] = (machine.buffer[input] ?? 0) + 1;
         continue;

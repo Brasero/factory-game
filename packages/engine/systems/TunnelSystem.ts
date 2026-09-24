@@ -18,9 +18,7 @@ export function runTunnels(world: World): World {
         const moved = Math.min(amount, Math.max(0, target.capacity - targetUsed));
         target.stored[resource] = (target.stored[resource] ?? 0) + moved;
         source.stored[resource] = (source.stored[resource] ?? 0) - moved;
-        campaign.statistics.exported[resource] += moved;
       } else {
-        campaign.statistics.exported[resource] += amount;
         source.stored[resource] = 0;
       }
     }

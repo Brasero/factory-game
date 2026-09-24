@@ -117,6 +117,18 @@ describe("Conveyor transfers", () => {
     expect(withProduct.machines[0].buffer).toMatchObject({iron: 2, ironPlate: 0});
   });
 
+  it("keeps boiler water inside until it is consumed", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(3, 1, "boiler");
+    engine.placeConveyor(3, 2, "down");
+    const world = engine.getWorld();
+    world.machines[0].buffer.water = 5;
+
+    const exported = runOutputMachine(world);
+    expect(exported.conveyors[0].carrying).toHaveLength(0);
+    expect(exported.machines[0].buffer.water).toBe(5);
+  });
+
   it("feeds machines only with their recipe ingredient", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(5, 5, "iron-smelter");
@@ -132,6 +144,35 @@ describe("Conveyor transfers", () => {
     runConveyors(world);
     expect(world.machines.map(m => m.buffer)).toEqual([{iron: 1}, {}]);
     expect(world.conveyors.map(c => c.carrying.length)).toEqual([0, 1]);
+  });
+
+  it("stores one full capacity for each ingredient of a multi-input recipe", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(5, 5, "assembler");
+    const world = engine.getWorld();
+    world.machines[0].recipeId = "circuit-assembly";
+    world.conveyors = [belt(4, 5, "right"), belt(5, 4, "down")];
+    world.conveyors[0].carrying[0] = {type: "ironPlate", amount: 100, progress: 1};
+    world.conveyors[1].carrying[0] = {type: "copperWire", amount: 100, progress: 1};
+
+    runConveyors(world);
+    expect(world.machines[0].buffer).toMatchObject({ironPlate: 100, copperWire: 100});
+    expect(world.conveyors.every(conveyor => conveyor.carrying.length === 0)).toBe(true);
+  });
+
+  it("lets storage feed another ingredient when one machine input is full", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeStorage(4, 5);
+    engine.placeMachine(5, 5, "assembler");
+    const world = engine.getWorld();
+    world.machines[0].recipeId = "circuit-assembly";
+    world.machines[0].buffer.ironPlate = 100;
+    world.storages[0].stored.ironPlate = 1;
+    world.storages[0].stored.copperWire = 1;
+
+    const supplied = runStorageOutputs(world);
+    expect(supplied.machines[0].buffer).toMatchObject({ironPlate: 100, copperWire: 1});
+    expect(supplied.storages[0].stored).toMatchObject({ironPlate: 1, copperWire: 0});
   });
 
   it("updates HUD totals in the transfer tick and after destruction", () => {

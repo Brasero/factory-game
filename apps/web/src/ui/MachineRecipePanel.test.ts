@@ -37,4 +37,37 @@ describe("Machine recipe panel", () => {
     act(() => pause.click());
     expect(setMachinePaused).toHaveBeenCalledWith(snapshot.machines[0].id, true);
   });
+
+  it("offers copper wire and circuit recipes on the same production machine", () => {
+    const world = createTestWorld();
+    const engine = new GameEngine(world);
+    engine.placeMachine(0, 0, "assembler");
+    const snapshot = engine.getSnapshot();
+    setWorldSnapshot(snapshot);
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(MachineRecipePanel, {
+      machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
+    })));
+
+    expect(host.textContent).toContain("Fil de cuivre1 Cuivre → 2 Fil de cuivre18 ticks");
+    expect(host.textContent).toContain("Circuit1 Lingot de fer + 2 Fil de cuivre → 1 Circuit35 ticks");
+  });
+
+  it("explains the boiler pollution reduction", () => {
+    const world = createTestWorld();
+    const engine = new GameEngine(world);
+    engine.placeMachine(0, 0, "boiler");
+    const snapshot = engine.getSnapshot();
+    setWorldSnapshot(snapshot);
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(MachineRecipePanel, {
+      machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
+    })));
+
+    expect(host.textContent).toContain("Dépollution à l’eau1 Eau → −12 pollution20 ticks");
+  });
 });

@@ -3,6 +3,7 @@ import {GameEngine} from "@engine/core/GameEngine";
 import {createTestWorld} from "@engine/test/createTestWorld";
 import {runCampaign} from "./CampaignSystem";
 import {runTunnels} from "./TunnelSystem";
+import {runConveyors} from "./ConveyorSystem";
 import {emptyResources} from "@engine/models/Resources";
 
 describe("Campaign progression", () => {
@@ -42,8 +43,9 @@ describe("Campaign progression", () => {
     expect(standard.getSnapshot().campaign.pollution).toBeGreaterThan(10);
   });
 
-  it("moves tunnel contents without duplication and counts exports once", () => {
+  it("moves already exported tunnel contents without counting them twice", () => {
     const world = createTestWorld();
+    world.campaign.statistics.exported.ironPlate = 3;
     world.tunnels = [
       {id: "out", x: 1, y: 1, entityType: "tunnel", type: "output", levelId: "level-1", linkedTunnelId: "in", direction: "right", capacity: 20, stored: {...emptyResources(), ironPlate: 3}},
       {id: "in", x: 5, y: 1, entityType: "tunnel", type: "input", levelId: "level-2", direction: "right", capacity: 20, stored: emptyResources()}
@@ -53,6 +55,25 @@ describe("Campaign progression", () => {
     expect(moved.campaign.statistics.exported.ironPlate).toBe(3);
     const stable = runTunnels(moved);
     expect(stable.campaign.statistics.exported.ironPlate).toBe(3);
+  });
+
+  it("lets output tunnels accumulate resources without a storage limit", () => {
+    const world = createTestWorld();
+    world.tunnels = [
+      {id: "out", x: 1, y: 1, entityType: "tunnel", type: "output", levelId: "level-1", linkedTunnelId: "in", direction: "right", capacity: 1, stored: emptyResources()},
+      {id: "in", x: 5, y: 1, entityType: "tunnel", type: "input", levelId: "level-2", direction: "right", capacity: 2, stored: emptyResources()}
+    ];
+    world.conveyors = [{id: "belt", x: 0, y: 1, entityType: "conveyor", type: "conveyor", direction: "right",
+      speed: 0.2, capacity: 3, carrying: [{type: "ironPlate", amount: 50, progress: 1}]}];
+
+    runConveyors(world);
+    expect(world.tunnels[0].stored.ironPlate).toBe(50);
+    expect(world.conveyors[0].carrying).toHaveLength(0);
+    expect(world.campaign.statistics.exported.ironPlate).toBe(50);
+
+    const transferred = runTunnels(world);
+    expect(transferred.tunnels.map(tunnel => tunnel.stored.ironPlate)).toEqual([48, 2]);
+    expect(transferred.campaign.statistics.exported.ironPlate).toBe(50);
   });
 
   it("completes an objective and unlocks the next island", () => {

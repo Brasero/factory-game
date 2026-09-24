@@ -3,7 +3,7 @@ import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
 
 export type MachineType = "iron-mine" | "coal-mine" | "copper-mine" | "water-pump" |
-    "iron-smelter" | "steel-smelter" | "wire-mill" | "assembler" | "conveyor";
+    "iron-smelter" | "steel-smelter" | "wire-mill" | "assembler" | "boiler" | "conveyor";
 export type MachineVariant = "eco" | "standard" | "industrial";
 
 export interface Machine extends BaseEntity {

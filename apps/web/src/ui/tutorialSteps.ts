@@ -21,7 +21,7 @@ export const tutorialSteps: TutorialStep[] = [
     eyebrow: "Campagne",
     title: "Objectifs et pollution",
     description: "La progression du niveau et la pollution globale sont affichées en haut. Une machine pollue lorsqu’elle termine un cycle : les versions industrielles vont plus vite, tandis que les versions écologiques peuvent laisser la nature absorber progressivement la pollution.",
-    tip: "Clique sur une machine pour la mettre en pause, même sur une île finalisée, et laisse la pollution redescendre. Si la jauge atteint sa limite, la campagne se termine."
+    tip: "Au niveau 2, le boiler consomme de l’eau pour retirer rapidement 12 points de pollution. Si la jauge atteint sa limite, la campagne se termine."
   },
   {
     eyebrow: "Explorer",
@@ -71,6 +71,12 @@ export const tutorialSteps: TutorialStep[] = [
     description: "Place une fonderie près d’un coffre contenant du fer, ou alimente-la avec un tapis. Elle transforme le minerai de fer en lingots.",
     target: "iron-smelter",
     expectedSelection: "iron-smelter"
+  },
+  {
+    eyebrow: "Dépollution",
+    title: "Le boiler",
+    description: "Débloqué au niveau 2, le boiler reçoit de l’eau depuis un tapis ou un coffre. Chaque cycle consomme une unité d’eau et retire 12 points de pollution globale.",
+    tip: "Il s’arrête automatiquement lorsque la pollution atteint zéro. Les variantes rapides accélèrent sa cadence."
   },
   {
     eyebrow: "Stockage",

@@ -186,13 +186,45 @@ button.text-button {
   grid-template-columns: auto auto minmax(220px, 320px) minmax(180px, 240px);
   gap: 20px;
   align-items: center;
-  max-width: calc(100vw - 36px);
+  width: min(980px, calc(100vw - 36px));
+  box-sizing: border-box;
   padding: 12px 16px;
   border: 2px solid c.$ui-border;
   border-radius: 10px;
   background: c.$ui-background;
   color: c.$text-primary;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+}
+
+.campaign-resources {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-top: 9px;
+  border-top: 1px solid c.$ui-border;
+}
+
+.campaign-resource {
+  display: flex;
+  align-items: center;
+  min-width: 82px;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid c.$ui-border;
+  border-radius: 6px;
+  background: c.$ui-surface-alt;
+  color: c.$text-primary;
+  font-size: 12px;
+  .resource-icon { width: 20px; height: 20px; }
+}
+
+.campaign-resource-value {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  small { overflow: hidden; color: c.$text-muted; font-size: 9px; line-height: 1; text-overflow: ellipsis; }
+  strong { margin-top: 2px; font-size: 12px; line-height: 1; }
 }
 
 .level-heading {

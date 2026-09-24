@@ -2,11 +2,24 @@ import {useState} from "react";
 import {useWorldSelector} from "@web/game/worldStore";
 import {CAMPAIGN_LEVELS, objectiveValue} from "@engine/config/campaignConfig";
 import {activateLevel, finalizeLevel} from "@web/game/GameController";
+import {assetManager} from "@web/render/manager/AssetManager";
+import type {ResourcesType} from "@engine/models/Resources";
 
 const resourceNames: Record<string, string> = {
   iron: "minerai de fer", coal: "charbon", water: "eau", ironPlate: "lingots de fer",
   steel: "acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits"
 };
+
+const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
+  {type: "iron", label: "Fer", icon: "ore.ironOre"},
+  {type: "coal", label: "Charbon", icon: "ore.coalOre"},
+  {type: "water", label: "Eau", icon: "ore.waterOre"},
+  {type: "ironPlate", label: "Lingots", icon: "ore.ironPlate"},
+  {type: "steel", label: "Acier", icon: "ore.ironPlate"},
+  {type: "copper", label: "Cuivre", icon: "ore.copperOre"},
+  {type: "copperWire", label: "Fils", icon: "ore.ironPlate"},
+  {type: "circuit", label: "Circuits", icon: "ore.ironPlate"}
+];
 
 export function CampaignHud({onRestart}: {onRestart: () => void}) {
   const campaign = useWorldSelector(world => world.campaign);
@@ -45,6 +58,17 @@ export function CampaignHud({onRestart}: {onRestart: () => void}) {
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
         <div><i style={{width: `${pollutionRatio * 100}%`}} /></div>
         {campaign.pollution > 0 && <small>Absorption naturelle : −0,02 par tick</small>}
+      </div>
+      <div className="campaign-resources" aria-label="Ressources stockées">
+        {resourceDisplay.map(resource => {
+          const amount = stored[resource.type] ?? 0;
+          return <div key={resource.type} className={`campaign-resource ${resource.type}`}
+            aria-label={`${resource.label} : ${amount}`} title={resource.label}>
+            <span className={`resource-icon ${resource.type}`}
+              style={{backgroundImage: `url(${assetManager.getImage(resource.icon).src})`}} />
+            <span className="campaign-resource-value"><small>{resource.label}</small><strong>{amount}</strong></span>
+          </div>;
+        })}
       </div>
     </section>
 

@@ -29,4 +29,16 @@ describe("Campaign saves", () => {
       type: "iron-smelter", recipeId: "steel-smelting", spriteName: "ironSmelter"
     });
   });
+
+  it("migrates the former wire mill to the shared production machine", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(0, 0, "assembler");
+    const saved = serializeWorld(engine.getWorld());
+    saved.machines[0].type = "wire-mill";
+    saved.machines[0].recipeId = "copper-wire";
+
+    expect(restoreWorld(saved).machines[0]).toMatchObject({
+      type: "assembler", recipeId: "copper-wire", spriteName: "assembler"
+    });
+  });
 });

@@ -8,6 +8,7 @@ import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
 import {createTestWorld} from "@engine/test/createTestWorld";
 
 vi.mock("@web/game/GameController", () => ({activateLevel: vi.fn(), finalizeLevel: vi.fn()}));
+vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn(() => ({src: "resource.png"}))}}));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 let root: Root;
@@ -29,5 +30,20 @@ describe("Campaign game over", () => {
     expect(button).toBeTruthy();
     act(() => button.click());
     expect(restart).toHaveBeenCalledOnce();
+  });
+
+  it("shows every stored resource even when all counters are zero", () => {
+    const world = createTestWorld();
+    setWorldSnapshot(buildWorldSnapshot(world));
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn()})));
+
+    const resources = host.querySelector('[aria-label="Ressources stockées"]')!;
+    expect(resources.children).toHaveLength(8);
+    expect(resources.querySelector('[aria-label="Fer : 0"]')).toBeTruthy();
+    expect(resources.querySelector('[aria-label="Circuits : 0"]')).toBeTruthy();
+    expect(resources.querySelector(".pulse")).toBeNull();
   });
 });

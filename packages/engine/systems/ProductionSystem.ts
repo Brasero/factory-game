@@ -32,14 +32,19 @@ export function runProduction(world: World): World {
       const inputs = recipeInputs(machine);
       const outputs = recipeOutputs(machine);
       const canConsume = inputs.every(([resource, amount]) => (buffer[resource] ?? 0) >= amount);
-      const outputAmount = outputs.reduce((sum, [resource, amount]) => sum + (buffer[resource] ?? 0) + amount * machine.production, 0);
-      if (!canConsume || outputAmount > machine.capacity) return {...machine, active: false};
+      const canStoreOutputs = outputs.every(([resource, amount]) =>
+        (buffer[resource] ?? 0) + amount * machine.production <= machine.capacity);
+      const canReducePollution = !recipe.pollutionReduction || campaign.pollution > 0;
+      if (!canConsume || !canStoreOutputs || !canReducePollution) return {...machine, active: false};
       const progress = machine.progress + machine.efficiency;
       if (progress < recipe.duration) return {...machine, buffer, progress, active: true};
       for (const [resource, amount] of inputs) buffer[resource] = (buffer[resource] ?? 0) - amount;
       const produced = outputs.map(([resource, amount]) => [resource, amount * machine.production] as [ResourcesType, number]);
       for (const [resource, amount] of produced) buffer[resource] = (buffer[resource] ?? 0) + amount;
       recordCycle(machine, produced, false);
+      if (recipe.pollutionReduction) {
+        campaign.pollution = Math.max(0, campaign.pollution - recipe.pollutionReduction);
+      }
       return {...machine, buffer, progress: 0, active: true};
     }
 

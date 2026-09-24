@@ -193,8 +193,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         case "coal-mine": placeCoalMine(x, y); break;
         case "water-pump": placeMachine(x, y, "water-pump", selectedVariant); break;
         case "iron-smelter": placeMachine(x, y, "iron-smelter", selectedVariant); break;
-        case "wire-mill": placeMachine(x, y, "wire-mill", selectedVariant); break;
         case "assembler": placeMachine(x, y, "assembler", selectedVariant); break;
+        case "boiler": placeMachine(x, y, "boiler", selectedVariant); break;
         case "storage": placeStorage(x, y); break;
       }
     }} />

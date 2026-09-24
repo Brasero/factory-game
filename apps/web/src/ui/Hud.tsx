@@ -8,18 +8,10 @@ import {formatTicks} from "@web/utils/utils.ts";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
-import type {MachineType, MachineVariant} from "@engine/models/Machine";
+import type {MachineVariant} from "@engine/models/Machine";
 
 
 export function Hud() {
-  const iron = useWorldSelector((world) => world.resources.iron);
-  const water = useWorldSelector((world) => world.resources.water);
-  const coal = useWorldSelector((world) => world.resources.coal);
-  const ironPlate = useWorldSelector((world) => world.resources.ironPlate);
-  const steel = useWorldSelector((world) => world.resources.steel ?? 0);
-  const copper = useWorldSelector((world) => world.resources.copper ?? 0);
-  const copperWire = useWorldSelector((world) => world.resources.copperWire ?? 0);
-  const circuit = useWorldSelector((world) => world.resources.circuit ?? 0);
   const tick = useWorldSelector((world) => world.tick);
   const selectedItem = useAppSelector(selectSelectedItem);
   const paused = useAppSelector(selectGamePaused);
@@ -66,31 +58,8 @@ export function Hud() {
   const destroyButtonClass = () => {
     return "destroyBtn " + (currentTool === "destroy" ? "selected" : "")
   }
-  const resources = [
-    {type: "iron", value: iron, icon: "ore.ironOre"},
-    {type: "coal", value: coal, icon: "ore.coalOre"},
-    {type: "water", value: water, icon: "ore.waterOre"},
-    {type: "ironPlate", value: ironPlate, icon: "ore.ironPlate"},
-    {type: "steel", value: steel, icon: "ore.ironPlate"},
-    {type: "copper", value: copper, icon: "ore.copperOre"},
-    {type: "copperWire", value: copperWire, icon: "ore.ironPlate"},
-    {type: "circuit", value: circuit, icon: "ore.ironPlate"}
-  ] as const;
-  const processorButtons: {type: MachineType; label: string; title: string}[] = [
-    {type: "wire-mill", label: "Fil", title: "Tréfilerie — cuivre vers fil de cuivre"},
-    {type: "assembler", label: "Circuit", title: "Assembleur — lingot et fil vers circuit"}
-  ];
-  
   return (<div id="hud_container">
       <div id="hud_info">
-        {resources.some(resource => resource.value > 0) && <div id="hud_resources">
-          {resources.filter(resource => resource.value > 0).map(resource => (
-            <div key={resource.type} className={`hud_resource ${resource.type} ${!paused ? 'pulse' : ''}`}>
-              <span className={`resource-icon ${resource.type}`} style={{backgroundImage: `url(${assetManager.getImage(resource.icon).src})`}} />
-              {resource.value}
-            </div>
-          ))}
-        </div>}
         <div id="hud_tick_container">
           <button id="hud_pause_btn" data-tutorial="pause" aria-label={paused ? "Reprendre la simulation" : "Mettre la simulation en pause"} onClick={toggleGamePause}>
             {paused ? "▶" : "⏸"}
@@ -112,10 +81,18 @@ export function Hud() {
         <button data-tutorial="iron-smelter" aria-label="Fonderie" title="Fonderie — sélectionne sa recette après placement" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
           <span className="automation-machine-icon" style={{backgroundImage: `url(${assetManager.getImage("machine.automation.ironSmelter.idle").src})`}} />
         </button>
-        {processorButtons.filter(button => unlockedMachines.has(button.type)).map(button => <button key={button.type}
-          aria-label={button.label} title={button.title} className={buttonMachineStyle(button.type)} onClick={() => handleClick(button.type)}>
-          <span className="processor-label">{button.label}</span>
-        </button>)}
+        {unlockedMachines.has("assembler") && <button aria-label="Machine de production"
+          title="Machine de production — sélectionne Fil de cuivre ou Circuit après placement"
+          className={buttonMachineStyle("assembler")} onClick={() => handleClick("assembler")}>
+          <img className="processor-machine-icon"
+            src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt="" />
+          </button>}
+        {unlockedMachines.has("boiler") && <button aria-label="Boiler dépolluant"
+          title="Boiler — consomme de l’eau pour réduire rapidement la pollution"
+          className={buttonMachineStyle("boiler")} onClick={() => handleClick("boiler")}>
+          <img className="processor-machine-icon"
+            src={assetManager.getImage("machine.automation.boiler.idle").src} alt="" />
+        </button>}
       </div>
       <div id="hud_commands_logistique">
         {(["merger", "splitter"] as const).map(type => <button key={type} data-tutorial={type}

@@ -47,4 +47,44 @@ describe("Recipe production", () => {
     world = run(world, 10);
     expect(world.machines[0].buffer).toEqual({iron: 1, ironPlate: 1});
   });
+
+  it("produces wire and circuits with the same production machine", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(0, 0, "assembler");
+    let world = engine.getWorld();
+    world.machines[0].buffer = {copper: 1};
+    world = run(world, 18);
+    expect(world.machines[0].buffer).toMatchObject({copper: 0, copperWire: 2});
+
+    world.machines[0].recipeId = "circuit-assembly";
+    world.machines[0].progress = 0;
+    world.machines[0].buffer = {ironPlate: 1, copperWire: 2};
+    world = run(world, 35);
+    expect(world.machines[0].buffer).toMatchObject({ironPlate: 0, copperWire: 0, circuit: 1});
+  });
+
+  it("consumes water to rapidly reduce pollution", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(0, 0, "boiler");
+    let world = engine.getWorld();
+    world.machines[0].buffer = {water: 1};
+    world.campaign.pollution = 50;
+
+    world = run(world, 19);
+    expect(world.machines[0]).toMatchObject({active: true, progress: 19, buffer: {water: 1}});
+    world = run(world, 1);
+
+    expect(world.machines[0]).toMatchObject({active: true, progress: 0, buffer: {water: 0}});
+    expect(world.campaign.pollution).toBeCloseTo(37.6);
+  });
+
+  it("does not waste water when there is no pollution", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(0, 0, "boiler");
+    let world = engine.getWorld();
+    world.machines[0].buffer = {water: 2};
+    world = run(world, 40);
+
+    expect(world.machines[0]).toMatchObject({active: false, progress: 0, buffer: {water: 2}});
+  });
 });

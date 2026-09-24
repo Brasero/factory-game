@@ -28,9 +28,15 @@ export function restoreWorld(save: GameSave): World {
   if (save.version !== 1) throw new Error("Version de sauvegarde incompatible.");
   const world = createWorld();
   world.tick = save.tick;
-  world.machines = structuredClone(save.machines).map(machine => machine.type === "steel-smelter"
-    ? {...machine, type: "iron-smelter" as const, recipeId: "steel-smelting" as const, spriteName: "ironSmelter"}
-    : machine);
+  world.machines = structuredClone(save.machines).map(machine => {
+    if (machine.type === "steel-smelter") {
+      return {...machine, type: "iron-smelter" as const, recipeId: "steel-smelting" as const, spriteName: "ironSmelter"};
+    }
+    if (machine.type === "wire-mill") {
+      return {...machine, type: "assembler" as const, recipeId: "copper-wire" as const, spriteName: "assembler"};
+    }
+    return machine;
+  });
   world.conveyors = structuredClone(save.conveyors);
   world.storages = structuredClone(save.storages);
   world.tunnels = world.tunnels.map(tunnel => {

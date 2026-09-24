@@ -1,7 +1,7 @@
 import type {World} from "@engine/models/World";
 import type {Machine} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
-import {recipeInputs} from "@engine/config/recipeConfig";
+import {machineInputSpace, recipeInputs} from "@engine/config/recipeConfig";
 import {buildNetworkTopology, inputPort, type NetworkTopology} from "./NetworkTopology";
 
 // Une machine n'accepte que l'ingredient de sa recette ; les extracteurs n'acceptent rien.
@@ -40,14 +40,22 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
             if (next[target.index].type === "merger") {
               next[target.index].routingCursor = (inputPort(next[target.index], belt) + 1) % 4;
             }
-          } else if (target.kind === "storage" || target.kind === "tunnel" ||
-            (target.kind === "machine" && acceptsResource(world.machines[target.index], item.type))) {
-            const entity = target.kind === "machine" ? world.machines[target.index] :
-              target.kind === "storage" ? world.storages[target.index] : world.tunnels[target.index];
-            const buffer = "buffer" in entity ? entity.buffer : entity.stored;
-            const used = Object.values(buffer).reduce((sum, amount) => sum + amount, 0);
-            moved = Math.min(remaining, Math.max(0, entity.capacity - used));
-            buffer[item.type] = (buffer[item.type] ?? 0) + moved;
+          } else if (target.kind === "machine" && acceptsResource(world.machines[target.index], item.type)) {
+            const machine = world.machines[target.index];
+            moved = Math.min(remaining, machineInputSpace(machine, item.type));
+            machine.buffer[item.type] = (machine.buffer[item.type] ?? 0) + moved;
+          } else if (target.kind === "storage" || target.kind === "tunnel") {
+            const entity = target.kind === "storage" ? world.storages[target.index] : world.tunnels[target.index];
+            if (target.kind === "tunnel" && world.tunnels[target.index].type === "output") {
+              moved = remaining;
+            } else {
+              const used = Object.values(entity.stored).reduce((sum, amount) => sum + amount, 0);
+              moved = Math.min(remaining, Math.max(0, entity.capacity - used));
+            }
+            entity.stored[item.type] = (entity.stored[item.type] ?? 0) + moved;
+            if (target.kind === "tunnel" && world.tunnels[target.index].type === "output") {
+              world.campaign.statistics.exported[item.type] += moved;
+            }
           }
           remaining -= moved;
           if (moved > 0) {

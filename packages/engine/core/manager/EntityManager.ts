@@ -63,15 +63,17 @@ class EntityManager implements EntityManagerType {
       const existingConveyor = conveyors.find(c => c.x === x && c.y === y);
 
       if (existingConveyor) {
-        if (existingConveyor.type !== type) return false;
-        const otherConveyors = conveyors.filter(c => c !== existingConveyor);
+        const canUpgrade = existingConveyor.type === "conveyor" && (type === "splitter" || type === "merger");
+        if (existingConveyor.type !== type && !canUpgrade) return false;
         const updated: Conveyor = {
           ...existingConveyor,
-          direction
+          direction,
+          type,
+          routingCursor: canUpgrade ? 0 : existingConveyor.routingCursor
         };
         return {
           ...world,
-          conveyors: [...otherConveyors, updated]
+          conveyors: conveyors.map(conveyor => conveyor === existingConveyor ? updated : conveyor)
         };
       }
 

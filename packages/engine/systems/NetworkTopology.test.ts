@@ -31,7 +31,7 @@ describe("Cached connections", () => {
     expect(build).toHaveBeenCalledTimes(4);
     expect(engine.getSnapshot().storages[1].stored.iron).toBe(1);
   });
-  it("uses current buffers and total machine capacity, not cached inventories", () => {
+  it("uses current per-resource machine capacity, not cached inventories", () => {
     const setup = new GameEngine(createTestWorld());
     setup.placeMachine(1, 1, "iron-smelter");
     setup.placeConveyor(1, 0, "down");
@@ -40,11 +40,12 @@ describe("Cached connections", () => {
     world.machines[0].buffer.ironPlate = 99;
     world.conveyors[0].carrying = [{type: "iron", amount: 3, progress: 1}];
     runConveyors(world, network);
-    expect(world.machines[0].buffer.iron).toBe(1);
-    expect(world.conveyors[0].carrying[0].amount).toBe(2);
-    world.machines[0].buffer.ironPlate = 97;
-    runConveyors(world, network);
     expect(world.machines[0].buffer.iron).toBe(3);
     expect(world.conveyors[0].carrying).toHaveLength(0);
+    world.machines[0].buffer.iron = 99;
+    world.conveyors[0].carrying = [{type: "iron", amount: 3, progress: 1}];
+    runConveyors(world, network);
+    expect(world.machines[0].buffer.iron).toBe(100);
+    expect(world.conveyors[0].carrying[0].amount).toBe(2);
   });
 });

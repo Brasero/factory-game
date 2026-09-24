@@ -4,12 +4,46 @@ import type {Conveyor, DirectionType, WorldSnapshot} from "@engine/api/types";
 import {assetManager} from "@web/render/manager/AssetManager";
 import {createTestCampaign} from "@engine/test/createTestWorld";
 
-vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn(() => ({width: 192}))}}));
+vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn((key: string) => ({width: 192, key}))}}));
 
 it("progressively obscures the world as pollution approaches its limit", () => {
   expect(pollutionHazeOpacity(90, 900)).toBe(0);
   expect(pollutionHazeOpacity(450, 900)).toBeGreaterThan(0.15);
   expect(pollutionHazeOpacity(900, 900)).toBeCloseTo(0.52);
+});
+
+it("cuts eco miner animation into 32 pixel frames and centers it on its cell", () => {
+  const world: WorldSnapshot = {
+    tick: 4,
+    machines: [{id: "eco-miner", x: 0, y: 0, type: "iron-mine", entityType: "machine", spriteName: "miner1",
+      progress: 1, active: true, buffer: {}, capacity: 100, efficiency: 0.6, production: 1, variant: "eco"}],
+    storages: [], tunnels: [], conveyors: [], campaign: createTestCampaign(),
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 1, height: 1, resources: [], tiles: [[{biome: "sea", variant: 0}]]}
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 32, height: 32}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+  render(ctx, world);
+  const machineDraw = drawImage.mock.calls.find(([image]) => image.key === "machine.miner.miner1.running");
+  expect(machineDraw).toEqual([expect.anything(), 32, 0, 32, 48, 0, -8, 32, 48]);
+});
+
+it("cuts the running boiler into two complete 64 pixel frames", () => {
+  const world: WorldSnapshot = {
+    tick: 4,
+    machines: [{id: "boiler", x: 1, y: 1, type: "boiler", entityType: "machine", spriteName: "boiler",
+      progress: 1, active: true, buffer: {water: 1}, capacity: 100, efficiency: 1, production: 1, variant: "standard",
+      recipeId: "water-purification"}],
+    storages: [], tunnels: [], conveyors: [], campaign: createTestCampaign(),
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 3, height: 3, resources: [], tiles: Array.from({length: 3}, () =>
+      Array.from({length: 3}, () => ({biome: "sea" as const, variant: 0})))}
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 96, height: 96}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+  render(ctx, world);
+  const machineDraw = drawImage.mock.calls.find(([image]) => image.key === "machine.automation.boiler.running");
+  expect(machineDraw).toEqual([expect.anything(), 64, 0, 64, 48, 16, 16, 64, 48]);
 });
 it("uses indexed predecessors for both resources and sprites, including disconnected belts", () => {
   const world: WorldSnapshot = {

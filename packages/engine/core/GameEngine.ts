@@ -68,13 +68,16 @@ export class GameEngine {
         const actualType = machineType === "miner" ? undefined : machineType;
         if (actualType && !["conveyor", "splitter", "merger", "storage"].includes(actualType) &&
             !unlockedLevels.some(definition => definition.unlocks.machines.includes(actualType as MachineType))) return false;
-        if (!unlockedLevels.some(definition => definition.unlocks.variants.includes(variant))) return false;
+        const usesVariant = machineType === "miner" ||
+            (actualType !== undefined && !["conveyor", "splitter", "merger", "storage"].includes(actualType));
+        if (usesVariant && !unlockedLevels.some(definition => definition.unlocks.variants.includes(variant))) return false;
         if (machineType === "conveyor" || machineType === "splitter" || machineType === "merger") {
             const blocked = world.machines.some(m => m.x === x && m.y === y) ||
                 world.storages.some(s => s.x === x && s.y === y);
             if (blocked) return false;
             const existing = world.conveyors.find(c => c.x === x && c.y === y);
-            if (existing) return existing.type === machineType;
+            if (existing) return existing.type === machineType ||
+                (existing.type === "conveyor" && (machineType === "splitter" || machineType === "merger"));
         }
         return world.grid?.canPlaceMachine({x, y}, machineType) ?? false;
     }

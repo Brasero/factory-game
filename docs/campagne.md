@@ -19,7 +19,9 @@ Les objectifs utilisent des statistiques cumulatives (`extracted`, `produced`, `
 
 La pollution est ajoutée uniquement lorsqu’une machine termine un cycle réel. Une machine inactive, saturée ou privée d’ingrédients ne pollue pas. Chaque cycle augmente la pollution de l’île et la pollution globale. La nature absorbe `0,02` point par tick tant que la simulation tourne. Le joueur peut donc ralentir ou saturer une chaîne, ou employer des variantes écologiques, pour faire redescendre la pollution. À 900 points, la campagne se termine immédiatement.
 
-La pollution d’une île reste une mesure brute des émissions produites pour le score. Seule la jauge globale courante bénéficie de l’absorption naturelle. Une brume apparaît après 10 % du seuil et s’épaissit progressivement jusqu’au Game Over.
+La pollution d’une île reste une mesure brute des émissions produites pour le score. Seule la jauge globale courante bénéficie de l’absorption naturelle et des machines de dépollution. Une brume apparaît après 10 % du seuil et s’épaissit progressivement jusqu’au Game Over.
+
+Le boiler est débloqué au niveau 2. Alimenté par un tapis ou un coffre, il consomme une unité d’eau toutes les 20 unités de progression et retire immédiatement 12 points de pollution globale. Il ne produit aucune ressource, n’émet pas de pollution et s’arrête automatiquement lorsque la jauge atteint zéro. La pollution brute attribuée aux îles reste inchangée afin de conserver un score représentatif des émissions.
 
 Chaque machine peut être mise en pause depuis son menu contextuel. La pause arrête la production et les émissions sans vider les buffers ; les produits déjà fabriqués peuvent encore sortir. Cette commande reste disponible après la finalisation de l’île afin que le joueur conserve le contrôle de la pollution globale.
 
@@ -35,7 +37,7 @@ Les valeurs de base sont définies dans `machineConfig.ts`. Les recettes à plus
 
 ## Tunnels
 
-Un tunnel de sortie accepte les ressources d’un tapis et les transfère vers le tunnel d’entrée lié. Le transfert conserve les quantités, respecte la capacité du tunnel destinataire et alimente la statistique d’export une seule fois. Un tunnel d’entrée distribue ensuite une unité par tick au tapis placé devant lui.
+Un tunnel de sortie accepte les ressources d’un tapis sans aucune limite de stockage et les transfère vers le tunnel d’entrée lié. Une ressource est comptée comme exportée dès son entrée dans le tunnel de sortie. Si le tunnel d’entrée est saturé, les ressources restent en attente dans le tunnel de sortie sans bloquer la production de l’île précédente et sans être comptées une seconde fois. Le transfert conserve les quantités et respecte la capacité du tunnel d’entrée. Un tunnel d’entrée distribue ensuite une unité par tick au tapis placé devant lui.
 
 ## Ajouter un niveau
 
