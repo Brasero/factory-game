@@ -1,5 +1,5 @@
 import {it, expect, vi} from "vitest";
-import {findPreviousConveyor, pollutionHazeOpacity, render} from "./CanvasRenderer";
+import {findPreviousConveyor, interpolatedConveyorProgress, pollutionHazeOpacity, render} from "./CanvasRenderer";
 import type {Conveyor, DirectionType, WorldSnapshot} from "@engine/api/types";
 import {assetManager} from "@web/render/manager/AssetManager";
 import {createTestCampaign} from "@engine/test/createTestWorld";
@@ -10,6 +10,25 @@ it("progressively obscures the world as pollution approaches its limit", () => {
   expect(pollutionHazeOpacity(90, 900)).toBe(0);
   expect(pollutionHazeOpacity(450, 900)).toBeGreaterThan(0.15);
   expect(pollutionHazeOpacity(900, 900)).toBeCloseTo(0.52);
+});
+
+it("interpolates conveyor movement between simulation ticks without overshooting", () => {
+  expect(interpolatedConveyorProgress(0.2, 0.2, 0)).toBeCloseTo(0.2);
+  expect(interpolatedConveyorProgress(0.2, 0.2, 0.5)).toBeCloseTo(0.3);
+  expect(interpolatedConveyorProgress(0.9, 0.2, 1)).toBe(1);
+  expect(interpolatedConveyorProgress(0.2, 0.2, 4)).toBeCloseTo(0.4);
+});
+
+it("keeps queued resources still when the belt ahead is blocked", () => {
+  const leading = interpolatedConveyorProgress(1, 0.2, 0.75);
+  const blocked = interpolatedConveyorProgress(0.65, 0.2, 0.75, leading);
+  expect(leading).toBe(1);
+  expect(blocked).toBeCloseTo(0.65);
+
+  const movingAhead = interpolatedConveyorProgress(0.6, 0.2, 0.5);
+  const following = interpolatedConveyorProgress(0.25, 0.2, 0.5, movingAhead);
+  expect(movingAhead).toBeCloseTo(0.7);
+  expect(following).toBeCloseTo(0.35);
 });
 
 it("cuts eco miner animation into 32 pixel frames and centers it on its cell", () => {

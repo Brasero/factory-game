@@ -30,7 +30,7 @@ export const MACHINE_RECIPE_OPTIONS: Partial<Record<MachineType, RecipeId[]>> = 
 
 export const defaultRecipe = (type: MachineType): RecipeId | undefined => MACHINE_RECIPE_OPTIONS[type]?.[0];
 export const recipeFor = (machine: Pick<Machine, "type" | "recipeId">): MachineRecipe | undefined =>
-  RECIPES[machine.recipeId ?? defaultRecipe(machine.type)!];
+  machine.recipeId ? RECIPES[machine.recipeId] : undefined;
 export const recipeInputs = (machine: Pick<Machine, "type" | "recipeId">) =>
   Object.entries(recipeFor(machine)?.inputs ?? {}) as [ResourcesType, number][];
 export const recipeOutputs = (machine: Pick<Machine, "type" | "recipeId">) =>

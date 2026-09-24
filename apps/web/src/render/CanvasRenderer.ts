@@ -18,6 +18,7 @@ import {connectedRouterIds, drawConveyorAt, getIncomingDirection} from "@web/ren
 import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
+import {machineIdleReason, type MachineIdleReason} from "@engine/systems/MachineStatus";
 
 const CELL_SIZE = config.CELL_SIZE;
 export function render(
@@ -26,7 +27,8 @@ export function render(
     camera?: Camera,
     hoveredCell?: Position & {canPlace: boolean},
     hoveredStorage?: Storage,
-    measure?: (layer: string, milliseconds: number) => void
+    measure?: (layer: string, milliseconds: number) => void,
+    tickInterpolation = 0
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -47,7 +49,7 @@ export function render(
     };
     drawLayer("terrain", () => drawTileMap(ctx, world.grid!, bounds));
     drawLayer("resources", () => drawResourceNodes(ctx, world.grid!, bounds));
-    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds));
+    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds, tickInterpolation));
     drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
     drawLayer("fog", () => drawCampaignFog(ctx, world));
     drawLayer("pollution", () => drawPollutionHaze(ctx, world));
@@ -102,7 +104,8 @@ type DrawCall = {
 function drawDynamicEntities(
   ctx: CanvasRenderingContext2D,
   world: WorldSnapshot,
-  bounds: ViewportBounds
+  bounds: ViewportBounds,
+  tickInterpolation: number
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
@@ -135,7 +138,7 @@ function drawDynamicEntities(
         x: conveyor.x,
         y: conveyor.y,
         layer: 1,
-        draw: () => drawResourcesForConveyor(ctx, conveyor, path)
+      draw: () => drawResourcesForConveyor(ctx, conveyor, path, tickInterpolation)
       });
     }
   });
@@ -146,7 +149,10 @@ function drawDynamicEntities(
       x: machine.x,
       y: machine.y,
       layer: 2,
-      draw: () => drawMachineAt(ctx, world, machine)
+      draw: () => {
+        drawMachineAt(ctx, world, machine);
+        drawMachineStatus(ctx, world, machine);
+      }
     });
   });
 
@@ -166,6 +172,45 @@ function drawDynamicEntities(
   });
 
   drawCallsSorted(drawCalls);
+}
+
+const RESOURCE_SHORT_NAMES: Record<ResourcesType, string> = {
+  iron: "FER", coal: "CHARBON", water: "EAU", ironPlate: "LINGOT",
+  steel: "ACIER", copper: "CUIVRE", copperWire: "FIL", circuit: "CIRCUIT"
+};
+
+function statusPresentation(reason: MachineIdleReason): {label: string; color: string} {
+  switch (reason.type) {
+    case "paused": return {label: "⏸ PAUSE", color: "#4f86c6"};
+    case "no-recipe": return {label: "? RECETTE", color: "#9b59b6"};
+    case "missing-input": return {label: `! ${RESOURCE_SHORT_NAMES[reason.resource]}`, color: "#d88924"};
+    case "output-full": return {label: `■ ${RESOURCE_SHORT_NAMES[reason.resource]}`, color: "#c0392b"};
+    case "buffer-full": return {label: "■ STOCK", color: "#c0392b"};
+    case "pollution-empty": return {label: "✓ AIR PROPRE", color: "#31845b"};
+  }
+}
+
+function drawMachineStatus(
+  ctx: CanvasRenderingContext2D,
+  world: WorldSnapshot,
+  machine: WorldSnapshot["machines"][number]
+) {
+  if (machine.active) return;
+  const reason = machineIdleReason(machine, world.campaign.pollution);
+  if (!reason) return;
+  const {label, color} = statusPresentation(reason);
+  const width = Math.max(34, label.length * 5 + 8);
+  const x = machine.x * CELL_SIZE + CELL_SIZE / 2 - width / 2;
+  const y = machine.y * CELL_SIZE - 24;
+  ctx.fillStyle = "rgba(15, 20, 28, 0.94)";
+  ctx.fillRect(x - 1, y - 1, width + 2, 13);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, width, 11);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 7px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, machine.x * CELL_SIZE + CELL_SIZE / 2, y + 5.5);
 }
 
 function drawCallsSorted(drawCalls: DrawCall[]) {
@@ -375,10 +420,10 @@ const resourceSprites: Record<ResourcesType, string> = {
   coal: "ore.coalOre",
   water: "ore.waterOre",
   ironPlate: "ore.ironPlate",
-  steel: "ore.ironPlate",
+  steel: "ore.steel",
   copper: "ore.copperOre",
-  copperWire: "ore.ironPlate",
-  circuit: "ore.ironPlate"
+  copperWire: "ore.copperWire",
+  circuit: "ore.circuit"
 };
 
 function drawResourceIcon(
@@ -395,17 +440,31 @@ function drawResourceIcon(
 function drawResourcesForConveyor(
   ctx: CanvasRenderingContext2D,
   conveyor: Conveyor,
-  path: ConveyorPath
+  path: ConveyorPath,
+  tickInterpolation: number
 ) {
     if (!conveyor.carrying.length) return;
+    let aheadProgress: number | undefined;
     conveyor.carrying.forEach(r => {
         const { type, progress = 0 } = r;
         
         // Position de base au centre de la case
-        const pos = interpolateOnConveyor(path, progress)
+        const visualProgress = interpolatedConveyorProgress(progress, conveyor.speed, tickInterpolation, aheadProgress);
+        aheadProgress = visualProgress;
+        const pos = interpolateOnConveyor(path, visualProgress)
         
         drawResourceIcon(ctx, type, pos.x - 10, pos.y - 15, CELL_SIZE - 10);
     })
+}
+
+export function interpolatedConveyorProgress(
+  progress: number,
+  speed: number,
+  tickInterpolation: number,
+  aheadProgress?: number
+): number {
+  const destination = aheadProgress === undefined ? 1 : Math.max(0, aheadProgress - 0.35);
+  return Math.min(destination, Math.max(0, progress + speed * Math.min(1, Math.max(0, tickInterpolation))));
 }
 export function directionToVector(dir: DirectionType): Position {
     switch (dir) {

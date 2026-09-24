@@ -15,10 +15,10 @@ const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
   {type: "coal", label: "Charbon", icon: "ore.coalOre"},
   {type: "water", label: "Eau", icon: "ore.waterOre"},
   {type: "ironPlate", label: "Lingots", icon: "ore.ironPlate"},
-  {type: "steel", label: "Acier", icon: "ore.ironPlate"},
+  {type: "steel", label: "Acier", icon: "ore.steel"},
   {type: "copper", label: "Cuivre", icon: "ore.copperOre"},
-  {type: "copperWire", label: "Fils", icon: "ore.ironPlate"},
-  {type: "circuit", label: "Circuits", icon: "ore.ironPlate"}
+  {type: "copperWire", label: "Fils", icon: "ore.copperWire"},
+  {type: "circuit", label: "Circuits", icon: "ore.circuit"}
 ];
 
 export function CampaignHud({onRestart}: {onRestart: () => void}) {

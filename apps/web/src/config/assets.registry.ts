@@ -4,6 +4,9 @@ import ironOre from "../assets/ore-nodeTiles/Materials/Iron/Ores/Ore-0003.png";
 import coalOre from "../assets/ore-nodeTiles/Materials/Coal/Ores/Ore-0003.png";
 import waterOre from "../assets/ore-nodeTiles/Materials/Water/Ores/water-item.png";
 import ironPlate from "../assets/logistic/automation/iron-plate.png";
+import steel from "../assets/logistic/automation/steel.png";
+import copperWire from "../assets/logistic/automation/copper-wire.png";
+import circuit from "../assets/logistic/automation/circuit.png";
 import conveyorUp from "../assets/logistic/conveyor/conveyor/conveyor-up.png";
 import conveyorDown from "../assets/logistic/conveyor/conveyor/conveyor-down.png";
 import conveyorLeft from "../assets/logistic/conveyor/conveyor/conveyor-left.png";
@@ -52,7 +55,10 @@ export const imagePath = {
     coalOre,
     copperOre,
     waterOre,
-    ironPlate
+    ironPlate,
+    steel,
+    copperWire,
+    circuit
   },
   conveyor: {
     up: conveyorUp,

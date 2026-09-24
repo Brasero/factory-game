@@ -9,10 +9,10 @@ const resourceIcon: Record<ResourcesType, string> = {
   coal: "ore.coalOre",
   water: "ore.waterOre",
   ironPlate: "ore.ironPlate",
-  steel: "ore.ironPlate",
+  steel: "ore.steel",
   copper: "ore.copperOre",
-  copperWire: "ore.ironPlate",
-  circuit: "ore.ironPlate"
+  copperWire: "ore.copperWire",
+  circuit: "ore.circuit"
 }
 const CELL_SIZE = GridConfig.CELL_SIZE
 export function drawStorageTooltip(

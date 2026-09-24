@@ -1,6 +1,6 @@
 import type {Machine} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
-import {defaultRecipe, MACHINE_RECIPE_OPTIONS, RECIPES, type RecipeId} from "@engine/config/recipeConfig";
+import {MACHINE_RECIPE_OPTIONS, RECIPES, type RecipeId} from "@engine/config/recipeConfig";
 import {selectMachineRecipe, setMachinePaused} from "@web/game/GameController";
 import {useWorldSelector} from "@web/game/worldStore";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
@@ -20,7 +20,7 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
   const unlockedRecipes = new Set(CAMPAIGN_LEVELS.flatMap(level =>
     campaignLevels.find(progress => progress.id === level.id)?.status === "locked" ? [] : level.unlocks.recipes));
   const options = (MACHINE_RECIPE_OPTIONS[machine.type] ?? []).filter(recipe => unlockedRecipes.has(recipe));
-  const selected = machine.recipeId ?? defaultRecipe(machine.type);
+  const selected = machine.recipeId;
   const buffer = Object.entries(machine.buffer).filter(([, amount]) => (amount ?? 0) > 0) as [ResourcesType, number][];
 
   return <section className="machine-recipe-panel" style={{left, top}} role="dialog" aria-label="Configuration de la machine">

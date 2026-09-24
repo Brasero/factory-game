@@ -7,6 +7,7 @@ import type {CampaignState} from "@engine/models/Campaign";
 import type {Resources} from "@engine/models/Resources";
 import {createWorld} from "@engine/world/WorldFactory";
 import {CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
+import {defaultRecipe} from "@engine/config/recipeConfig";
 
 export type GameSave = {
   version: 1;
@@ -35,7 +36,7 @@ export function restoreWorld(save: GameSave): World {
     if (machine.type === "wire-mill") {
       return {...machine, type: "assembler" as const, recipeId: "copper-wire" as const, spriteName: "assembler"};
     }
-    return machine;
+    return machine.recipeId ? machine : {...machine, recipeId: defaultRecipe(machine.type)};
   });
   world.conveyors = structuredClone(save.conveyors);
   world.storages = structuredClone(save.storages);

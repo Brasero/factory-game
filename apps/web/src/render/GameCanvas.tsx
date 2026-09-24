@@ -5,7 +5,7 @@ import {drawPreviewConveyor} from "./utils/conveyor";
 import {useWorldSnapshot} from "@web/game/worldStore";
 import {destroyEntity, placeMiner, placeMachine, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine,
   placeStorage, canPlaceAt} from "@web/game/GameController";
-import {selectCurentTool, selectSelectedItem, selectSelectedVariant} from "@web/store/selectors";
+import {selectCurentTool, selectGamePaused, selectSelectedItem, selectSelectedVariant} from "@web/store/selectors";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
 import type {Position, ConveyorPlacement, DirectionType} from "@engine/api/types";
 import {buildConveyorPlacements, getBestPath} from "./utils/canvas";
@@ -27,6 +27,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const selectedItem = useAppSelector(selectSelectedItem);
   const currentTool = useAppSelector(selectCurentTool);
   const selectedVariant = useAppSelector(selectSelectedVariant);
+  const paused = useAppSelector(selectGamePaused);
+  const snapshotTime = useRef(performance.now());
   const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "splitter" || selectedItem === "merger";
   const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
   const [hover, setHover] = useState<Position | null>(null);
@@ -34,6 +36,10 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const [cameraVersion, redrawCamera] = useState(0);
   const [inspectedMachine, setInspectedMachine] = useState<{id: string; left: number; top: number} | null>(null);
   const machine = inspectedMachine ? world.machines.find(item => item.id === inspectedMachine.id) : undefined;
+
+  useEffect(() => {
+    snapshotTime.current = performance.now();
+  }, [world.tick]);
 
   useEffect(() => {
     if (!world.grid) return;
@@ -61,19 +67,23 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const frame = requestAnimationFrame(() => {
+    let frame = 0;
+    const drawFrame = (now: number) => {
       const storage = hover ? world.storages.find(s => s.x === hover.x && s.y === hover.y) : undefined;
       const highlight = hover && (selectedItem || currentTool === "destroy")
         ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)} : undefined;
-      render(ctx, world, camera.current, highlight, storage);
+      const tickInterpolation = paused ? 0 : Math.min(1, (now - snapshotTime.current) / 100);
+      render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation);
       if (isDirectionalTool && currentTool === "build") {
         const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)
           ? [{...hover, direction: beltDirection, type: selectedItem as "conveyor" | "splitter" | "merger"}] : [];
         if (placement.length) drawPreviewConveyor(ctx, placement, world);
       }
-    });
+      frame = requestAnimationFrame(drawFrame);
+    };
+    frame = requestAnimationFrame(drawFrame);
     return () => cancelAnimationFrame(frame);
-  }, [world, hover, preview, selectedItem, selectedVariant, currentTool, cameraVersion, width, height, beltDirection, isDirectionalTool]);
+  }, [world, hover, preview, selectedItem, selectedVariant, currentTool, cameraVersion, width, height, beltDirection, isDirectionalTool, paused]);
 
   // Stable subscriptions; effect events read the latest tool and camera state.
   const finishDrag = useEffectEvent((event: MouseEvent) => {
