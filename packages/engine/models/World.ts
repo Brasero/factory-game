@@ -5,6 +5,7 @@ import type {Conveyor} from "@engine/models/Conveyor.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {CampaignState} from "./Campaign";
 import type {Tunnel} from "./Tunnel";
+import type {Pipe} from "./Pipe";
 
 export interface World {
     tick: number;
@@ -12,6 +13,7 @@ export interface World {
     machines: Machine[];
     resources: Resources;
     conveyors: Conveyor[];
+    pipes: Pipe[];
     storages: Storage[];
     tunnels: Tunnel[];
     campaign: CampaignState;

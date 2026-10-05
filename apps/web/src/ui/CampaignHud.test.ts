@@ -24,7 +24,7 @@ describe("Campaign game over", () => {
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
-    act(() => root.render(createElement(CampaignHud, {onRestart: restart})));
+    act(() => root.render(createElement(CampaignHud, {onRestart: restart, onContinue: vi.fn(), onMainMenu: vi.fn()})));
 
     const button = [...host.querySelectorAll("button")].find(item => item.textContent === "Recommencer une campagne")!;
     expect(button).toBeTruthy();
@@ -38,12 +38,31 @@ describe("Campaign game over", () => {
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
-    act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn()})));
+    act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn(), onContinue: vi.fn(), onMainMenu: vi.fn()})));
 
     const resources = host.querySelector('[aria-label="Ressources stockées"]')!;
     expect(resources.children).toHaveLength(8);
     expect(resources.querySelector('[aria-label="Fer : 0"]')).toBeTruthy();
     expect(resources.querySelector('[aria-label="Circuits : 0"]')).toBeTruthy();
     expect(resources.querySelector(".pulse")).toBeNull();
+  });
+
+  it("offers free play, restart and main menu actions after victory", () => {
+    const world = createTestWorld();
+    world.campaign.status = "finished";
+    setWorldSnapshot(buildWorldSnapshot(world));
+    const onContinue = vi.fn(), onRestart = vi.fn(), onMainMenu = vi.fn();
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(CampaignHud, {onRestart, onContinue, onMainMenu})));
+
+    const buttons = [...host.querySelectorAll("button")];
+    act(() => buttons.find(item => item.textContent === "Continuer à jouer")!.click());
+    act(() => buttons.find(item => item.textContent === "Relancer une campagne")!.click());
+    act(() => buttons.find(item => item.textContent === "Revenir au menu principal")!.click());
+    expect(onContinue).toHaveBeenCalledOnce();
+    expect(onRestart).toHaveBeenCalledOnce();
+    expect(onMainMenu).toHaveBeenCalledOnce();
   });
 });

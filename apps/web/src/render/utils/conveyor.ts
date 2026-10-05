@@ -1,23 +1,24 @@
 import {acceptsInput, nextPosition, outputDirections, positionKey} from "@engine/systems/NetworkTopology";
 import type {DirectionType, Conveyor, WorldSnapshot} from "@engine/api/types.ts";
-import {config, config as gridConfig} from "@web/config/gridConfig.ts";
+import type {ConveyorTier} from "@engine/models/Conveyor.ts";
+import {config as gridConfig} from "@web/config/gridConfig.ts";
 import {config as conveyorConfig} from "@web/config/conveyorConfig.ts";
 import {findPreviousConveyor} from "@web/render/CanvasRenderer.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 
 const CELL_SIZE = gridConfig.CELL_SIZE;
-export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, conveyors: {x: number, y: number, direction: DirectionType; type?: Conveyor["type"]}[], world?: WorldSnapshot) {
+type BeltSegment = "start" | "middle" | "end";
+export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, conveyors: {x: number, y: number, direction: DirectionType; type?: Conveyor["type"]; tier?: ConveyorTier}[], world?: WorldSnapshot) {
   conveyors.forEach((c) => {
     const px = c.x * CELL_SIZE;
     const py = c.y * CELL_SIZE;
-    const {sx, sy} = getConveyorSpriteCoords(c.direction, c.direction);
     ctx.globalAlpha = 0.5;
     if (c.type === "splitter" || c.type === "merger") {
       const preview: Conveyor = {...c, type: c.type, id: "preview", entityType: "conveyor", carrying: [], speed: 0, capacity: 3};
       const neighbors = world?.conveyors.filter(belt => belt.x !== c.x || belt.y !== c.y) ?? [];
       drawRouter(ctx, c.x, c.y, c.direction, c.type, 0, connectedRouterIds([...neighbors, preview]).has(preview.id));
     }
-    else drawConveyor(ctx, sx, sy, CELL_SIZE, px, py, c.direction)
+    else drawBeltSprite(ctx, px, py, c.direction, c.direction, 0, c.tier, "middle")
     ctx.globalAlpha = 1;
     if (c.type === "splitter" || c.type === "merger") drawRouterArrows(ctx, c.x, c.y, c.direction, c.type);
   })
@@ -32,7 +33,10 @@ export function drawConveyorAt(
   world: WorldSnapshot,
   conveyor: Conveyor,
   previous?: Conveyor | null,
-  connected?: boolean
+  connected?: boolean,
+  tickInterpolation = 0,
+  hasNext = false,
+  incomingOverride?: DirectionType
 ) {
   if (conveyor.type !== "conveyor") return drawRouter(ctx, conveyor.x, conveyor.y, conveyor.direction, conveyor.type, world.tick, connected ?? connectedRouterIds(world.conveyors).has(conveyor.id));
   const px = conveyor.x * CELL_SIZE;
@@ -40,19 +44,10 @@ export function drawConveyorAt(
 
   const previousConveyor = previous === undefined ? findPreviousConveyor(world, conveyor) : previous;
   const outgoing = conveyor.direction
-  const incoming = previousConveyor ? getIncomingDirection(previousConveyor, conveyor) : outgoing;
-  const {sx, sy} = getConveyorSpriteCoords(incoming, outgoing)
-  if ((outgoing  === incoming && incoming === "right") || (outgoing === "left" && outgoing === incoming)) {
-    const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES);
-    return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, outgoing)
-  }
-  if ((outgoing  === incoming && incoming === "up") || (outgoing === "down" && outgoing === incoming)) {
-    const offset = getBeltFrame(world.tick, conveyorConfig.V_FRAMES);
-    return drawConveyor(ctx, sx, sy + offset, CELL_SIZE, px, py, outgoing)
-  }
-  const offset = getBeltFrame(world.tick, conveyorConfig.H_FRAMES)
-  const direction = `${incoming}-${outgoing}` as `${DirectionType}-${DirectionType}`;
-  return drawConveyor(ctx, sx + offset, sy, CELL_SIZE, px, py, direction);
+  const incoming = incomingOverride ?? (previousConveyor ? getIncomingDirection(previousConveyor, conveyor) : outgoing);
+  const frame = getBeltFrame(world.tick + tickInterpolation);
+  const segment: BeltSegment = !previousConveyor ? "start" : hasNext ? "middle" : "end";
+  drawBeltSprite(ctx, px, py, incoming, outgoing, frame, conveyor.tier, segment);
 }
 
 
@@ -68,46 +63,56 @@ export function getIncomingDirection(
   return "up";
 }
 
-function getBeltFrame(tick: number, frameCount: number) {
-  return (Math.floor(tick * conveyorConfig.BELT_ANIMATION_SPEED) % CELL_SIZE ) % frameCount;
+function getBeltFrame(tick: number) {
+  return Math.floor(tick * conveyorConfig.ANIMATION_FRAMES_PER_TICK) % conveyorConfig.ANIMATION_FRAMES;
 }
 
+type BeltSource = {x: number; y: number; width: number; height: number};
+const CLOCKWISE_NEXT: Record<DirectionType, DirectionType> = {right: "down", down: "left", left: "up", up: "right"};
+const CORNER_QUADRANT: Record<string, {x: number; y: number}> = {
+  "right-down": {x: 16, y: 0},
+  "right-up": {x: 16, y: 16},
+  "left-down": {x: 0, y: 0},
+  "left-up": {x: 0, y: 16},
+  "down-left": {x: 16, y: 16},
+  "down-right": {x: 0, y: 16},
+  "up-left": {x: 16, y: 0},
+  "up-right": {x: 0, y: 0}
+};
 
-export const SPRITE_SIZE = config.CELL_SIZE;
+export function conveyorAssetKey(tier: ConveyorTier = 1) {
+  return `conveyor.tier${tier}`;
+}
 
-type SpriteDirectionType = DirectionType | `${DirectionType}-${DirectionType}`
-
-
-export function getConveyorSpriteCoords(incoming: DirectionType, outgoing: DirectionType) {
-  //lignes droites
+function drawBeltSprite(ctx: CanvasRenderingContext2D, px: number, py: number,
+  incoming: DirectionType, outgoing: DirectionType, frame: number, tier: ConveyorTier = 1,
+  segment: BeltSegment = "middle") {
+  const spriteSheet = assetManager.getImage(conveyorAssetKey(tier));
+  const sourceX = frame * conveyorConfig.FRAME_COLUMNS * conveyorConfig.FRAME_SIZE;
+  const displaySize = conveyorConfig.DISPLAY_SIZE;
   if (incoming === outgoing) {
-    if (incoming === "left") return {sx: 0, sy: 0}
-    if (incoming === "right") return {sx: 0, sy: 0}
-    if (incoming === "up") return {sx: 0, sy: 0}
-    if (incoming === "down") return {sx: 0, sy: 0}
+    const source = straightBeltSource(outgoing, segment);
+    ctx.drawImage(spriteSheet,
+      sourceX + source.x, source.y, source.width, source.height,
+      px - (displaySize - CELL_SIZE) / 2, py - (displaySize - CELL_SIZE) / 2, displaySize, displaySize);
+    return;
   }
-  // virages
-  if (incoming === "left" && outgoing === "up") return {sx: 0, sy: 0}
-  if (incoming === "left" && outgoing === "down") return {sx: 0, sy: 0}
-  if (incoming === "down" && outgoing === "left") return {sx: 0, sy: 0}
-  if (incoming === "down" && outgoing === "right") return {sx: 0, sy: 0}
-  if (incoming === "right" && outgoing === "up") return {sx: 0, sy: 0}
-  if (incoming === "right" && outgoing === "down") return {sx: 0, sy: 0}
-  if (incoming === "up" && outgoing === "right") return {sx: 0, sy: 0}
-  if (incoming === "up" && outgoing === "left") return {sx: 0, sy: 0}
-  return {sx: 0, sy: 0};
+
+  // Les deux blocs de 32 px contiennent chacun les quatre orientations d'un virage.
+  const clockwise = CLOCKWISE_NEXT[incoming] === outgoing;
+  const cornerBlockX = clockwise ? 0 : 32;
+  const quadrant = CORNER_QUADRANT[`${incoming}-${outgoing}`];
+  ctx.drawImage(spriteSheet,
+    sourceX + cornerBlockX + quadrant.x, quadrant.y, 16, 16,
+    px - (displaySize - CELL_SIZE) / 2, py - (displaySize - CELL_SIZE) / 2, displaySize, displaySize);
 }
 
-export  function drawConveyor(ctx: CanvasRenderingContext2D,sx: number, sy: number, tileSize: number, px: number, py: number, direction: SpriteDirectionType | null = null) {
-  const spriteSheet = assetManager.getImage(`conveyor.${direction}`);
-
-  ctx.drawImage(
-      spriteSheet,
-      sx * SPRITE_SIZE, sy * SPRITE_SIZE,
-      SPRITE_SIZE, SPRITE_SIZE,
-      px, py,
-      tileSize, tileSize
-  )
+function straightBeltSource(direction: DirectionType, segment: BeltSegment): BeltSource {
+  const position = segment === "middle" ? 16 : segment === "start" ? 0 : 32;
+  if (direction === "right") return {x: position, y: 48, width: 16, height: 16};
+  if (direction === "left") return {x: 32 - position, y: 32, width: 16, height: 16};
+  if (direction === "down") return {x: 80, y: position, width: 16, height: 16};
+  return {x: 64, y: 32 - position, width: 16, height: 16};
 }
 
 export function connectedRouterIds(conveyors: Conveyor[]): Set<string> {

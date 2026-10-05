@@ -26,6 +26,7 @@ export function createWorld(): World {
         machines: [],
         resources: emptyResources(),
         conveyors: [],
+        pipes: [],
         storages: [],
         tunnels: CAMPAIGN_LEVELS.flatMap(level => level.tunnels.map(definition => ({
             id: definition.id,

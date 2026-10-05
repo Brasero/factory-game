@@ -98,4 +98,17 @@ describe("GameEngine", () => {
     for (let tick = 0; tick < 10; tick++) engine.tick();
     expect(engine.getWorld().machines[0].buffer.iron).toBe(1);
   });
+
+  it("resumes simulation in free-play mode after campaign victory", () => {
+    const world = createTestWorld();
+    world.campaign.status = "finished";
+    engine = new GameEngine(world);
+    const tick = engine.getWorld().tick;
+    engine.tick();
+    expect(engine.getWorld().tick).toBe(tick);
+    expect(engine.continueCampaign()).toBe(true);
+    engine.tick();
+    expect(engine.getWorld().tick).toBe(tick + 1);
+    expect(engine.continueCampaign()).toBe(false);
+  });
 });

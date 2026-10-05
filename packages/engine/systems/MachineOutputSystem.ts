@@ -16,6 +16,7 @@ export function runOutputMachine(world: World, network: NetworkTopology = buildN
       ? outputs.find(([output]) => (m.buffer[output] ?? 0) > 0)?.[0]
       : (Object.keys(m.buffer) as ResourcesType[]).find(key => (m.buffer[key] ?? 0) > 0);
     if (!resource) continue;
+    if (resource === "water") continue;
     if ((m.buffer[resource] ?? 0) <= 0) continue;
     target.carrying.push({type: resource, amount: 1, progress: 0});
     machines[index] = {...m, buffer: {...m.buffer, [resource]: (m.buffer[resource] ?? 0) - 1}};

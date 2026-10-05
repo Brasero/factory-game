@@ -9,6 +9,7 @@ function smelterWorld(buffer: Partial<Machine["buffer"]>): World {
   const engine = new GameEngine(createTestWorld());
   engine.placeMachine(5, 5, "iron-smelter");
   const world = engine.getWorld();
+  world.machines[0].recipeId = "iron-smelting";
   world.machines[0].buffer = {...buffer} as Machine["buffer"];
   return world;
 }
@@ -52,6 +53,7 @@ describe("Recipe production", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(0, 0, "assembler");
     let world = engine.getWorld();
+    world.machines[0].recipeId = "copper-wire";
     world.machines[0].buffer = {copper: 1};
     world = run(world, 18);
     expect(world.machines[0].buffer).toMatchObject({copper: 0, copperWire: 2});
@@ -67,6 +69,7 @@ describe("Recipe production", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(0, 0, "boiler");
     let world = engine.getWorld();
+    world.machines[0].recipeId = "water-purification";
     world.machines[0].buffer = {water: 1};
     world.campaign.pollution = 50;
 
@@ -82,6 +85,7 @@ describe("Recipe production", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(0, 0, "boiler");
     let world = engine.getWorld();
+    world.machines[0].recipeId = "water-purification";
     world.machines[0].buffer = {water: 2};
     world = run(world, 40);
 

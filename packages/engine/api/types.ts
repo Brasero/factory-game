@@ -1,6 +1,6 @@
 import type {World} from "@engine/models/World.ts";
 import type {MachineType, MachineVariant} from "@engine/models/Machine.ts";
-import type {DirectionType, Conveyor} from "@engine/models/Conveyor.ts";
+import type {DirectionType, Conveyor, ConveyorTier} from "@engine/models/Conveyor.ts";
 import type {Position} from "@engine/models/Position.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {SelectedItem, ToolMode, Controls} from "@engine/models/Controls.ts";
@@ -8,6 +8,7 @@ import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {ConveyorPlacement} from "@engine/models/ConveyorPlacement.ts";
 import type {TileData} from "@engine/models/Tile.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
+import type {Pipe} from "@engine/models/Pipe";
 
 export interface ResourceNodeSnapshot extends TileData {
   resource: ResourcesType;
@@ -21,13 +22,14 @@ export interface GridSnapshot {
   resources: ResourceNodeSnapshot[];
 }
 
-export type WorldSnapshot = Omit<World, "grid"> & {grid?: GridSnapshot};
+export type WorldSnapshot = Omit<World, "grid" | "pipes"> & {grid?: GridSnapshot; pipes?: Pipe[]};
 
 export type {
   World,
   MachineType,
   DirectionType,
   Conveyor,
+  Pipe,
   Position,
   Storage,
   SelectedItem,
@@ -49,6 +51,7 @@ export type PlaceMachineCommand = {
 export type PlaceConveyorCommand = {
   type: "place-conveyor";
   conveyorType?: Conveyor["type"];
+  tier?: ConveyorTier;
   x: number;
   y: number;
   direction: DirectionType;
@@ -60,6 +63,8 @@ export type PlaceStorageCommand = {
   y: number;
 };
 
+export type PlacePipeCommand = {type: "place-pipe"; x: number; y: number; direction: DirectionType};
+
 export type DestroyEntityCommand = {
   type: "destroy-entity";
   x: number;
@@ -70,13 +75,16 @@ export type ActivateLevelCommand = {type: "activate-level"; levelId: string};
 export type FinalizeLevelCommand = {type: "finalize-level"; levelId: string};
 export type SelectMachineRecipeCommand = {type: "select-machine-recipe"; machineId: string; recipeId: RecipeId};
 export type SetMachinePausedCommand = {type: "set-machine-paused"; machineId: string; paused: boolean};
+export type ContinueCampaignCommand = {type: "continue-campaign"};
 
 export type EngineCommand =
   | PlaceMachineCommand
   | PlaceConveyorCommand
+  | PlacePipeCommand
   | PlaceStorageCommand
   | DestroyEntityCommand
   | ActivateLevelCommand
   | FinalizeLevelCommand
   | SelectMachineRecipeCommand
-  | SetMachinePausedCommand;
+  | SetMachinePausedCommand
+  | ContinueCampaignCommand;

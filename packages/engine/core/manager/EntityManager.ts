@@ -4,14 +4,15 @@ import type {World} from "../../models/World";
 import type {ResourcesType} from "../../models/Resources";
 import {MACHINE_CAPACITY, MACHINE_SPRITE_SHEET} from "../../config/machineConfig";
 import type {EntityManagerType} from "./EntityManager.type";
-import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
+import type {Conveyor, ConveyorTier, DirectionType} from "@engine/models/Conveyor.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 import {isStorageType} from "@engine/models/Storage.ts";
 import {isConveyorType} from "@engine/models/Conveyor.ts";
 import type {Position} from "@engine/models/Position.ts";
 import {MACHINE_VARIANTS} from "@engine/config/machineConfig";
-import {defaultRecipe} from "@engine/config/recipeConfig";
+import type {Pipe} from "@engine/models/Pipe";
+import {isPipe} from "@engine/models/Pipe";
 
 class EntityManager implements EntityManagerType {
   placeMachine(x: number, y: number, type: MachineType, world: World, variant: MachineVariant = "standard"): World | false {
@@ -37,8 +38,7 @@ class EntityManager implements EntityManagerType {
         entityType: 'machine',
         efficiency: MACHINE_VARIANTS[variant].speed,
         production: MACHINE_VARIANTS[variant].production,
-        variant,
-        recipeId: defaultRecipe(type)
+        variant
       }
       world = {
         ...world,
@@ -50,7 +50,17 @@ class EntityManager implements EntityManagerType {
       return false;
     }
   }
-  placeConveyor(x: number, y: number, direction: DirectionType, world: World, type: Conveyor["type"] = "conveyor"): World | false {
+  placePipe(x: number, y: number, direction: DirectionType, world: World): World | false {
+    const {grid} = world;
+    if (!grid) throw new Error("Le monde n'a pas de grille définie.");
+    const existing = world.pipes.find(pipe => pipe.x === x && pipe.y === y);
+    if (existing) return {...world, pipes: world.pipes.map(pipe => pipe === existing ? {...pipe, direction} : pipe)};
+    if (!grid.canPlaceMachine({x, y}, "conveyor")) return false;
+    if (!grid.occupy({x, y})) return false;
+    const pipe: Pipe = {id: crypto.randomUUID(), x, y, entityType: "pipe", direction, water: 0, capacity: 10};
+    return {...world, pipes: [...world.pipes, pipe]};
+  }
+  placeConveyor(x: number, y: number, direction: DirectionType, world: World, type: Conveyor["type"] = "conveyor", tier?: ConveyorTier): World | false {
     const {grid, conveyors} = world;
     if (!grid) throw new Error("Le monde n'a pas de grille définie.")
     
@@ -69,6 +79,7 @@ class EntityManager implements EntityManagerType {
           ...existingConveyor,
           direction,
           type,
+          tier: type === "conveyor" ? tier ?? existingConveyor.tier ?? 1 : undefined,
           routingCursor: canUpgrade ? 0 : existingConveyor.routingCursor
         };
         return {
@@ -85,6 +96,7 @@ class EntityManager implements EntityManagerType {
         x,
         y,
         type,
+        tier: type === "conveyor" ? tier ?? 1 : undefined,
         routingCursor: 0,
         direction,
         entityType: 'conveyor',
@@ -157,6 +169,7 @@ class EntityManager implements EntityManagerType {
         conveyors
       }
     }
+    if (isPipe(entity)) return {...world, pipes: world.pipes.filter(pipe => pipe.id !== entity.id)};
     return world;
   }
   
@@ -168,6 +181,8 @@ class EntityManager implements EntityManagerType {
     if (machine) return machine;
     const conveyor = world.conveyors.find(findFn);
     if (conveyor) return conveyor;
+    const pipe = world.pipes.find(findFn);
+    if (pipe) return pipe;
     return null;
   }
   private removeConveyor(id: string, world: World): Conveyor[] {

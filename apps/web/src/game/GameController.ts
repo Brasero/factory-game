@@ -32,6 +32,7 @@ export function pauseGame() {
 }
 
 export function hasSavedGame() { return storedSave !== undefined; }
+export function getCurrentSnapshot(): WorldSnapshot { return session.getSnapshot(); }
 
 export function startNewCampaign() {
     loop.stop();
@@ -94,6 +95,17 @@ export function placeConveyorLine(
     updateWorld();
 }
 
+export function placePipe(x: number, y: number, direction: DirectionType) {
+    const success = session.dispatch({type: "place-pipe", x, y, direction});
+    if (success) updateWorld();
+    return success;
+}
+
+export function placePipeLine(line: {x: number; y: number; direction: DirectionType}[]) {
+    for (const pipe of line) if (!session.dispatch({type: "place-pipe", ...pipe})) break;
+    updateWorld();
+}
+
 export function canPlaceAt(x: number, y: number, item: SelectedItem | "", variant?: MachineVariant): boolean {
     if (!item) return false;
     return session.canPlaceMachine(x, y, item, variant);
@@ -107,6 +119,12 @@ export function activateLevel(levelId: string) {
 
 export function finalizeLevel(levelId: string) {
     const success = session.dispatch({type: "finalize-level", levelId});
+    if (success) updateWorld();
+    return success;
+}
+
+export function continueCampaign() {
+    const success = session.dispatch({type: "continue-campaign"});
     if (success) updateWorld();
     return success;
 }

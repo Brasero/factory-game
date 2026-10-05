@@ -25,6 +25,10 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
     const carrying = next[index].carrying;
     for (const item of belt.carrying) {
       let remaining = item.amount;
+      if (item.type === "water") {
+        carrying.push({...item, amount: remaining});
+        continue;
+      }
       if (item.progress >= 1) {
         const outputs = network.outputs[index];
         const start = belt.type === "splitter" ? (next[index].routingCursor ?? 0) % outputs.length : 0;

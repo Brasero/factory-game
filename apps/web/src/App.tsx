@@ -1,6 +1,6 @@
 import './App.scss'
 import {useEffect, useState} from "react";
-import {hasSavedGame, startGame, pauseGame, startNewCampaign} from "./game/GameController.ts";
+import {continueCampaign, getCurrentSnapshot, hasSavedGame, startGame, pauseGame, startNewCampaign} from "./game/GameController.ts";
 import {Hud} from "./ui/Hud.tsx";
 import {GameCanvas} from "@web/render/GameCanvas.tsx";
 import {config} from "@web/config/gridConfig.ts";
@@ -86,6 +86,11 @@ function App() {
       setTutorialStep(null);
       play();
     };
+    const continueFinishedCampaign = () => {
+      if (!continueCampaign()) return;
+      dispatch(setPaused(false));
+      startGame();
+    };
     const openMainMenu = () => {
       pauseGame();
       setHasSave(true);
@@ -107,10 +112,12 @@ function App() {
   return <div className={gameViewClass()}>
     {hasStarted && <>
       <Hud />
-      <CampaignHud onRestart={restartCampaign} />
+      <CampaignHud onRestart={restartCampaign} onContinue={continueFinishedCampaign} onMainMenu={openMainMenu} />
       <GameCanvas width={size.width} height={size.height} cellSize={config.CELL_SIZE} />
     </>}
-    {screen === "main" && <GameMenu mode="main" hasSave={hasSave} onPlay={play} onNewCampaign={newCampaign} onTutorial={openTutorial} />}
+    {screen === "main" && <GameMenu mode="main" hasSave={hasSave} backgroundWorld={getCurrentSnapshot()}
+      savePreview={hasSave ? getCurrentSnapshot() : undefined}
+      onPlay={play} onNewCampaign={newCampaign} onTutorial={openTutorial} />}
     {screen === "pause" && <GameMenu mode="pause" onPlay={play} onTutorial={() => {
       play();
       setTutorialStep(0);

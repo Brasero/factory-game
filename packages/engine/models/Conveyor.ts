@@ -2,6 +2,7 @@ import type {ResourcesType} from "./Resources";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 
 export type DirectionType = "up" | "down" | "left" | "right";
+export type ConveyorTier = 1 | 2 | 3 | 4;
 export type ResourceCarryingType = {
   type: ResourcesType;
   amount: number;
@@ -11,6 +12,8 @@ export type ResourceCarryingType = {
 export interface Conveyor extends BaseEntity {
   entityType: 'conveyor';
   type: "conveyor" | "splitter" | "merger";
+  /** Visual/upgrade level. Missing on old saves and routers; level 1 is the fallback. */
+  tier?: ConveyorTier;
   routingCursor?: number;
   direction: DirectionType;
   carrying: ResourceCarryingType[];

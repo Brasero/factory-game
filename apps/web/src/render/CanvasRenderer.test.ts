@@ -107,6 +107,52 @@ it("draws belts facing each other or a router output as straight belts", () => {
   const ctx = {canvas: {width: 160, height: 32}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage: vi.fn()} as unknown as CanvasRenderingContext2D;
   render(ctx, world);
   const beltSprites = vi.mocked(assetManager.getImage).mock.calls.map(([key]) => key).filter(key => key.startsWith("conveyor."));
-  expect(beltSprites).toEqual(["conveyor.right", "conveyor.left", "conveyor.left"]);
+  expect(beltSprites).toEqual(["conveyor.tier1", "conveyor.tier1", "conveyor.tier1"]);
   expect(world.conveyors.map(conveyor => findPreviousConveyor(world, conveyor))).toEqual([undefined, undefined, undefined, undefined]);
+});
+
+it("selects the upgraded belt atlas and the animated directional cell", () => {
+  const world: WorldSnapshot = {
+    tick: 2, machines: [], storages: [], tunnels: [], campaign: createTestCampaign(), resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 1, height: 1, resources: [], tiles: [[{biome: "sea", variant: 0}]]},
+    conveyors: [{id: "upgraded", x: 0, y: 0, direction: "right", type: "conveyor", tier: 4,
+      entityType: "conveyor", speed: 0.2, capacity: 3, carrying: []}]
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 32, height: 32}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+  render(ctx, world);
+  const beltDraw = drawImage.mock.calls.find(([image]) => image.key === "conveyor.tier4");
+  expect(beltDraw).toEqual([expect.anything(), 96, 48, 16, 16, 0, 0, 32, 32]);
+});
+
+it("uses the start, middle and end sprites across a connected belt line", () => {
+  const world: WorldSnapshot = {
+    tick: 0, machines: [], storages: [], tunnels: [], campaign: createTestCampaign(), resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 3, height: 1, resources: [], tiles: [[{biome: "sea", variant: 0}, {biome: "sea", variant: 0}, {biome: "sea", variant: 0}]]},
+    conveyors: [0, 1, 2].map(x => ({id: String(x), x, y: 0, direction: "right" as const, type: "conveyor" as const,
+      entityType: "conveyor" as const, speed: 0.2, capacity: 3, carrying: []}))
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 96, height: 32}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+  render(ctx, world);
+  const beltDraws = drawImage.mock.calls.filter(([image]) => image.key === "conveyor.tier1");
+  expect(beltDraws.map(([, sourceX]) => sourceX)).toEqual([0, 16, 32]);
+});
+
+it("curves the first belt away from a connected machine output", () => {
+  const world: WorldSnapshot = {
+    tick: 0, storages: [], tunnels: [], campaign: createTestCampaign(), resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 2, height: 2, resources: [], tiles: Array.from({length: 2}, () =>
+      Array.from({length: 2}, () => ({biome: "sea" as const, variant: 0})))},
+    machines: [{id: "smelter", x: 0, y: 0, type: "iron-smelter", entityType: "machine", spriteName: "ironSmelter",
+      progress: 0, active: false, buffer: {}, capacity: 100, efficiency: 1, production: 1, variant: "standard", recipeId: "iron-smelting"}],
+    conveyors: [{id: "belt", x: 0, y: 1, direction: "right", type: "conveyor", entityType: "conveyor",
+      speed: 0.2, capacity: 3, carrying: []}]
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 64, height: 64}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage,
+    fillRect: vi.fn(), fillText: vi.fn(), measureText: vi.fn(() => ({width: 40}))} as unknown as CanvasRenderingContext2D;
+  render(ctx, world);
+  const beltDraw = drawImage.mock.calls.find(([image]) => image.key === "conveyor.tier1");
+  expect(beltDraw).toEqual([expect.anything(), 32, 16, 16, 16, 0, 32, 32, 32]);
 });

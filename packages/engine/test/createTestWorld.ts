@@ -22,6 +22,6 @@ export function createTestWorld(): World {
   grid.setResource(1, 1, "iron");
   grid.setResource(2, 1, "coal");
   grid.setResource(3, 1, "water");
-  return {tick: 0, grid, machines: [], conveyors: [], storages: [], tunnels: [],
+  return {tick: 0, grid, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [],
     resources: emptyResources(), campaign: createTestCampaign()};
 }

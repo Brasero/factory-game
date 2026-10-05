@@ -5,7 +5,7 @@ import type {World} from "@engine/models/World";
 import {acceptsInput, directions, nextPosition, positionKey} from "@engine/systems/NetworkTopology";
 
 function firstStoredResource(storage: Storage): ResourcesType | undefined {
-  return (Object.keys(storage.stored) as ResourcesType[]).find(resource => (storage.stored[resource] ?? 0) > 0);
+  return (Object.keys(storage.stored) as ResourcesType[]).find(resource => resource !== "water" && (storage.stored[resource] ?? 0) > 0);
 }
 
 export function runStorageOutputs(world: World): World {

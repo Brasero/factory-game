@@ -7,7 +7,7 @@
   width: fit-content;
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
-  overflow-x: auto;
+  overflow: visible;
   white-space: nowrap;
   margin: 0 auto;
   border: 3px solid c.$ui-border;
@@ -43,11 +43,22 @@
 }
 
 #hud_commands {
-  display: flex;
+  display: none;
   justify-content: flex-start;
   flex-direction: row;
   align-items: center;
   gap: 16px;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  padding: 14px;
+  border: 3px solid c.$ui-border;
+  border-radius: 10px;
+  background: c.$ui-background;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .45);
+
+  &.open { display: flex; }
 
   h5 {
     text-align: center;
@@ -82,34 +93,19 @@
     flex-direction: row;
     gap: 10px;
     align-items: center;
-   button {
-     width: 32px;
-     height: 32px;
-     background: none;
-     border: none;
-     padding: 0;
-     overflow: hidden;
-     border-radius: 0;
-
-     &.selected {
-       box-shadow: 0 0 10px 2px c.$state-accent;
-     }
-     &.destroyBtn {
-       background: c.$state-danger;
-       border-radius: 6px;
-     }
-   }
   }
-  button.extractor {
-    width: fit-content;
-    padding: 6px 14px;
+  button.hud-tool-button {
+    width: 48px;
+    height: 48px;
+    padding: 2px;
     border-radius: 6px;
-    border: none;
+    border: 1px solid transparent;
+    background: c.$ui-surface-alt;
     cursor: pointer;
-    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    overflow: hidden;
     transition: transform 0.1s, filter 0.2s;
 
     &:hover {
@@ -118,14 +114,50 @@
     }
 
     &.selected {
-      box-shadow: 0 0 10px 2px c.$state-accent;
+      border-color: c.$state-accent;
+      box-shadow: 0 0 10px 2px rgba(c.$state-accent, 0.65);
     }
-
-    &.iron-mine { background-color: c.$resource-iron; color: #fff; }
-    &.coal-mine { background-color: c.$resource-coal; color: #fff; }
-    &.water-pump { background-color: transparent; color: #fff; }
-    &.iron-smelter { background-color: transparent; color: #fff; }
   }
+}
+
+button.destroyBtn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #ff7096;
+  border-radius: 7px;
+  background: c.$state-danger;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  &.selected {
+    outline: 2px solid #fff;
+    box-shadow: 0 0 12px rgba(255, 70, 110, .8);
+  }
+}
+
+.build-menu-toggle {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid c.$state-accent;
+  border-radius: 7px;
+  background: c.$ui-surface-alt;
+  color: c.$text-primary;
+  font-weight: 800;
+  cursor: pointer;
+  kbd { color: c.$state-accent; }
+}
+
+.pipe-icon {
+  width: 32px;
+  height: 32px;
+  background-size: 256px 160px;
+  background-position: -96px -96px;
+  image-rendering: pixelated;
 }
 
 #hud_tick_container {
@@ -178,32 +210,53 @@
   50% { opacity: 1; text-shadow: 0 0 15px #ff4d4d; }
   100% { opacity: 1; text-shadow: 0 0 5px #ff4d4d; }
 }
-.router-icon {
+.hud-tool-icon,
+.hud-atlas-icon {
   display: block;
-  width: 32px;
-  height: 32px;
   flex-shrink: 0;
-  background-size: 256px 256px;
   image-rendering: pixelated;
 }
 
-.automation-machine-icon,
+.hud-tool-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.storage-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.router-icon {
+  width: 48px;
+  height: 48px;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 384px 384px;
+}
+
+.conveyor-icon {
+  width: 32px;
+  height: 32px;
+  background-position: -32px -96px;
+  background-repeat: no-repeat;
+  background-size: 1536px 128px;
+}
+
+.destruction-icon {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .resource-icon {
   display: block;
   flex-shrink: 0;
-  image-rendering: pixelated;
-}
-
-.automation-machine-icon {
-  width: 32px;
-  height: 48px;
-  background-position: 0 0;
-}
-
-.processor-machine-icon {
-  display: block;
-  width: 34px;
-  height: 34px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -229,15 +282,4 @@
 .resource-icon {
   width: 16px;
   height: 16px;
-  background-size: 80px 944px;
-
-  &.iron,
-  &.coal,
-  &.water {
-    background-size: cover;
-  }
-
-  &.ironPlate {
-    background-size: cover;
-  }
 }

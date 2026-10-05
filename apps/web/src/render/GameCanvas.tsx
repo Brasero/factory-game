@@ -4,7 +4,7 @@ import {render} from "./CanvasRenderer";
 import {drawPreviewConveyor} from "./utils/conveyor";
 import {useWorldSnapshot} from "@web/game/worldStore";
 import {destroyEntity, placeMiner, placeMachine, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine,
-  placeStorage, canPlaceAt} from "@web/game/GameController";
+  placeStorage, canPlaceAt, placePipeLine} from "@web/game/GameController";
 import {selectCurentTool, selectGamePaused, selectSelectedItem, selectSelectedVariant} from "@web/store/selectors";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
 import type {Position, ConveyorPlacement, DirectionType} from "@engine/api/types";
@@ -14,7 +14,7 @@ import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import {MachineRecipePanel} from "@web/ui/MachineRecipePanel";
 
 interface GameCanvasProps {width: number; height: number; cellSize: number}
-type Drag = {start: Position; last: Position; mode: "pan" | "conveyor"; moved: boolean};
+type Drag = {start: Position; last: Position; mode: "pan" | "network"; moved: boolean};
 
 export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,7 +29,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const selectedVariant = useAppSelector(selectSelectedVariant);
   const paused = useAppSelector(selectGamePaused);
   const snapshotTime = useRef(performance.now());
-  const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "splitter" || selectedItem === "merger";
+  const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "pipe" || selectedItem === "splitter" || selectedItem === "merger";
   const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
   const [hover, setHover] = useState<Position | null>(null);
   const [preview, setPreview] = useState<ConveyorPlacement[]>([]);
@@ -61,7 +61,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   };
   const pathTo = (end: Position) => buildConveyorPlacements(getBestPath(
     cellAt(drag.current!.start.x, drag.current!.start.y), end,
-    pos => canPlaceAt(pos.x, pos.y, "conveyor")
+    pos => canPlaceAt(pos.x, pos.y, selectedItem === "pipe" ? "pipe" : "conveyor")
   ), beltDirection);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)} : undefined;
       const tickInterpolation = paused ? 0 : Math.min(1, (now - snapshotTime.current) / 100);
       render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation);
-      if (isDirectionalTool && currentTool === "build") {
+      if (isDirectionalTool && selectedItem !== "pipe" && currentTool === "build") {
         const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)
           ? [{...hover, direction: beltDirection, type: selectedItem as "conveyor" | "splitter" | "merger"}] : [];
         if (placement.length) drawPreviewConveyor(ctx, placement, world);
@@ -89,8 +89,10 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const finishDrag = useEffectEvent((event: MouseEvent) => {
     if (event.button !== 0 || !drag.current) return;
     suppressClick.current = drag.current.moved;
-    if (drag.current.mode === "conveyor" && selectedItem === "conveyor" && event.target === canvasRef.current) {
-      placeConveyorLine(pathTo(cellAt(event.clientX, event.clientY)));
+    if (drag.current.mode === "network" && (selectedItem === "conveyor" || selectedItem === "pipe") && event.target === canvasRef.current) {
+      const line = pathTo(cellAt(event.clientX, event.clientY));
+      if (selectedItem === "pipe") placePipeLine(line);
+      else placeConveyorLine(line);
     }
     drag.current = null;
     setPreview([]);
@@ -140,8 +142,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
 
   return <div style={{position: "relative", width, height}}>
     {isDirectionalTool && currentTool === "build" && <div className="conveyor-help" role="status">
-      <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "merger" ? "Merger" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
-      {selectedItem !== "conveyor" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
+      <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "pipe" ? "Tuyau" : selectedItem === "merger" ? "Merger" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
+      {selectedItem !== "conveyor" && selectedItem !== "pipe" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
       <span><kbd>R</kbd> Rotation horaire</span>
       <span><kbd>Maj</kbd> + <kbd>R</kbd> Rotation antihoraire</span>
     </div>}
@@ -152,9 +154,9 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     onMouseDown={event => {
       if (event.button !== 0) return;
       suppressClick.current = false;
-      if (selectedItem === "conveyor" || (!selectedItem && currentTool === "build")) {
+      if (selectedItem === "conveyor" || selectedItem === "pipe" || (!selectedItem && currentTool === "build")) {
         const pos = {x: event.clientX, y: event.clientY};
-        drag.current = {start: pos, last: pos, moved: false, mode: selectedItem === "conveyor" ? "conveyor" : "pan"};
+        drag.current = {start: pos, last: pos, moved: false, mode: selectedItem === "conveyor" || selectedItem === "pipe" ? "network" : "pan"};
       }
     }}
     onMouseMove={event => {

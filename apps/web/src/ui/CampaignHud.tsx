@@ -21,7 +21,11 @@ const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
   {type: "circuit", label: "Circuits", icon: "ore.circuit"}
 ];
 
-export function CampaignHud({onRestart}: {onRestart: () => void}) {
+export function CampaignHud({onRestart, onContinue, onMainMenu}: {
+  onRestart: () => void;
+  onContinue: () => void;
+  onMainMenu: () => void;
+}) {
   const campaign = useWorldSelector(world => world.campaign);
   const stored = useWorldSelector(world => world.resources);
   const [dismissedLevel, setDismissedLevel] = useState<string | null>(null);
@@ -57,15 +61,15 @@ export function CampaignHud({onRestart}: {onRestart: () => void}) {
         <span>Pollution globale</span>
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
         <div><i style={{width: `${pollutionRatio * 100}%`}} /></div>
-        {campaign.pollution > 0 && <small>Absorption naturelle : −0,02 par tick</small>}
+        <small>Absorption naturelle : −0,02 par tick</small>
       </div>
       <div className="campaign-resources" aria-label="Ressources stockées">
         {resourceDisplay.map(resource => {
           const amount = stored[resource.type] ?? 0;
           return <div key={resource.type} className={`campaign-resource ${resource.type}`}
             aria-label={`${resource.label} : ${amount}`} title={resource.label}>
-            <span className={`resource-icon ${resource.type}`}
-              style={{backgroundImage: `url(${assetManager.getImage(resource.icon).src})`}} />
+            <img className={`resource-icon ${resource.type}`}
+              src={assetManager.getImage(resource.icon).src} alt="" />
             <span className="campaign-resource-value"><small>{resource.label}</small><strong>{amount}</strong></span>
           </div>;
         })}
@@ -110,6 +114,11 @@ export function CampaignHud({onRestart}: {onRestart: () => void}) {
           <div><span>Pollution totale</span><strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong></div>
         </div>
         <p>Les trois chaînes de production sont opérationnelles. Ton score combine maintenant rapidité et respect de l’archipel.</p>
+        <div className="level-result-actions">
+          <button className="primary-button" onClick={onContinue}>Continuer à jouer</button>
+          <button className="secondary-button" onClick={onRestart}>Relancer une campagne</button>
+          <button className="text-button" onClick={onMainMenu}>Revenir au menu principal</button>
+        </div>
       </section>
     </div>}
   </>;

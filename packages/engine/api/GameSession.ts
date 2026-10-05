@@ -34,8 +34,11 @@ export class GameSession {
           command.x,
           command.y,
           command.direction,
-          command.conveyorType
+          command.conveyorType,
+          command.tier
         );
+      case "place-pipe":
+        return this.engine.placePipe(command.x, command.y, command.direction);
       case "place-storage":
         return this.engine.placeStorage(command.x, command.y);
       case "destroy-entity":
@@ -48,6 +51,8 @@ export class GameSession {
         return this.engine.selectMachineRecipe(command.machineId, command.recipeId);
       case "set-machine-paused":
         return this.engine.setMachinePaused(command.machineId, command.paused);
+      case "continue-campaign":
+        return this.engine.continueCampaign();
       default:
         return false;
     }

@@ -17,13 +17,13 @@ vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
-  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn()
+  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
 let host: HTMLDivElement;
 let canvas: HTMLCanvasElement;
-const world = (tick = 0) => ({tick, machines: [], conveyors: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()});
+const world = (tick = 0) => ({tick, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()});
 const tree = (width = 640, height = 480) => createElement(Provider, {store, children: createElement(GameCanvas, {width, height, cellSize: 32})});
 const mouse = (target: EventTarget, type: string, x: number, y: number, buttons = 0) => {
   act(() => { target.dispatchEvent(new MouseEvent(type, {bubbles: true, clientX: x, clientY: y, button: 0, buttons})); });

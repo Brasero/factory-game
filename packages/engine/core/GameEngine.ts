@@ -12,10 +12,11 @@ import {runCampaign} from "@engine/systems/CampaignSystem";
 import {CAMPAIGN_LEVELS, campaignLevelAt} from "@engine/config/campaignConfig";
 import {emptyResources, RESOURCE_TYPES} from "@engine/models/Resources";
 import type {MachineVariant} from "@engine/models/Machine";
-import type {DirectionType} from "@engine/models/Conveyor.ts";
+import type {Conveyor, DirectionType} from "@engine/models/Conveyor.ts";
 import type {EntityManagerType} from "@engine/core/manager/EntityManager.type.ts";
 import {entityManager} from "@engine/core/manager/EntityManager.ts";
 import {MACHINE_RECIPE_OPTIONS, RECIPES, recipeInputs, type RecipeId} from "@engine/config/recipeConfig";
+import {runPipes} from "@engine/systems/PipeSystem";
 
 export class GameEngine {
     private network?: NetworkTopology;
@@ -33,6 +34,7 @@ export class GameEngine {
         this.#world = runProduction(this.#world);
         this.#world = runOutputMachine(this.#world, this.network);
         runConveyors(this.#world, this.network);
+        this.#world = runPipes(this.#world);
         this.#world = runTunnels(this.#world);
         this.updateResourceTotals();
         this.#world = runCampaign(this.#world);
@@ -66,10 +68,10 @@ export class GameEngine {
         if (world.tunnels.some(tunnel => tunnel.x === x && tunnel.y === y)) return false;
         const unlockedLevels = CAMPAIGN_LEVELS.filter(definition => world.campaign.levels.find(item => item.id === definition.id)?.status !== "locked");
         const actualType = machineType === "miner" ? undefined : machineType;
-        if (actualType && !["conveyor", "splitter", "merger", "storage"].includes(actualType) &&
+        if (actualType && !["conveyor", "splitter", "merger", "pipe", "storage"].includes(actualType) &&
             !unlockedLevels.some(definition => definition.unlocks.machines.includes(actualType as MachineType))) return false;
         const usesVariant = machineType === "miner" ||
-            (actualType !== undefined && !["conveyor", "splitter", "merger", "storage"].includes(actualType));
+            (actualType !== undefined && !["conveyor", "splitter", "merger", "pipe", "storage"].includes(actualType));
         if (usesVariant && !unlockedLevels.some(definition => definition.unlocks.variants.includes(variant))) return false;
         if (machineType === "conveyor" || machineType === "splitter" || machineType === "merger") {
             const blocked = world.machines.some(m => m.x === x && m.y === y) ||
@@ -78,6 +80,11 @@ export class GameEngine {
             const existing = world.conveyors.find(c => c.x === x && c.y === y);
             if (existing) return existing.type === machineType ||
                 (existing.type === "conveyor" && (machineType === "splitter" || machineType === "merger"));
+        }
+        if (machineType === "pipe") {
+            if (world.machines.some(m => m.x === x && m.y === y) || world.storages.some(s => s.x === x && s.y === y) ||
+                world.conveyors.some(c => c.x === x && c.y === y)) return false;
+            if (world.pipes.some(pipe => pipe.x === x && pipe.y === y)) return true;
         }
         return world.grid?.canPlaceMachine({x, y}, machineType) ?? false;
     }
@@ -103,13 +110,13 @@ export class GameEngine {
         return true;
     }
     
-    placeConveyor(x: number, y: number, direction: DirectionType, type: "conveyor" | "splitter" | "merger" = "conveyor"): boolean {
+    placeConveyor(x: number, y: number, direction: DirectionType, type: "conveyor" | "splitter" | "merger" = "conveyor", tier?: Conveyor["tier"]): boolean {
         const {grid} = this.#world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.")
         
         try {
             if (!this.canPlaceMachine(x, y, type)) return false;
-            const updatedWorld = this.entityManager.placeConveyor(x, y, direction, this.#world, type);
+            const updatedWorld = this.entityManager.placeConveyor(x, y, direction, this.#world, type, tier);
             if (!updatedWorld) return false;
             this.network = undefined;
             this.#world = {
@@ -120,6 +127,14 @@ export class GameEngine {
             console.error("Une erreur est survenu lors du placement du convoyeur", e)
             return false
         }
+    }
+
+    placePipe(x: number, y: number, direction: DirectionType): boolean {
+        if (!this.canPlaceMachine(x, y, "pipe")) return false;
+        const updated = this.entityManager.placePipe(x, y, direction, this.#world);
+        if (!updated) return false;
+        this.#world = updated;
+        return true;
     }
     
     placeStorage(x: number, y: number) {
@@ -167,6 +182,12 @@ export class GameEngine {
         level.status = "finalized";
         level.finalizedAt = this.#world.tick;
         if (this.#world.campaign.levels.every(item => item.status === "finalized")) this.#world.campaign.status = "finished";
+        return true;
+    }
+
+    continueCampaign(): boolean {
+        if (this.#world.campaign.status !== "finished") return false;
+        this.#world.campaign.status = "playing";
         return true;
     }
 

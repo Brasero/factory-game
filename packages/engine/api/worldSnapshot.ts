@@ -25,6 +25,7 @@ export function buildWorldSnapshot(world: World): WorldSnapshot {
       ...conveyor,
       carrying: conveyor.carrying.map(resource => ({...resource}))
     })),
+    pipes: world.pipes.map(pipe => ({...pipe})),
     storages: world.storages.map(storage => ({
       ...storage,
       stored: {...storage.stored}

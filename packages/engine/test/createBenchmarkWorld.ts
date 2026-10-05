@@ -11,7 +11,7 @@ export function createBenchmarkWorld(count: number): World {
     Array.from({length: 250}, (_, x) => ({biome: "grass", variant: 3,
       decoration: y % 4 === 2 && x % 7 === 0 ? {type: "tree", variant: 0} : undefined})));
   const grid = new Grid(250, 190, new TileMap(250, 190, tiles));
-  const world: World = {tick: 0, grid, machines: [], conveyors: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()};
+  const world: World = {tick: 0, grid, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()};
   for (let i = 0; i < count; i++) {
     const x = i % 200, y = Math.floor(i / 200) * 4 + 1;
     world.conveyors.push({id: `belt-${i}`, x, y, type: "conveyor", entityType: "conveyor",

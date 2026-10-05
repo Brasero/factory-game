@@ -35,6 +35,7 @@ describe("Machine idle diagnostics", () => {
     engine.placeMachine(1, 1, "iron-mine");
     engine.placeMachine(5, 5, "boiler");
     const [miner, boiler] = engine.getWorld().machines;
+    boiler.recipeId = "water-purification";
     miner.buffer.iron = 100;
     boiler.buffer.water = 1;
     expect(machineIdleReason(miner, 20)).toEqual({type: "buffer-full"});

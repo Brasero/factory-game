@@ -1,5 +1,5 @@
 import {visibleCells, isVisible, type ViewportBounds} from "./utils/viewport";
-import {acceptsInput, positionKey} from "@engine/systems/NetworkTopology";
+import {acceptsInput, directions, nextPosition, outputDirections, positionKey} from "@engine/systems/NetworkTopology";
 import type {
   WorldSnapshot,
   Position,
@@ -19,6 +19,7 @@ import type {Camera} from "@web/model/Camera.ts";
 import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import {machineIdleReason, type MachineIdleReason} from "@engine/systems/MachineStatus";
+import {drawPipeAt} from "@web/render/utils/pipe";
 
 const CELL_SIZE = config.CELL_SIZE;
 export function render(
@@ -109,29 +110,64 @@ function drawDynamicEntities(
 ) {
   const drawCalls: DrawCall[] = [];
   const previousByPos = new Map<string, Conveyor>();
+  const incomingByPos = new Map<string, DirectionType>();
   const conveyorsByPos = new Map(world.conveyors.map(conveyor => [positionKey(conveyor), conveyor]));
+  const connectedOutputs = new Set<string>();
   const connected = connectedRouterIds(world.conveyors);
 
   world.conveyors.forEach(conveyor => {
-    const key = positionKey(getNextPosition(conveyor));
+    for (const direction of outputDirections(conveyor)) {
+      const key = positionKey(nextPosition(conveyor, direction));
+      const receiver = conveyorsByPos.get(key);
+      // Un tapis refusé par son voisin (face à face) n'en est pas le prédécesseur : aucun sprite de demi-tour.
+      if (!receiver || !acceptsInput(receiver, conveyor)) continue;
+      connectedOutputs.add(conveyor.id);
+      const existing = previousByPos.get(key);
+      if (!existing || conveyor.y < existing.y || (conveyor.y === existing.y && conveyor.x < existing.x)) {
+        previousByPos.set(key, conveyor);
+        incomingByPos.set(key, getIncomingDirection(conveyor, receiver));
+      }
+    }
+  });
+
+  (world.pipes ?? []).forEach(pipe => {
+    if (!isVisible(pipe, bounds)) return;
+    drawCalls.push({x: pipe.x, y: pipe.y, layer: 0, draw: () => drawPipeAt(ctx, world, pipe, CELL_SIZE)});
+  });
+
+  const registerEntityOutput = (source: Position, direction: DirectionType) => {
+    const key = positionKey(nextPosition(source, direction));
     const receiver = conveyorsByPos.get(key);
-    // Un tapis refusé par son voisin (face à face) n'en est pas le prédécesseur : aucun sprite de demi-tour.
-    if (!receiver || !acceptsInput(receiver, conveyor)) return;
-    const existing = previousByPos.get(key);
-    if (!existing || conveyor.y < existing.y || (conveyor.y === existing.y && conveyor.x < existing.x)) {
-      previousByPos.set(key, conveyor);
+    if (!receiver || !acceptsInput(receiver, source) || incomingByPos.has(key)) return;
+    incomingByPos.set(key, direction);
+  };
+  world.machines.forEach(machine => registerEntityOutput(machine, machine.type === "water-pump" ? "right" : "down"));
+  world.tunnels.filter(tunnel => tunnel.type === "input")
+    .forEach(tunnel => registerEntityOutput(tunnel, tunnel.direction));
+  world.storages.forEach(storage => directions.forEach(direction => registerEntityOutput(storage, direction)));
+
+  const receivers = new Set([
+    ...world.machines.map(positionKey),
+    ...world.storages.map(positionKey),
+    ...world.tunnels.filter(tunnel => tunnel.type === "output").map(positionKey)
+  ]);
+  world.conveyors.forEach(conveyor => {
+    if (outputDirections(conveyor).some(direction => receivers.has(positionKey(nextPosition(conveyor, direction))))) {
+      connectedOutputs.add(conveyor.id);
     }
   });
 
   world.conveyors.forEach(conveyor => {
     if (!isVisible(conveyor, bounds)) return;
     const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`) ?? null;
-    const path = buildConveyorPath(world, conveyor, CELL_SIZE, prev);
+    const incoming = incomingByPos.get(positionKey(conveyor));
+    const path = buildConveyorPath(world, conveyor, CELL_SIZE, prev, incoming);
     drawCalls.push({
       x: conveyor.x,
       y: conveyor.y,
       layer: 0,
-      draw: () => drawConveyorAt(ctx, world, conveyor, prev, connected.has(conveyor.id))
+      draw: () => drawConveyorAt(ctx, world, conveyor, prev, connected.has(conveyor.id), tickInterpolation,
+        connectedOutputs.has(conveyor.id), incoming)
     });
     if (conveyor.type === "conveyor" && conveyor.carrying.length) {
       drawCalls.push({
@@ -525,7 +561,8 @@ export function buildConveyorPath(
   world: WorldSnapshot,
   conveyor: Conveyor,
   cellSize: number,
-  prevOverride?: Conveyor | null
+  prevOverride?: Conveyor | null,
+  incomingOverride?: DirectionType
 ): ConveyorPath {
     const prev = prevOverride === undefined ? findPreviousConveyor(world, conveyor) : prevOverride;
     
@@ -535,9 +572,9 @@ export function buildConveyorPath(
     };
     
     const outgoing = conveyor.direction;
-    const incoming = prev
+    const incoming = incomingOverride ?? (prev
       ? getIncomingDirection(prev, conveyor)
-      : outgoing;
+      : outgoing);
     
     return {
         entry: getEntryPoint(center, incoming, cellSize),

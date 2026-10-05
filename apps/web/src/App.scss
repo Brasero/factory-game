@@ -45,7 +45,34 @@ canvas {
   }
 }
 
+.main-menu {
+  overflow: hidden;
+  background: #294d38;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(rgba(7, 16, 18, 0.4), rgba(7, 11, 18, 0.68));
+    pointer-events: none;
+  }
+}
+
+.menu-world-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 .menu-panel {
+  position: relative;
+  z-index: 1;
   width: min(520px, 100%);
   padding: 42px;
   border: 1px solid c.$ui-border;
@@ -65,6 +92,50 @@ canvas {
   > small { display: block; margin-top: 26px; color: c.$text-muted; text-align: center; }
 }
 
+.main-menu .menu-panel {
+  width: min(620px, 100%);
+  box-sizing: border-box;
+  border: 3px solid #52687c;
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.035) 25%, transparent 25%) 0 0 / 12px 12px,
+    linear-gradient(315deg, rgba(255,255,255,0.025) 25%, transparent 25%) 0 0 / 12px 12px,
+    #111a26;
+  box-shadow: 0 0 0 5px #0b111a, 0 0 0 7px #d28c32, 18px 22px 0 rgba(10, 17, 22, 0.45);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #8293a2;
+    box-shadow: inset 2px 2px #c0ccd5, inset -2px -2px #344453;
+  }
+  &::before { top: 12px; left: 12px; }
+  &::after { right: 12px; bottom: 12px; }
+
+  h1 {
+    color: #f2ead7;
+    text-shadow: 4px 4px 0 #713f27, 7px 7px 0 rgba(0,0,0,0.4);
+  }
+}
+
+.menu-factory-mark {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  margin: -16px 0 24px auto;
+  color: #69d4c4;
+  font: 800 9px/1 monospace;
+  letter-spacing: 0.1em;
+  i { width: 7px; height: 7px; background: #69d4c4; box-shadow: 0 0 8px #69d4c4; }
+  i:nth-child(2) { opacity: 0.65; }
+  i:nth-child(3) { opacity: 0.3; }
+}
+
 .menu-kicker,
 .tutorial-eyebrow {
   color: c.$state-accent;
@@ -78,6 +149,58 @@ canvas {
   display: grid;
   gap: 10px;
   margin: 30px 0;
+}
+
+.continue-action {
+  position: relative;
+  display: grid;
+  > button { width: 100%; }
+}
+
+.save-preview {
+  position: absolute;
+  z-index: 10;
+  top: 50%;
+  left: calc(100% + 24px);
+  width: 360px;
+  overflow: hidden;
+  transform: translateY(-50%);
+  border: 3px solid #52687c;
+  border-radius: 4px;
+  background: #101923;
+  color: #e9eef2;
+  box-shadow: 0 0 0 4px #0a1017, 10px 12px 0 rgba(0,0,0,0.38);
+  pointer-events: none;
+  animation: previewDeploy 140ms ease-out;
+}
+
+.save-preview-screen {
+  height: 204px;
+  overflow: hidden;
+  border-bottom: 3px solid #d28c32;
+  background: #294d38;
+  canvas { display: block; width: 360px; height: 204px; image-rendering: pixelated; }
+}
+
+.save-preview-heading {
+  padding: 12px 14px 7px;
+  span { display: block; color: #69d4c4; font: 800 9px monospace; letter-spacing: 0.12em; }
+  strong { display: block; margin-top: 3px; font-size: 17px; }
+}
+
+.save-preview-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  padding: 7px 14px 14px;
+  div { padding: 8px; background: #172331; }
+  small { display: block; color: #8293a2; font-size: 9px; text-transform: uppercase; }
+  strong { font-size: 12px; text-transform: capitalize; }
+}
+
+@keyframes previewDeploy {
+  from { opacity: 0; transform: translate(-10px, -50%); }
+  to { opacity: 1; transform: translate(0, -50%); }
 }
 
 button.primary-button,
@@ -123,6 +246,13 @@ button.text-button {
   span { color: c.$text-muted; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
   strong { display: block; margin: 3px 0; color: c.$text-primary; }
   p { color: c.$text-muted; font-size: 13px; }
+}
+
+.main-menu .goal-preview {
+  border: 2px solid #314354;
+  border-left: 5px solid #69d4c4;
+  border-radius: 2px;
+  background: #0b131d;
 }
 
 .tutorial-card {
@@ -175,6 +305,18 @@ button.text-button {
   .menu-panel { padding: 28px; }
   .tutorial-card { top: 12px; left: 12px; width: calc(100vw - 24px); padding: 18px; }
   .tutorial-progress { margin: -18px -18px 16px; }
+}
+
+@media (max-width: 1120px) {
+  .save-preview {
+    top: calc(100% + 18px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  @keyframes previewDeploy {
+    from { opacity: 0; transform: translate(-50%, -8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
 }
 
 .campaign-hud {

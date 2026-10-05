@@ -7,18 +7,11 @@ import ironPlate from "../assets/logistic/automation/iron-plate.png";
 import steel from "../assets/logistic/automation/steel.png";
 import copperWire from "../assets/logistic/automation/copper-wire.png";
 import circuit from "../assets/logistic/automation/circuit.png";
-import conveyorUp from "../assets/logistic/conveyor/conveyor/conveyor-up.png";
-import conveyorDown from "../assets/logistic/conveyor/conveyor/conveyor-down.png";
-import conveyorLeft from "../assets/logistic/conveyor/conveyor/conveyor-left.png";
-import conveyorRight from "../assets/logistic/conveyor/conveyor/conveyor-right.png";
-import conveyorRightUp from "../assets/logistic/conveyor/conveyor/conveyor-right-up.png";
-import conveyorLeftDown from "../assets/logistic/conveyor/conveyor/conveyor-left-down.png";
-import conveyorLeftUp from "../assets/logistic/conveyor/conveyor/conveyor-left-up.png";
-import conveyorRightDown from "../assets/logistic/conveyor/conveyor/conveyor-right-down.png";
-import conveyorDownLeft from "../assets/logistic/conveyor/conveyor/conveyor-down-left.png";
-import conveyorDownRight from "../assets/logistic/conveyor/conveyor/conveyor-down-right.png";
-import conveyorUpLeft from "../assets/logistic/conveyor/conveyor/conveyor-up-left.png";
-import conveyorUpRight from "../assets/logistic/conveyor/conveyor/conveyor-up-right.png";
+import conveyorTier1 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt.png";
+import conveyorTier2 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt_B.png";
+import conveyorTier3 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt_C.png";
+import conveyorTier4 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt_D.png";
+import metalPipe from "../assets/logistic/conveyor/pipe/Metal_Pipe.png";
 import splitter from "../assets/logistic/conveyor/splitter/splitter.png";
 import merger from "../assets/logistic/conveyor/combiner/combiner.png";
 import miner1Idle from "../assets/machines/Miner_Machine_1.png";
@@ -61,19 +54,12 @@ export const imagePath = {
     circuit
   },
   conveyor: {
-    up: conveyorUp,
-    down: conveyorDown,
-    left: conveyorLeft,
-    right: conveyorRight,
-    "right-up": conveyorRightUp,
-    "left-down": conveyorLeftDown,
-    "left-up": conveyorLeftUp,
-    "right-down": conveyorRightDown,
-    "down-left": conveyorDownLeft,
-    "down-right": conveyorDownRight,
-    "up-left": conveyorUpLeft,
-    "up-right": conveyorUpRight,
+    tier1: conveyorTier1,
+    tier2: conveyorTier2,
+    tier3: conveyorTier3,
+    tier4: conveyorTier4,
   },
+  pipe: {metal: metalPipe},
   router: {
     splitter,
     merger

@@ -36,6 +36,7 @@ describe("Cached connections", () => {
     setup.placeMachine(1, 1, "iron-smelter");
     setup.placeConveyor(1, 0, "down");
     const world = setup.getWorld();
+    world.machines[0].recipeId = "iron-smelting";
     const network = topology.buildNetworkTopology(world);
     world.machines[0].buffer.ironPlate = 99;
     world.conveyors[0].carrying = [{type: "iron", amount: 3, progress: 1}];

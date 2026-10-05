@@ -56,6 +56,14 @@ describe("Placement rules", () => {
     expect(engine.placeStorage(0, 0)).toBe(true);
   });
 
+  it("changes a belt tier and preserves it when the belt is rotated", () => {
+    const engine = new GameEngine(createTestWorld());
+    expect(engine.placeConveyor(0, 0, "right", "conveyor", 3)).toBe(true);
+    expect(engine.getSnapshot().conveyors[0].tier).toBe(3);
+    expect(engine.placeConveyor(0, 0, "down")).toBe(true);
+    expect(engine.getSnapshot().conveyors[0].tier).toBe(3);
+  });
+
   it.each(["splitter", "merger"] as const)("replaces a belt with a %s without losing carried resources", type => {
     let engine = new GameEngine(createTestWorld());
     expect(engine.placeConveyor(0, 0, "right")).toBe(true);

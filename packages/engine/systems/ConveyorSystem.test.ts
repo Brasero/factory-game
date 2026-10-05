@@ -78,15 +78,15 @@ describe("Conveyor transfers", () => {
     expect(a.storages[0].stored.iron).toBe(1);
   });
 
-  it("exports water to the right and stops when its output is full", () => {
+  it("never exports water onto a conveyor", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(3, 1, "water-pump");
     engine.placeConveyor(4, 1, "right");
     let world = engine.getWorld();
     world.machines[0].buffer.water = 5;
     for (let i = 0; i < 5; i++) world = runOutputMachine(world);
-    expect(world.conveyors[0].carrying).toHaveLength(3);
-    expect(world.machines[0].buffer.water).toBe(2);
+    expect(world.conveyors[0].carrying).toHaveLength(0);
+    expect(world.machines[0].buffer.water).toBe(5);
   });
 
   it("does not export into a belt pointing back into the machine", () => {
@@ -105,6 +105,7 @@ describe("Conveyor transfers", () => {
     engine.placeMachine(3, 1, "iron-smelter");
     engine.placeConveyor(3, 2, "down");
     const world = engine.getWorld();
+    world.machines[0].recipeId = "iron-smelting";
     world.machines[0].buffer.iron = 2;
 
     const withoutProduct = runOutputMachine(world);
@@ -134,6 +135,7 @@ describe("Conveyor transfers", () => {
     engine.placeMachine(5, 5, "iron-smelter");
     engine.placeMachine(1, 1, "iron-mine");
     const world = engine.getWorld();
+    world.machines[0].recipeId = "iron-smelting";
     world.conveyors = [belt(4, 5, "right"), belt(0, 1, "right")];
     world.conveyors.forEach(c => { c.carrying[0].type = "coal"; });
     runConveyors(world);
@@ -192,6 +194,7 @@ describe("Conveyor transfers", () => {
     expect(engine.placeStorage(0, 0)).toBe(true);
     expect(engine.placeMachine(1, 0, "iron-smelter")).toBe(true);
     let world = engine.getWorld();
+    world.machines[0].recipeId = "iron-smelting";
     world.storages[0].stored.iron = 1;
     const loaded = new GameEngine(world);
     for (let i = 0; i < 20; i++) loaded.tick();

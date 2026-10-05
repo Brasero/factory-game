@@ -7,13 +7,14 @@ import type {CampaignState} from "@engine/models/Campaign";
 import type {Resources} from "@engine/models/Resources";
 import {createWorld} from "@engine/world/WorldFactory";
 import {CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
-import {defaultRecipe} from "@engine/config/recipeConfig";
+import type {Pipe} from "@engine/models/Pipe";
 
 export type GameSave = {
   version: 1;
   tick: number;
   machines: Machine[];
   conveyors: Conveyor[];
+  pipes?: Pipe[];
   storages: Storage[];
   tunnels: Tunnel[];
   resources: Resources;
@@ -21,7 +22,7 @@ export type GameSave = {
 };
 
 export function serializeWorld(world: World): GameSave {
-  return structuredClone({version: 1, tick: world.tick, machines: world.machines, conveyors: world.conveyors,
+  return structuredClone({version: 1, tick: world.tick, machines: world.machines, conveyors: world.conveyors, pipes: world.pipes,
     storages: world.storages, tunnels: world.tunnels, resources: world.resources, campaign: world.campaign});
 }
 
@@ -36,9 +37,11 @@ export function restoreWorld(save: GameSave): World {
     if (machine.type === "wire-mill") {
       return {...machine, type: "assembler" as const, recipeId: "copper-wire" as const, spriteName: "assembler"};
     }
-    return machine.recipeId ? machine : {...machine, recipeId: defaultRecipe(machine.type)};
+    return machine;
   });
-  world.conveyors = structuredClone(save.conveyors);
+  world.conveyors = structuredClone(save.conveyors).map(conveyor =>
+    conveyor.type === "conveyor" ? {...conveyor, tier: conveyor.tier ?? 1} : conveyor);
+  world.pipes = structuredClone(save.pipes ?? []);
   world.storages = structuredClone(save.storages);
   world.tunnels = world.tunnels.map(tunnel => {
     const saved = save.tunnels.find(item => item.id === tunnel.id);
@@ -47,7 +50,7 @@ export function restoreWorld(save: GameSave): World {
   world.resources = structuredClone(save.resources);
   world.campaign = structuredClone(save.campaign);
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;
-  for (const entity of [...world.machines, ...world.conveyors, ...world.storages]) world.grid?.occupy(entity);
+  for (const entity of [...world.machines, ...world.conveyors, ...world.pipes, ...world.storages]) world.grid?.occupy(entity);
   return world;
 }
 
