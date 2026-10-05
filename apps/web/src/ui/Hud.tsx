@@ -39,9 +39,10 @@ export function Hud() {
 
   
   const handleClick = (item: SelectedItem) => {
-    if (currentTool !== "build") return
+    if (currentTool !== "build") dispatch(setToolMode("build"));
     if (selectedItem === item) {
       dispatch(setSelectedItem(""));
+      setBuildMenuOpen(false);
       return;
     }
     dispatch(setSelectedItem(item));
@@ -73,6 +74,39 @@ export function Hud() {
   const destroyButtonClass = () => {
     return "destroyBtn " + (currentTool === "destroy" ? "selected" : "")
   }
+  const selectedConstruction = () => {
+    if (!selectedItem || currentTool !== "build") return null;
+    const labels: Partial<Record<SelectedItem, string>> = {
+      miner: "Mineur", "water-pump": "Pompe à eau", "iron-smelter": "Fonderie",
+      assembler: "Machine de production", boiler: "Boiler", conveyor: "Tapis roulant",
+      pipe: "Tuyau", merger: "Merger", splitter: "Splitter", storage: "Coffre"
+    };
+    let icon;
+    if (selectedItem === "conveyor") icon = <span className="hud-atlas-icon conveyor-icon"
+      style={{backgroundImage: `url(${assetManager.getImage("conveyor.tier1").src})`}} />;
+    else if (selectedItem === "pipe") icon = <span className="hud-atlas-icon pipe-icon"
+      style={{backgroundImage: `url(${assetManager.getImage("pipe.metal").src})`}} />;
+    else if (selectedItem === "merger" || selectedItem === "splitter") icon = <span
+      className={`hud-atlas-icon router-icon ${selectedItem}`}
+      style={{backgroundImage: `url(${assetManager.getImage(`router.${selectedItem}`).src})`}} />;
+    else if (selectedItem === "storage") icon = <img className="hud-tool-icon storage-icon"
+      src={assetManager.getImage("storage.crate").src} alt=""/>;
+    else if (selectedItem === "miner") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>;
+    else if (selectedItem === "water-pump") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.pump.water.idle").src} alt=""/>;
+    else if (selectedItem === "iron-smelter") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.automation.ironSmelter.idle").src} alt=""/>;
+    else if (selectedItem === "assembler") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt=""/>;
+    else if (selectedItem === "boiler") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.automation.boiler.idle").src} alt=""/>;
+    else icon = <span className="selected-construction-fallback">{selectedItem}</span>;
+    return <div className="selected-construction" aria-label={`Construction sélectionnée : ${labels[selectedItem] ?? selectedItem}`}
+      title={labels[selectedItem] ?? selectedItem}>
+      {icon}<span>{labels[selectedItem] ?? selectedItem}</span>
+    </div>;
+  };
   return (<div id="hud_container">
       <div id="hud_info">
         <div id="hud_tick_container">
@@ -85,26 +119,27 @@ export function Hud() {
         </div>
       </div>
     
-    <button className="build-menu-toggle" aria-label="Ouvrir le menu de construction" aria-expanded={buildMenuOpen}
+    <button className="build-menu-toggle" data-tutorial="build-menu" aria-label="Ouvrir le menu de construction" aria-expanded={buildMenuOpen}
       onClick={() => setBuildMenuOpen(open => !open)}>🛠 <kbd>A</kbd></button>
+    {!buildMenuOpen && selectedConstruction()}
     <div id="hud_commands" className={buildMenuOpen ? "open" : ""} aria-hidden={!buildMenuOpen}>
       <div id="hud_commands_extractor">
         <button data-tutorial="miner" aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>
         </button>
-        <button data-tutorial="water-pump" aria-label="Pompe à eau" className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
+        {unlockedMachines.has("water-pump") && <button data-tutorial="water-pump" aria-label="Pompe à eau" className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.pump.water.idle").src} alt=""/>
-        </button>
+        </button>}
         <button data-tutorial="iron-smelter" aria-label="Fonderie" title="Fonderie — sélectionne sa recette après placement" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.ironSmelter.idle").src} alt="" />
         </button>
-        {unlockedMachines.has("assembler") && <button aria-label="Machine de production"
+        {unlockedMachines.has("assembler") && <button data-tutorial="assembler" aria-label="Machine de production"
           title="Machine de production — sélectionne Fil de cuivre ou Circuit après placement"
           className={buttonMachineStyle("assembler")} onClick={() => handleClick("assembler")}>
           <img className="hud-tool-icon"
             src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt="" />
           </button>}
-        {unlockedMachines.has("boiler") && <button aria-label="Boiler dépolluant"
+        {unlockedMachines.has("boiler") && <button data-tutorial="boiler" aria-label="Boiler dépolluant"
           title="Boiler — consomme de l’eau pour réduire rapidement la pollution"
           className={buttonMachineStyle("boiler")} onClick={() => handleClick("boiler")}>
           <img className="hud-tool-icon"
@@ -122,9 +157,9 @@ export function Hud() {
           <span className="hud-atlas-icon conveyor-icon"
             style={{backgroundImage: `url(${assetManager.getImage("conveyor.tier1").src})`}} />
         </button>
-        <button aria-label="Tuyau d’eau" title="Tuyau — transporte exclusivement l’eau" className={buttonMachineStyle("pipe")} onClick={() => handleClick("pipe")}>
+        {unlockedMachines.has("water-pump") && <button data-tutorial="pipe" aria-label="Tuyau d’eau" title="Tuyau — transporte exclusivement l’eau" className={buttonMachineStyle("pipe")} onClick={() => handleClick("pipe")}>
           <span className="hud-atlas-icon pipe-icon" style={{backgroundImage: `url(${assetManager.getImage("pipe.metal").src})`}} />
-        </button>
+        </button>}
         <button data-tutorial="storage" aria-label="Coffre" className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>
           <img className="hud-tool-icon storage-icon" src={assetManager.getImage("storage.crate").src} alt=""/>
         </button>

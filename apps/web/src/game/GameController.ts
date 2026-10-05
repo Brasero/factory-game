@@ -155,12 +155,13 @@ export function placeStorage(x: number, y: number) {
 }
 
 export function destroyEntity(x: number, y: number) {
-    session.dispatch({
+    const success = session.dispatch({
         type: "destroy-entity",
         x,
         y
     })
     updateWorld();
+    return success;
 }
 
 function persistGame() {

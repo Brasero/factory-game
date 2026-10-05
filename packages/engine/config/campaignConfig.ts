@@ -14,10 +14,10 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     radius: 24,
     objective: {type: "export", resource: "ironPlate", amount: 50},
     unlocks: {
-      machines: ["iron-mine", "water-pump", "iron-smelter"],
+      machines: ["iron-mine", "iron-smelter"],
       recipes: ["iron-smelting"],
       variants: ["standard"],
-      resources: ["iron", "water", "ironPlate"]
+      resources: ["iron", "ironPlate"]
     },
     tunnels: [{id: "level-1-output", type: "output", position: {x: 61, y: 55}, levelId: "level-1", linkedTunnelId: "level-2-input"}]
   },
@@ -29,10 +29,10 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     radius: 24,
     objective: {type: "export", resource: "steel", amount: 40},
     unlocks: {
-      machines: ["coal-mine", "boiler"],
+      machines: ["coal-mine", "water-pump", "boiler"],
       recipes: ["steel-smelting", "water-purification"],
       variants: ["eco", "industrial"],
-      resources: ["coal", "steel"]
+      resources: ["coal", "water", "steel"]
     },
     tunnels: [
       {id: "level-2-input", type: "input", position: {x: 104, y: 55}, levelId: "level-2"},

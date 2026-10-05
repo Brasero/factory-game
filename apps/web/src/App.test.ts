@@ -6,6 +6,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import store from "@web/store/store.ts";
 import App from "./App.tsx";
 import {pauseGame, startGame} from "@web/game/GameController.ts";
+import {getWorldSnapshot, setWorldSnapshot} from "@web/game/worldStore.ts";
+import {emptyResources} from "@engine/models/Resources";
+import {createTestCampaign} from "@engine/test/createTestWorld";
 
 vi.mock("@web/render/manager/AssetManager.ts", () => ({loadGameAssets: vi.fn(() => Promise.resolve())}));
 vi.mock("@web/game/GameController.ts", () => ({startGame: vi.fn(), pauseGame: vi.fn(), startNewCampaign: vi.fn(),
@@ -22,6 +25,10 @@ const button = (label: string) => [...host.querySelectorAll("button")].find(item
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  const campaign = createTestCampaign();
+  campaign.levels[1].status = "locked";
+  campaign.levels[2].status = "locked";
+  setWorldSnapshot({tick: 0, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [], resources: emptyResources(), campaign});
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -48,7 +55,7 @@ describe("application menu", () => {
 
   it("starts the tutorial and opens the pause menu with Escape", () => {
     act(() => button("Tutoriel").click());
-    expect(host.textContent).toContain("Construis une chaîne de production");
+    expect(host.textContent).toContain("Construis ta première usine");
     act(() => button("Quitter").click());
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
     expect(pauseGame).toHaveBeenCalled();
@@ -56,5 +63,16 @@ describe("application menu", () => {
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
     expect(host.textContent).toContain("Canvas");
     expect(startGame).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the level tutorial once when its mechanics unlock", async () => {
+    act(() => button("Jouer").click());
+    const next = structuredClone(getWorldSnapshot());
+    next.campaign.levels[1].status = "active";
+    await act(async () => { setWorldSnapshot(next); await Promise.resolve(); });
+    expect(host.textContent).toContain("Le réseau d’eau");
+    act(() => button("Quitter").click());
+    await act(async () => { setWorldSnapshot({...next, tick: 1}); await Promise.resolve(); });
+    expect(host.textContent).not.toContain("Le réseau d’eau");
   });
 });

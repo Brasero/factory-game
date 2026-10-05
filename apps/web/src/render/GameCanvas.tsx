@@ -2,6 +2,7 @@ import {useEffect, useEffectEvent, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks";
 import {render} from "./CanvasRenderer";
 import {drawPreviewConveyor} from "./utils/conveyor";
+import {drawPreviewPipes} from "./utils/pipe";
 import {useWorldSnapshot} from "@web/game/worldStore";
 import {destroyEntity, placeMiner, placeMachine, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine,
   placeStorage, canPlaceAt, placePipeLine} from "@web/game/GameController";
@@ -12,9 +13,10 @@ import {buildConveyorPlacements, getBestPath} from "./utils/canvas";
 import type {Camera} from "@web/model/Camera";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import {MachineRecipePanel} from "@web/ui/MachineRecipePanel";
+import {createDestructionParticles, drawDestructionParticles, type DestructionParticle} from "./utils/destructionParticles";
 
 interface GameCanvasProps {width: number; height: number; cellSize: number}
-type Drag = {start: Position; last: Position; mode: "pan" | "network"; moved: boolean};
+type Drag = {start: Position; last: Position; mode: "pan" | "network" | "destroy"; moved: boolean; lastCell?: Position};
 
 export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,6 +31,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const selectedVariant = useAppSelector(selectSelectedVariant);
   const paused = useAppSelector(selectGamePaused);
   const snapshotTime = useRef(performance.now());
+  const destructionParticles = useRef<DestructionParticle[]>([]);
   const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "pipe" || selectedItem === "splitter" || selectedItem === "merger";
   const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
   const [hover, setHover] = useState<Position | null>(null);
@@ -63,6 +66,14 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     cellAt(drag.current!.start.x, drag.current!.start.y), end,
     pos => canPlaceAt(pos.x, pos.y, selectedItem === "pipe" ? "pipe" : "conveyor")
   ), beltDirection);
+  const destroyAt = (cell: Position) => {
+    const decoration = world.grid?.tiles[cell.y]?.[cell.x]?.decoration;
+    const palette = decoration?.type === "tree" ? ["#315b35", "#598447", "#7a5835"]
+      : decoration?.type === "rock" ? ["#667080", "#89909b", "#414957"]
+      : ["#c47a3d", "#e0a45d", "#596274"];
+    if (!destroyEntity(cell.x, cell.y)) return;
+    destructionParticles.current.push(...createDestructionParticles(cell, cellSize, performance.now(), palette));
+  };
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
@@ -74,21 +85,28 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)} : undefined;
       const tickInterpolation = paused ? 0 : Math.min(1, (now - snapshotTime.current) / 100);
       render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation);
+      destructionParticles.current = destructionParticles.current.filter(particle => now - particle.bornAt < particle.lifetime);
+      if (destructionParticles.current.length) drawDestructionParticles(ctx, destructionParticles.current, now);
       if (isDirectionalTool && selectedItem !== "pipe" && currentTool === "build") {
         const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)
           ? [{...hover, direction: beltDirection, type: selectedItem as "conveyor" | "splitter" | "merger"}] : [];
         if (placement.length) drawPreviewConveyor(ctx, placement, world);
       }
+      if (selectedItem === "pipe" && currentTool === "build") {
+        const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, "pipe", selectedVariant)
+          ? [{...hover, direction: beltDirection}] : [];
+        if (placement.length) drawPreviewPipes(ctx, placement, world, cellSize);
+      }
       frame = requestAnimationFrame(drawFrame);
     };
     frame = requestAnimationFrame(drawFrame);
     return () => cancelAnimationFrame(frame);
-  }, [world, hover, preview, selectedItem, selectedVariant, currentTool, cameraVersion, width, height, beltDirection, isDirectionalTool, paused]);
+  }, [world, hover, preview, selectedItem, selectedVariant, currentTool, cameraVersion, width, height, cellSize, beltDirection, isDirectionalTool, paused]);
 
   // Stable subscriptions; effect events read the latest tool and camera state.
   const finishDrag = useEffectEvent((event: MouseEvent) => {
     if (event.button !== 0 || !drag.current) return;
-    suppressClick.current = drag.current.moved;
+    suppressClick.current = drag.current.moved || drag.current.mode === "destroy";
     if (drag.current.mode === "network" && (selectedItem === "conveyor" || selectedItem === "pipe") && event.target === canvasRef.current) {
       const line = pathTo(cellAt(event.clientX, event.clientY));
       if (selectedItem === "pipe") placePipeLine(line);
@@ -112,19 +130,22 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     setBeltDirection(next);
     setPreview(previous => previous.length === 1 ? [{...previous[0], direction: next}] : previous);
   });
+  const handleWheel = useEffectEvent((event: WheelEvent) => {
+    event.preventDefault();
+    if (currentTool === "destroy") return;
+    const canvas = canvasRef.current!;
+    const c = camera.current;
+    const scale = Math.min(c.maxScale, Math.max(c.minScale, c.scale * (event.deltaY > 0 ? 1 / 1.1 : 1.1)));
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left, y = event.clientY - rect.top;
+    c.x = x - (x - c.x) * scale / c.scale;
+    c.y = y - (y - c.y) * scale / c.scale;
+    c.scale = scale;
+    redrawCamera(v => v + 1);
+  });
   useEffect(() => {
     const canvas = canvasRef.current!;
-    const wheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const c = camera.current;
-      const scale = Math.min(c.maxScale, Math.max(c.minScale, c.scale * (event.deltaY > 0 ? 1 / 1.1 : 1.1)));
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left, y = event.clientY - rect.top;
-      c.x = x - (x - c.x) * scale / c.scale;
-      c.y = y - (y - c.y) * scale / c.scale;
-      c.scale = scale;
-      redrawCamera(v => v + 1);
-    };
+    const wheel = (event: WheelEvent) => handleWheel(event);
     const keydown = (event: KeyboardEvent) => rotateBelt(event);
     window.addEventListener("keydown", keydown);
     const up = (event: MouseEvent) => finishDrag(event);
@@ -154,7 +175,13 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     onMouseDown={event => {
       if (event.button !== 0) return;
       suppressClick.current = false;
-      if (selectedItem === "conveyor" || selectedItem === "pipe" || (!selectedItem && currentTool === "build")) {
+      if (currentTool === "destroy") {
+        const cell = cellAt(event.clientX, event.clientY);
+        drag.current = {start: {x: event.clientX, y: event.clientY}, last: {x: event.clientX, y: event.clientY},
+          lastCell: cell, moved: false, mode: "destroy"};
+        destroyAt(cell);
+        setInspectedMachine(null);
+      } else if (selectedItem === "conveyor" || selectedItem === "pipe" || (!selectedItem && currentTool === "build")) {
         const pos = {x: event.clientX, y: event.clientY};
         drag.current = {start: pos, last: pos, moved: false, mode: selectedItem === "conveyor" || selectedItem === "pipe" ? "network" : "pan"};
       }
@@ -168,8 +195,21 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
           camera.current.y += event.clientY - active.last.y;
           active.last = {x: event.clientX, y: event.clientY};
           redrawCamera(v => v + 1);
-        } else {
+        } else if (active.mode === "network") {
           setPreview(pathTo(cellAt(event.clientX, event.clientY)));
+        } else {
+          const nextCell = cellAt(event.clientX, event.clientY);
+          const previous = active.lastCell ?? nextCell;
+          const dx = Math.abs(nextCell.x - previous.x), sx = previous.x < nextCell.x ? 1 : -1;
+          const dy = -Math.abs(nextCell.y - previous.y), sy = previous.y < nextCell.y ? 1 : -1;
+          let x = previous.x, y = previous.y, error = dx + dy;
+          while (x !== nextCell.x || y !== nextCell.y) {
+            const twice = 2 * error;
+            if (twice >= dy) { error += dy; x += sx; }
+            if (twice <= dx) { error += dx; y += sy; }
+            destroyAt({x, y});
+          }
+          active.lastCell = nextCell;
         }
       }
       const next = cellAt(event.clientX, event.clientY);
@@ -187,7 +227,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     onClick={event => {
       if (suppressClick.current) { suppressClick.current = false; return; }
       const {x, y} = cellAt(event.clientX, event.clientY);
-      if (currentTool === "destroy") { destroyEntity(x, y); setInspectedMachine(null); return; }
+      if (currentTool === "destroy") { destroyAt({x, y}); setInspectedMachine(null); return; }
       const clickedMachine = world.machines.find(item => item.x === x && item.y === y);
       if (clickedMachine) {
         const rect = canvasRef.current!.getBoundingClientRect();

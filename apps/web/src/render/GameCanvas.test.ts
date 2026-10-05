@@ -8,12 +8,14 @@ import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
 import {setWorldSnapshot} from "@web/game/worldStore";
 import {GameCanvas} from "./GameCanvas";
 import {render} from "./CanvasRenderer";
+import {drawPreviewPipes} from "./utils/pipe";
 import * as controller from "@web/game/GameController";
 import {emptyResources} from "@engine/models/Resources";
 import {createTestCampaign} from "@engine/test/createTestWorld";
 
 vi.mock("./CanvasRenderer", () => ({render: vi.fn()}));
 vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
+vi.mock("./utils/pipe", () => ({drawPreviewPipes: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
@@ -58,6 +60,41 @@ describe("Canvas interactions (DOM)", () => {
     mouse(canvas, "mousemove", 17, 16, 1);
     mouse(canvas, "mouseup", 17, 16);
     expect(controller.placeConveyorLine).toHaveBeenCalledWith([{x: 0, y: 0, direction: "right"}]);
+  });
+  it("previews and places a dragged pipe line", () => {
+    act(() => store.dispatch(setSelectedItem("pipe")));
+    mouse(canvas, "mousemove", 16, 16);
+    frame();
+    expect(drawPreviewPipes).toHaveBeenCalled();
+    mouse(canvas, "mousedown", 16, 16, 1);
+    mouse(canvas, "mousemove", 80, 16, 1);
+    frame();
+    expect(drawPreviewPipes).toHaveBeenLastCalledWith(expect.anything(), [
+      {x: 0, y: 0, direction: "right"}, {x: 1, y: 0, direction: "right"}, {x: 2, y: 0, direction: "right"}
+    ], expect.anything(), 32);
+    mouse(canvas, "mouseup", 80, 16);
+    expect(controller.placePipeLine).toHaveBeenCalledWith([
+      {x: 0, y: 0, direction: "right"}, {x: 1, y: 0, direction: "right"}, {x: 2, y: 0, direction: "right"}
+    ]);
+  });
+  it("destroys every crossed cell and keeps the camera locked in destroy mode", () => {
+    act(() => store.dispatch(setToolMode("destroy")));
+    frame();
+    const cameraBefore = vi.mocked(render).mock.lastCall?.[2];
+    mouse(canvas, "mousedown", 16, 16, 1);
+    mouse(canvas, "mousemove", 112, 16, 1);
+    mouse(canvas, "mouseup", 112, 16);
+    expect(vi.mocked(controller.destroyEntity).mock.calls.slice(-4)).toEqual([[0, 0], [1, 0], [2, 0], [3, 0]]);
+    mouse(canvas, "mousedown", 100, 100, 1);
+    mouse(canvas, "mousemove", 164, 132, 1);
+    mouse(canvas, "mouseup", 164, 132);
+    frame();
+    expect(vi.mocked(render).mock.lastCall?.[2]).toMatchObject(cameraBefore!);
+    const wheel = new MouseEvent("wheel", {clientX: 64, clientY: 32});
+    Object.defineProperty(wheel, "deltaY", {value: -1});
+    act(() => canvas.dispatchEvent(wheel));
+    frame();
+    expect(vi.mocked(render).mock.lastCall?.[2]?.scale).toBe(cameraBefore?.scale);
   });
   it("rotates single belts in both directions and dismisses the shortcut hint", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));

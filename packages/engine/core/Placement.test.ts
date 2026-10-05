@@ -16,8 +16,16 @@ describe("Placement rules", () => {
     };
 
     expect(placeable("miner")).toBe(true);
-    expect(placeable("water-pump")).toBe(true);
+    expect(placeable("water-pump")).toBe(false);
     expect(placeable("iron-smelter")).toBe(true);
+    const world = engine.getWorld();
+    world.campaign.levels[1].status = "active";
+    const unlockedEngine = new GameEngine(world);
+    let pipePlaceable = false;
+    for (let y = 31; y <= 79 && !pipePlaceable; y++) {
+      for (let x = 96; x <= 144; x++) if (unlockedEngine.canPlaceMachine(x, y, "pipe")) { pipePlaceable = true; break; }
+    }
+    expect(pipePlaceable).toBe(true);
   });
 
   it("does not apply machine variant locks to logistics placement", () => {
@@ -43,6 +51,26 @@ describe("Placement rules", () => {
     expect(engine.placeConveyor(x, 0, "right")).toBe(false);
     expect(world.storages).toHaveLength(0);
     expect(world.conveyors).toHaveLength(0);
+  });
+
+  it("unlocks mass removal of trees and rocks with level 3", () => {
+    const world = createTestWorld();
+    world.grid = new Grid(2, 1, new TileMap(2, 1, [[
+      {biome: "grass", variant: 0, decoration: {type: "tree", variant: 0}},
+      {biome: "grass", variant: 0, decoration: {type: "rock", variant: 0}}
+    ]]));
+    world.campaign.levels[2].status = "locked";
+    let engine = new GameEngine(world);
+    expect(engine.destroyEntityAt(0, 0)).toBe(false);
+    expect(engine.getWorld().grid?.getTile(0, 0)?.decoration?.type).toBe("tree");
+
+    world.campaign.levels[2].status = "active";
+    engine = new GameEngine(world);
+    expect(engine.destroyEntityAt(0, 0)).toBe(true);
+    expect(engine.destroyEntityAt(1, 0)).toBe(true);
+    expect(engine.getWorld().grid?.getTile(0, 0)?.decoration).toBeUndefined();
+    expect(engine.getWorld().grid?.getTile(1, 0)?.decoration).toBeUndefined();
+    expect(engine.canPlaceMachine(0, 0, "storage")).toBe(true);
   });
   it("rotates an existing belt without losing its items, then frees the cell", () => {
     let engine = new GameEngine(createTestWorld());

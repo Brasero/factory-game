@@ -1,19 +1,20 @@
 import {useEffect} from "react";
 import {useAppSelector} from "@web/store/hooks.ts";
 import {selectCurentTool, selectSelectedItem} from "@web/store/selectors.ts";
-import {tutorialSteps} from "./tutorialSteps.ts";
+import type {TutorialStep} from "./tutorialSteps.ts";
 
 type TutorialProps = {
   step: number;
   onStepChange: (step: number) => void;
   onClose: () => void;
+  steps: TutorialStep[];
 };
 
-export function Tutorial({step, onStepChange, onClose}: TutorialProps) {
+export function Tutorial({step, onStepChange, onClose, steps}: TutorialProps) {
   const selectedItem = useAppSelector(selectSelectedItem);
   const currentTool = useAppSelector(selectCurentTool);
-  const current = tutorialSteps[step];
-  const isLast = step === tutorialSteps.length - 1;
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
   const interactionComplete = (!current.expectedSelection || selectedItem === current.expectedSelection) &&
     (!current.expectedTool || currentTool === current.expectedTool);
 
@@ -26,15 +27,15 @@ export function Tutorial({step, onStepChange, onClose}: TutorialProps) {
   }, [current.target]);
 
   return <aside className="tutorial-card" aria-live="polite" aria-label="Tutoriel">
-    <div className="tutorial-progress" aria-label={`Étape ${step + 1} sur ${tutorialSteps.length}`}>
-      <span style={{width: `${((step + 1) / tutorialSteps.length) * 100}%`}} />
+    <div className="tutorial-progress" aria-label={`Étape ${step + 1} sur ${steps.length}`}>
+      <span style={{width: `${((step + 1) / steps.length) * 100}%`}} />
     </div>
     <div className="tutorial-heading">
       <div>
         <span className="tutorial-eyebrow">{current.eyebrow}</span>
         <h2>{current.title}</h2>
       </div>
-      <span className="tutorial-count">{step + 1}/{tutorialSteps.length}</span>
+      <span className="tutorial-count">{step + 1}/{steps.length}</span>
     </div>
     <p>{current.description}</p>
     {current.tip && <p className="tutorial-tip">💡 {current.tip}</p>}

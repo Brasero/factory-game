@@ -33,6 +33,7 @@ import type {TileData} from "@engine/models/Tile.ts";
  */
 export class Grid {
   private terrainVersion = 0;
+  private readonly removedDecorations = new Set<string>();
   get revision(): number { return this.terrainVersion; }
   readonly width: number;
   readonly height: number;
@@ -68,6 +69,7 @@ export class Grid {
       }
     }
     copy.terrainVersion = this.terrainVersion;
+    this.removedDecorations.forEach(position => copy.removedDecorations.add(position));
     return copy;
   }
 
@@ -187,5 +189,47 @@ export class Grid {
   free(pos: Position): void {
     if (!this.isInside(pos)) return;
     this.cells[pos.y][pos.x].occupied = false;
+  }
+
+  removeDecoration(pos: Position): boolean {
+    if (!this.isInside(pos)) return false;
+    const decoration = this.cells[pos.y][pos.x].decoration;
+    if (!decoration || (decoration.type !== "tree" && decoration.type !== "rock")) return false;
+    this.cells[pos.y][pos.x].decoration = undefined;
+    this.removedDecorations.add(`${pos.x},${pos.y}`);
+    this.terrainVersion++;
+    return true;
+  }
+
+  getRemovedDecorations(): Position[] {
+    return [...this.removedDecorations].map(value => {
+      const [x, y] = value.split(",").map(Number);
+      return {x, y};
+    });
+  }
+
+  getDecorations(): Array<Position & {type: string; variant: number}> {
+    const decorations: Array<Position & {type: string; variant: number}> = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const decoration = this.cells[y][x].decoration;
+        if (decoration) decorations.push({x, y, type: decoration.type, variant: decoration.variant});
+      }
+    }
+    return decorations;
+  }
+
+  replaceDecorations(decorations: Array<Position & {type: string; variant: number}>): void {
+    for (const row of this.cells) for (const cell of row) cell.decoration = undefined;
+    for (const decoration of decorations) {
+      if (!this.isInside(decoration)) continue;
+      this.cells[decoration.y][decoration.x].decoration = {
+        type: decoration.type,
+        variant: decoration.variant,
+        destructible: decoration.type === "tree" || decoration.type === "rock"
+      };
+    }
+    this.removedDecorations.clear();
+    this.terrainVersion++;
   }
 }

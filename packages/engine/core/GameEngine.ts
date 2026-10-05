@@ -82,6 +82,7 @@ export class GameEngine {
                 (existing.type === "conveyor" && (machineType === "splitter" || machineType === "merger"));
         }
         if (machineType === "pipe") {
+            if (!unlockedLevels.some(definition => definition.unlocks.machines.includes("water-pump"))) return false;
             if (world.machines.some(m => m.x === x && m.y === y) || world.storages.some(s => s.x === x && s.y === y) ||
                 world.conveyors.some(c => c.x === x && c.y === y)) return false;
             if (world.pipes.some(pipe => pipe.x === x && pipe.y === y)) return true;
@@ -160,13 +161,19 @@ export class GameEngine {
         const definition = campaignLevelAt(x, y) ?? CAMPAIGN_LEVELS.find(item => item.id === this.#world.campaign.activeLevelId);
         const progress = this.#world.campaign.levels.find(item => item.id === definition?.id);
         if (!progress || progress.status === "locked" || progress.status === "finalized") return false;
+        const beforeCount = this.#world.machines.length + this.#world.conveyors.length + this.#world.pipes.length + this.#world.storages.length;
         this.network = undefined;
         const updatedWorld = this.entityManager.destroyEntityAt(x, y, this.#world);
         this.#world = {
             ...updatedWorld
         }
+        const afterCount = this.#world.machines.length + this.#world.conveyors.length + this.#world.pipes.length + this.#world.storages.length;
+        const levelThree = this.#world.campaign.levels.find(level => level.id === "level-3");
+        const levelThreeUnlocked = !!levelThree && levelThree.status !== "locked";
+        const decorationRemoved = beforeCount === afterCount && levelThreeUnlocked
+            ? this.#world.grid?.removeDecoration({x, y}) ?? false : false;
         this.updateResourceTotals();
-        return true;
+        return beforeCount !== afterCount || decorationRemoved;
     }
 
     activateLevel(levelId: string): boolean {

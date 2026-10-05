@@ -11,6 +11,8 @@ import {setPaused, setSelectedItem, setSelectedVariant, setToolMode} from "@web/
 import {GameMenu} from "@web/ui/GameMenu.tsx";
 import {Tutorial} from "@web/ui/Tutorial.tsx";
 import {CampaignHud} from "@web/ui/CampaignHud.tsx";
+import {useWorldSelector} from "@web/game/worldStore.ts";
+import {tutorialSequences, type TutorialSequenceId} from "@web/ui/tutorialSteps.ts";
 
 type AppScreen = "main" | "game" | "pause";
 
@@ -21,8 +23,11 @@ function App() {
     const [screen, setScreen] = useState<AppScreen>("main");
     const [hasStarted, setHasStarted] = useState(false);
     const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+    const [tutorialSequence, setTutorialSequence] = useState<TutorialSequenceId>("basics");
+    const [shownTutorials, setShownTutorials] = useState<Set<TutorialSequenceId>>(() => new Set());
     const [hasSave, setHasSave] = useState(hasSavedGame());
     const currentTool = useAppSelector(selectCurentTool)
+    const campaignLevels = useWorldSelector(world => world.campaign.levels);
     const dispatch = useAppDispatch();
     useEffect(() => {
         let cancelled = false;
@@ -58,6 +63,22 @@ function App() {
       return () => window.removeEventListener("keydown", onKeyDown);
     }, [dispatch, hasStarted, screen, tutorialStep]);
 
+    useEffect(() => {
+      if (!hasStarted || screen !== "game" || tutorialStep !== null) return;
+      const unlocked = (id: string) => campaignLevels.find(level => level.id === id)?.status !== "locked";
+      const next: TutorialSequenceId | undefined = unlocked("level-2") && !shownTutorials.has("level-2") ? "level-2"
+        : unlocked("level-3") && !shownTutorials.has("level-3") ? "level-3" : undefined;
+      if (!next) return;
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setShownTutorials(previous => new Set(previous).add(next));
+        setTutorialSequence(next);
+        setTutorialStep(0);
+      });
+      return () => { cancelled = true; };
+    }, [campaignLevels, hasStarted, screen, shownTutorials, tutorialStep]);
+
     const play = () => {
       setHasStarted(true);
       setScreen("game");
@@ -66,6 +87,8 @@ function App() {
     };
     const openTutorial = () => {
       play();
+      setTutorialSequence("basics");
+      setShownTutorials(previous => new Set(previous).add("basics"));
       setTutorialStep(0);
     };
     const newCampaign = () => {
@@ -75,6 +98,8 @@ function App() {
       dispatch(setToolMode("build"));
       setHasSave(false);
       play();
+      setShownTutorials(new Set(["basics"]));
+      setTutorialSequence("basics");
       setTutorialStep(0);
     };
     const restartCampaign = () => {
@@ -120,9 +145,11 @@ function App() {
       onPlay={play} onNewCampaign={newCampaign} onTutorial={openTutorial} />}
     {screen === "pause" && <GameMenu mode="pause" onPlay={play} onTutorial={() => {
       play();
+      setTutorialSequence("basics");
+      setShownTutorials(previous => new Set(previous).add("basics"));
       setTutorialStep(0);
     }} onMainMenu={openMainMenu} />}
-    {tutorialStep !== null && <Tutorial step={tutorialStep} onStepChange={setTutorialStep}
+    {tutorialStep !== null && <Tutorial step={tutorialStep} steps={tutorialSequences[tutorialSequence]} onStepChange={setTutorialStep}
       onClose={() => setTutorialStep(null)} />}
   </div>
 }

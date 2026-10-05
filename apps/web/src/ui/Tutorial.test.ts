@@ -6,6 +6,7 @@ import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import store from "@web/store/store.ts";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice.ts";
 import {Tutorial} from "./Tutorial.tsx";
+import {tutorialSteps} from "./tutorialSteps.ts";
 
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
@@ -15,7 +16,7 @@ function TutorialHarness() {
   const [step, setStep] = useState(0);
   return createElement("div", null,
     createElement("button", {"data-tutorial": "miner"}, "Mineur"),
-    createElement(Tutorial, {step, onStepChange: setStep, onClose: () => undefined})
+    createElement(Tutorial, {step, steps: tutorialSteps, onStepChange: setStep, onClose: () => undefined})
   );
 }
 
@@ -37,9 +38,9 @@ describe("Tutorial", () => {
   it("progresses through explanatory steps and gates interactive steps", () => {
     const continueButton = () => [...host.querySelectorAll("button")].find(button => button.textContent === "Continuer")!;
     act(() => continueButton().click());
-    expect(host.textContent).toContain("Objectifs et pollution");
-    act(() => continueButton().click());
     expect(host.textContent).toContain("Déplace-toi sur la carte");
+    act(() => continueButton().click());
+    expect(host.textContent).toContain("Le menu de construction");
     act(() => continueButton().click());
     expect(host.textContent).toContain("Le mineur");
     expect(continueButton().disabled).toBe(true);

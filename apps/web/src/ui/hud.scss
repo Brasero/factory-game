@@ -152,6 +152,34 @@ button.destroyBtn {
   kbd { color: c.$state-accent; }
 }
 
+.selected-construction {
+  height: 42px;
+  min-width: 118px;
+  box-sizing: border-box;
+  padding: 4px 10px 4px 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid c.$state-accent;
+  border-radius: 7px;
+  background: c.$ui-surface-alt;
+  color: c.$text-primary;
+  font-weight: 700;
+
+  .hud-tool-icon,
+  .hud-atlas-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .selected-construction-fallback {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .pipe-icon {
   width: 32px;
   height: 32px;

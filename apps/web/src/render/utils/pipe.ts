@@ -1,4 +1,4 @@
-import type {DirectionType, Pipe, Position, WorldSnapshot} from "@engine/api/types";
+import type {ConveyorPlacement, DirectionType, Pipe, Position, WorldSnapshot} from "@engine/api/types";
 import {recipeInputs} from "@engine/config/recipeConfig";
 import {assetManager} from "../manager/AssetManager";
 
@@ -51,11 +51,11 @@ export function drawPipeAt(ctx: CanvasRenderingContext2D, world: WorldSnapshot, 
   const sprite = pipeSprite(connections, pipe.direction, pipe.water > 0);
   const cx = pipe.x * cellSize + cellSize / 2;
   const cy = pipe.y * cellSize + cellSize / 2;
-  const spriteSize = cellSize * 0.72;
+  const spriteSize = cellSize * 0.62;
   ctx.save();
   // Les prolongements se rejoignent au bord des cases ; la pièce centrale peut donc rester plus petite.
   ctx.strokeStyle = "#39465e";
-  ctx.lineWidth = Math.max(8, cellSize * 0.3);
+  ctx.lineWidth = Math.max(8, spriteSize * 0.5);
   ctx.lineCap = "butt";
   ctx.beginPath();
   for (const direction of connections) {
@@ -65,11 +65,27 @@ export function drawPipeAt(ctx: CanvasRenderingContext2D, world: WorldSnapshot, 
   }
   ctx.stroke();
   ctx.strokeStyle = "#66758f";
-  ctx.lineWidth = Math.max(6, cellSize * 0.22);
+  ctx.lineWidth = Math.max(5, spriteSize * 0.32);
   ctx.stroke();
   ctx.translate(cx, cy);
   if (sprite.rotation) ctx.rotate(sprite.rotation);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(image, sprite.sx, sprite.sy, 16, 16, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize);
+  ctx.restore();
+}
+
+export function drawPreviewPipes(
+  ctx: CanvasRenderingContext2D,
+  placements: ConveyorPlacement[],
+  world: WorldSnapshot,
+  cellSize: number
+) {
+  const previewPipes: Pipe[] = placements.map((placement, index) => ({
+    ...placement, id: `preview-pipe-${index}`, entityType: "pipe", water: 0, capacity: 10
+  }));
+  const previewWorld: WorldSnapshot = {...world, pipes: [...(world.pipes ?? []), ...previewPipes]};
+  ctx.save();
+  ctx.globalAlpha = 0.68;
+  previewPipes.forEach(pipe => drawPipeAt(ctx, previewWorld, pipe, cellSize));
   ctx.restore();
 }

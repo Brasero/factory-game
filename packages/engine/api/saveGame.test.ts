@@ -41,4 +41,27 @@ describe("Campaign saves", () => {
       type: "assembler", recipeId: "copper-wire", spriteName: "assembler"
     });
   });
+
+  it("preserves removed scenery", () => {
+    const generated = restoreWorld(serializeWorld(new GameEngine(createTestWorld()).getWorld()));
+    const decoration = {x: 12, y: 14};
+    generated.grid!.replaceDecorations([{...decoration, type: "tree", variant: 1}]);
+    generated.grid!.removeDecoration(decoration);
+    const restored = restoreWorld(serializeWorld(generated));
+    expect(restored.grid!.getTile(decoration.x, decoration.y)?.decoration).toBeUndefined();
+  });
+
+  it("restores the complete saved decoration layout", () => {
+    const generated = restoreWorld(serializeWorld(new GameEngine(createTestWorld()).getWorld()));
+    generated.grid!.replaceDecorations([
+      {x: 12, y: 14, type: "tree", variant: 2},
+      {x: 20, y: 22, type: "rock", variant: 3}
+    ]);
+    const save = serializeWorld(generated);
+    const restored = restoreWorld(save);
+    expect(restored.grid!.getDecorations()).toEqual([
+      {x: 12, y: 14, type: "tree", variant: 2},
+      {x: 20, y: 22, type: "rock", variant: 3}
+    ]);
+  });
 });

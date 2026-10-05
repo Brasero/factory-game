@@ -8,6 +8,7 @@ import type {Resources} from "@engine/models/Resources";
 import {createWorld} from "@engine/world/WorldFactory";
 import {CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
 import type {Pipe} from "@engine/models/Pipe";
+import type {Position} from "@engine/models/Position";
 
 export type GameSave = {
   version: 1;
@@ -19,11 +20,15 @@ export type GameSave = {
   tunnels: Tunnel[];
   resources: Resources;
   campaign: CampaignState;
+  removedDecorations?: Position[];
+  decorations?: Array<Position & {type: string; variant: number}>;
 };
 
 export function serializeWorld(world: World): GameSave {
   return structuredClone({version: 1, tick: world.tick, machines: world.machines, conveyors: world.conveyors, pipes: world.pipes,
-    storages: world.storages, tunnels: world.tunnels, resources: world.resources, campaign: world.campaign});
+    storages: world.storages, tunnels: world.tunnels, resources: world.resources, campaign: world.campaign,
+    removedDecorations: world.grid?.getRemovedDecorations() ?? [],
+    decorations: world.grid?.getDecorations() ?? []});
 }
 
 export function restoreWorld(save: GameSave): World {
@@ -50,6 +55,8 @@ export function restoreWorld(save: GameSave): World {
   world.resources = structuredClone(save.resources);
   world.campaign = structuredClone(save.campaign);
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;
+  if (save.decorations) world.grid?.replaceDecorations(save.decorations);
+  else for (const position of save.removedDecorations ?? []) world.grid?.removeDecoration(position);
   for (const entity of [...world.machines, ...world.conveyors, ...world.pipes, ...world.storages]) world.grid?.occupy(entity);
   return world;
 }
