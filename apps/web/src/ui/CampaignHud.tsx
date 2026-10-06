@@ -50,20 +50,26 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
       <div className="level-heading">
         <span>NIVEAU {CAMPAIGN_LEVELS.indexOf(definition) + 1}</span>
         <strong>{definition.name}</strong>
-        {progress.status === "completed" && <button onClick={() => finalizeLevel(definition.id)}>Finaliser</button>}
+        {progress.status === "completed" && <button onClick={() => setDismissedLevel(null)}>Finaliser…</button>}
       </div>
-      <div className="objective-progress">
+      <div className="objective-progress" data-tutorial="campaign-objective">
         <span>Exporter {definition.objective.amount} {resourceNames[definition.objective.resource]}</span>
         <strong>{Math.min(value, definition.objective.amount)} / {definition.objective.amount}</strong>
         <div><i style={{width: `${Math.min(100, value / definition.objective.amount * 100)}%`}} /></div>
       </div>
-      <div className={`pollution-meter ${pollutionRatio > 0.75 ? "danger" : ""}`}>
+      <div className={`pollution-meter ${pollutionRatio > 0.75 ? "danger" : ""}`} data-tutorial="campaign-pollution">
         <span>Pollution globale</span>
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
         <div><i style={{width: `${pollutionRatio * 100}%`}} /></div>
         <small>Absorption naturelle : −0,02 par tick</small>
       </div>
       <div className="campaign-resources" aria-label="Ressources stockées">
+        <div className="campaign-resource construction-material" data-tutorial="construction-materials"
+          aria-label={`Matériaux de construction : ${campaign.constructionMaterials}`}
+          title="Matériaux de construction">
+          <span className="construction-material-icon" aria-hidden="true">🧱</span>
+          <span className="campaign-resource-value"><small>Construction</small><strong>{campaign.constructionMaterials}</strong></span>
+        </div>
         {resourceDisplay.map(resource => {
           const amount = stored[resource.type] ?? 0;
           return <div key={resource.type} className={`campaign-resource ${resource.type}`}
@@ -84,10 +90,16 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
           <div><span>Temps</span><strong>{progress.completedAt ?? 0} ticks</strong></div>
           <div><span>Pollution de l’île</span><strong>{Math.floor(progress.pollution)}</strong></div>
         </div>
-        <p>Tu peux encore améliorer cette usine, ou la finaliser pour verrouiller sa configuration.</p>
+        <p>Tu peux encore améliorer cette usine avant de passer à la suite.</p>
+        <div className="finalization-warning" role="alert">
+          <strong>⚠ VERROUILLAGE DÉFINITIF</strong>
+          <span>Finaliser cette île empêchera définitivement toute construction, destruction ou modification dessus.</span>
+        </div>
         <div className="level-result-actions">
           <button className="text-button" onClick={() => setDismissedLevel(definition.id)}>Continuer à optimiser</button>
-          <button className="secondary-button" onClick={() => { finalizeLevel(definition.id); setDismissedLevel(definition.id); }}>Finaliser l’île</button>
+          <button className="secondary-button finalization-button" onClick={() => { finalizeLevel(definition.id); setDismissedLevel(definition.id); }}>
+            Finaliser et verrouiller définitivement
+          </button>
           {next && <button className="primary-button" onClick={() => { activateLevel(next.id); setDismissedLevel(definition.id); }}>
             Explorer l’île suivante
           </button>}

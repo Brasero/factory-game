@@ -9,8 +9,13 @@ import {pauseGame, startGame} from "@web/game/GameController.ts";
 import {assetManager} from "@web/render/manager/AssetManager.ts";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import type {MachineVariant} from "@engine/models/Machine";
+import {MACHINE_VARIANTS} from "@engine/config/machineConfig";
+import {constructionCost} from "@engine/config/constructionConfig";
 import {useEffect, useState} from "react";
 
+const machineSelections: SelectedItem[] = ["miner", "water-pump", "iron-smelter", "assembler", "boiler", "recycler"];
+const variantLabels: Record<MachineVariant, string> = {eco: "Écologique", standard: "Standard", industrial: "Industrielle"};
+const multiplier = (value: number) => `×${value.toLocaleString("fr-FR")}`;
 
 export function Hud() {
   const tick = useWorldSelector((world) => world.tick);
@@ -24,6 +29,29 @@ export function Hud() {
   const unlockedMachines = new Set(unlockedDefinitions.flatMap(level => level.unlocks.machines));
   const unlockedVariants = new Set(unlockedDefinitions.flatMap(level => level.unlocks.variants));
   const [buildMenuOpen, setBuildMenuOpen] = useState(false);
+  const machineSelected = !!selectedItem && machineSelections.includes(selectedItem);
+
+  const machineVariantSelector = (floating = false) => <div
+    className={`machine-variant-panel${floating ? " floating" : ""}`}
+    data-tutorial="machine-variants" aria-label="Performances des variantes de machine">
+    <div className="machine-variant-heading">
+      <strong>Variante de machine</strong>
+      <span>Compare ses performances avant de la poser</span>
+    </div>
+    <div className="machine-variant-options">
+      {(["eco", "standard", "industrial"] as MachineVariant[]).filter(variant => unlockedVariants.has(variant)).map(variant => {
+        const profile = MACHINE_VARIANTS[variant];
+        return <button key={variant} className={selectedVariant === variant ? "selected" : ""}
+          aria-pressed={selectedVariant === variant} onClick={() => dispatch(setSelectedVariant(variant))}>
+          <strong>{variantLabels[variant]}</strong>
+          <span><small>Cadence</small><b>{multiplier(profile.speed)}</b></span>
+          <span><small>Rendement</small><b>{multiplier(profile.production)}</b></span>
+          <span><small>Pollution</small><b>{multiplier(profile.pollution)}</b></span>
+          <span><small>Coût</small><b>🧱 {constructionCost(selectedItem || "miner", variant)}</b></span>
+        </button>;
+      })}
+    </div>
+  </div>;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -79,16 +107,19 @@ export function Hud() {
     const labels: Partial<Record<SelectedItem, string>> = {
       miner: "Mineur", "water-pump": "Pompe à eau", "iron-smelter": "Fonderie",
       assembler: "Machine de production", boiler: "Boiler", conveyor: "Tapis roulant",
-      pipe: "Tuyau", merger: "Merger", splitter: "Splitter", storage: "Coffre"
+      recycler: "Recycleur",
+      pipe: "Tuyau", merger: "Merger", splitter: "Splitter", "smart-splitter": "Splitter intelligent", storage: "Coffre"
     };
     let icon;
     if (selectedItem === "conveyor") icon = <span className="hud-atlas-icon conveyor-icon"
       style={{backgroundImage: `url(${assetManager.getImage("conveyor.tier1").src})`}} />;
     else if (selectedItem === "pipe") icon = <span className="hud-atlas-icon pipe-icon"
       style={{backgroundImage: `url(${assetManager.getImage("pipe.metal").src})`}} />;
-    else if (selectedItem === "merger" || selectedItem === "splitter") icon = <span
-      className={`hud-atlas-icon router-icon ${selectedItem}`}
-      style={{backgroundImage: `url(${assetManager.getImage(`router.${selectedItem}`).src})`}} />;
+    else if (selectedItem === "merger" || selectedItem === "splitter" || selectedItem === "smart-splitter") {
+      const assetType = selectedItem === "smart-splitter" ? "splitter" : selectedItem;
+      icon = <span className={`hud-atlas-icon router-icon ${selectedItem}`}
+        style={{backgroundImage: `url(${assetManager.getImage(`router.${assetType}`).src})`}} />;
+    }
     else if (selectedItem === "storage") icon = <img className="hud-tool-icon storage-icon"
       src={assetManager.getImage("storage.crate").src} alt=""/>;
     else if (selectedItem === "miner") icon = <img className="hud-tool-icon"
@@ -101,10 +132,14 @@ export function Hud() {
       src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt=""/>;
     else if (selectedItem === "boiler") icon = <img className="hud-tool-icon"
       src={assetManager.getImage("machine.automation.boiler.idle").src} alt=""/>;
+    else if (selectedItem === "recycler") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.automation.recycler.idle").src} alt=""/>;
     else icon = <span className="selected-construction-fallback">{selectedItem}</span>;
     return <div className="selected-construction" aria-label={`Construction sélectionnée : ${labels[selectedItem] ?? selectedItem}`}
       title={labels[selectedItem] ?? selectedItem}>
-      {icon}<span>{labels[selectedItem] ?? selectedItem}</span>
+      {icon}<span className="selected-construction-label"><b>{labels[selectedItem] ?? selectedItem}</b>
+        <small>{machineSelected ? `Variante ${variantLabels[selectedVariant]} · ` : ""}🧱 {constructionCost(selectedItem, selectedVariant)}</small>
+      </span>
     </div>;
   };
   return (<div id="hud_container">
@@ -121,7 +156,10 @@ export function Hud() {
     
     <button className="build-menu-toggle" data-tutorial="build-menu" aria-label="Ouvrir le menu de construction" aria-expanded={buildMenuOpen}
       onClick={() => setBuildMenuOpen(open => !open)}>🛠 <kbd>A</kbd></button>
-    {!buildMenuOpen && selectedConstruction()}
+    {!buildMenuOpen && selectedItem && <div className="selected-build-choice">
+      {machineSelected && machineVariantSelector(true)}
+      {selectedConstruction()}
+    </div>}
     <div id="hud_commands" className={buildMenuOpen ? "open" : ""} aria-hidden={!buildMenuOpen}>
       <div id="hud_commands_extractor">
         <button data-tutorial="miner" aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
@@ -140,10 +178,15 @@ export function Hud() {
             src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt="" />
           </button>}
         {unlockedMachines.has("boiler") && <button data-tutorial="boiler" aria-label="Boiler dépolluant"
-          title="Boiler — consomme de l’eau pour réduire rapidement la pollution"
+          title="Boiler — consomme de l’eau pour réduire la pollution"
           className={buttonMachineStyle("boiler")} onClick={() => handleClick("boiler")}>
           <img className="hud-tool-icon"
             src={assetManager.getImage("machine.automation.boiler.idle").src} alt="" />
+        </button>}
+        {unlockedMachines.has("recycler") && <button data-tutorial="recycler" aria-label="Recycleur"
+          title="Recycleur — transforme toute ressource en matériaux de construction"
+          className={buttonMachineStyle("recycler")} onClick={() => handleClick("recycler")}>
+          <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.recycler.idle").src} alt="" />
         </button>}
       </div>
       <div id="hud_commands_logistique">
@@ -153,6 +196,12 @@ export function Hud() {
           className={buttonMachineStyle(type)} onClick={() => handleClick(type)}>
           <span className={`hud-atlas-icon router-icon ${type}`} style={{backgroundImage: `url(${assetManager.getImage(`router.${type}`).src})`}} />
         </button>)}
+        <button data-tutorial="smart-splitter" aria-label="Splitter intelligent"
+          title="Splitter intelligent — filtre les ressources par sortie"
+          className={buttonMachineStyle("smart-splitter")} onClick={() => handleClick("smart-splitter")}>
+          <span className="hud-atlas-icon router-icon smart-splitter"
+            style={{backgroundImage: `url(${assetManager.getImage("router.splitter").src})`}} />
+        </button>
         <button data-tutorial="conveyor" aria-label="Tapis roulant" className={buttonMachineStyle("conveyor")} onClick={() => handleClick("conveyor")}>
           <span className="hud-atlas-icon conveyor-icon"
             style={{backgroundImage: `url(${assetManager.getImage("conveyor.tier1").src})`}} />
@@ -164,12 +213,7 @@ export function Hud() {
           <img className="hud-tool-icon storage-icon" src={assetManager.getImage("storage.crate").src} alt=""/>
         </button>
       </div>
-      {selectedItem && !["conveyor", "pipe", "splitter", "merger", "storage"].includes(selectedItem) && <div className="machine-variants" aria-label="Version de la machine">
-        {(["eco", "standard", "industrial"] as MachineVariant[]).filter(variant => unlockedVariants.has(variant)).map(variant =>
-          <button key={variant} className={selectedVariant === variant ? "selected" : ""} onClick={() => dispatch(setSelectedVariant(variant))}>
-            {variant === "eco" ? "Éco" : variant === "industrial" ? "Indus." : "Standard"}
-          </button>)}
-      </div>}
+      {machineSelected && machineVariantSelector()}
     </div>
     <button data-tutorial="destroy" aria-label="Mode destruction" title="Démolir une construction"
       className={destroyButtonClass()} onClick={toggleDestroyMode}>

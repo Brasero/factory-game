@@ -17,9 +17,9 @@ vi.mock("./CanvasRenderer", () => ({render: vi.fn()}));
 vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
 vi.mock("./utils/pipe", () => ({drawPreviewPipes: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
-  canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), placeStorage: vi.fn(),
+  canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), destroyEntities: vi.fn(() => false), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
-  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn()
+  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn(), setSmartSplitterFilter: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
@@ -54,6 +54,11 @@ describe("Canvas interactions (DOM)", () => {
     mouse(canvas, "click", 80, 112);
     expect(controller.destroyEntity).toHaveBeenCalledWith(2, 3);
   });
+  it("places the recycler with the selected variant", () => {
+    act(() => store.dispatch(setSelectedItem("recycler")));
+    mouse(canvas, "click", 80, 112);
+    expect(controller.placeMachine).toHaveBeenCalledWith(2, 3, "recycler", "standard");
+  });
   it("places a single belt and previews movement within the starting cell", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));
     mouse(canvas, "mousedown", 16, 16, 1);
@@ -77,6 +82,24 @@ describe("Canvas interactions (DOM)", () => {
       {x: 0, y: 0, direction: "right"}, {x: 1, y: 0, direction: "right"}, {x: 2, y: 0, direction: "right"}
     ]);
   });
+  it.each([
+    ["conveyor", controller.placeConveyorLine],
+    ["pipe", controller.placePipeLine]
+  ] as const)("inverts the bend of a dragged %s line with R", (item, placeLine) => {
+    act(() => store.dispatch(setSelectedItem(item)));
+    mouse(canvas, "mousedown", 16, 16, 1);
+    mouse(canvas, "mousemove", 80, 80, 1);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "r"})));
+    mouse(canvas, "mouseup", 80, 80);
+
+    expect(placeLine).toHaveBeenLastCalledWith([
+      {x: 0, y: 0, direction: "down"},
+      {x: 0, y: 1, direction: "down"},
+      {x: 0, y: 2, direction: "right"},
+      {x: 1, y: 2, direction: "right"},
+      {x: 2, y: 2, direction: "right"}
+    ]);
+  });
   it("destroys every crossed cell and keeps the camera locked in destroy mode", () => {
     act(() => store.dispatch(setToolMode("destroy")));
     frame();
@@ -84,7 +107,9 @@ describe("Canvas interactions (DOM)", () => {
     mouse(canvas, "mousedown", 16, 16, 1);
     mouse(canvas, "mousemove", 112, 16, 1);
     mouse(canvas, "mouseup", 112, 16);
-    expect(vi.mocked(controller.destroyEntity).mock.calls.slice(-4)).toEqual([[0, 0], [1, 0], [2, 0], [3, 0]]);
+    expect(controller.destroyEntities).toHaveBeenLastCalledWith([
+      {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}
+    ]);
     mouse(canvas, "mousedown", 100, 100, 1);
     mouse(canvas, "mousemove", 164, 132, 1);
     mouse(canvas, "mouseup", 164, 132);
@@ -117,9 +142,9 @@ describe("Canvas interactions (DOM)", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));
     place("up");
   });
-  it.each(["splitter", "merger"] as const)("places and rotates %s using the belt shortcuts", type => {
+  it.each(["splitter", "smart-splitter", "merger"] as const)("places and rotates %s using the belt shortcuts", type => {
     act(() => store.dispatch(setSelectedItem(type)));
-    expect(host.textContent).toContain(type === "splitter" ? "Splitter" : "Merger");
+    expect(host.textContent).toContain(type === "merger" ? "Merger" : type === "smart-splitter" ? "Splitter intelligent" : "Splitter");
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "r"})));
     mouse(canvas, "click", 80, 112);
     expect(controller.placeConveyor).toHaveBeenLastCalledWith(2, 3, "down", type);

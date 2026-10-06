@@ -6,6 +6,7 @@ import {CampaignHud} from "./CampaignHud";
 import {setWorldSnapshot} from "@web/game/worldStore";
 import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
 import {createTestWorld} from "@engine/test/createTestWorld";
+import {finalizeLevel} from "@web/game/GameController";
 
 vi.mock("@web/game/GameController", () => ({activateLevel: vi.fn(), finalizeLevel: vi.fn()}));
 vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn(() => ({src: "resource.png"}))}}));
@@ -13,7 +14,11 @@ Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 
 let root: Root;
 let host: HTMLDivElement;
-afterEach(() => { act(() => root?.unmount()); host?.remove(); });
+afterEach(() => {
+  act(() => root?.unmount());
+  host?.remove();
+  vi.clearAllMocks();
+});
 
 describe("Campaign game over", () => {
   it("allows the player to restart the campaign", () => {
@@ -41,7 +46,8 @@ describe("Campaign game over", () => {
     act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn(), onContinue: vi.fn(), onMainMenu: vi.fn()})));
 
     const resources = host.querySelector('[aria-label="Ressources stockées"]')!;
-    expect(resources.children).toHaveLength(8);
+    expect(resources.children).toHaveLength(9);
+    expect(resources.querySelector('[aria-label="Matériaux de construction : 150"]')).toBeTruthy();
     expect(resources.querySelector('[aria-label="Fer : 0"]')).toBeTruthy();
     expect(resources.querySelector('[aria-label="Circuits : 0"]')).toBeTruthy();
     expect(resources.querySelector(".pulse")).toBeNull();
@@ -64,5 +70,23 @@ describe("Campaign game over", () => {
     expect(onContinue).toHaveBeenCalledOnce();
     expect(onRestart).toHaveBeenCalledOnce();
     expect(onMainMenu).toHaveBeenCalledOnce();
+  });
+
+  it("warns before permanently finalizing an island", () => {
+    const world = createTestWorld();
+    world.campaign.levels[0].status = "completed";
+    setWorldSnapshot(buildWorldSnapshot(world));
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn(), onContinue: vi.fn(), onMainMenu: vi.fn()})));
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("VERROUILLAGE DÉFINITIF");
+    expect(host.textContent).toContain("empêchera définitivement toute construction, destruction ou modification");
+
+    const button = [...host.querySelectorAll("button")]
+      .find(item => item.textContent?.includes("Finaliser et verrouiller définitivement"))!;
+    act(() => button.click());
+    expect(finalizeLevel).toHaveBeenCalledWith("level-1");
   });
 });

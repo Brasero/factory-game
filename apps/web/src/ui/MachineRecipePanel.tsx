@@ -39,12 +39,14 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
       {options.length === 0 && <p>Cette machine ne possède pas de recette.</p>}
       {options.map(recipeId => {
         const recipe = RECIPES[recipeId];
+        const inputLabel = recipe.acceptsAnyResource ? "1 ressource au choix" : ingredients(recipe.inputs);
+        const outputLabel = recipe.constructionMaterials
+          ? `${recipe.constructionMaterials} matériau de construction`
+          : recipe.pollutionReduction ? `−${recipe.pollutionReduction} pollution` : ingredients(recipe.outputs);
         return <button key={recipeId} className={`recipe-choice ${selected === recipeId ? "selected" : ""}`}
           onClick={() => selectMachineRecipe(machine.id, recipeId as RecipeId)}>
           <strong>{recipe.name}</strong>
-          <span>{ingredients(recipe.inputs)} → {recipe.pollutionReduction
-            ? `−${recipe.pollutionReduction} pollution`
-            : ingredients(recipe.outputs)}</span>
+          <span>{inputLabel} → {outputLabel}</span>
           <small>{recipe.duration} ticks</small>
         </button>;
       })}

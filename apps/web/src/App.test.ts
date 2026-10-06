@@ -9,6 +9,7 @@ import {pauseGame, startGame} from "@web/game/GameController.ts";
 import {getWorldSnapshot, setWorldSnapshot} from "@web/game/worldStore.ts";
 import {emptyResources} from "@engine/models/Resources";
 import {createTestCampaign} from "@engine/test/createTestWorld";
+import {setPaused} from "@web/store/controlSlice";
 
 vi.mock("@web/render/manager/AssetManager.ts", () => ({loadGameAssets: vi.fn(() => Promise.resolve())}));
 vi.mock("@web/game/GameController.ts", () => ({startGame: vi.fn(), pauseGame: vi.fn(), startNewCampaign: vi.fn(),
@@ -25,6 +26,7 @@ const button = (label: string) => [...host.querySelectorAll("button")].find(item
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  store.dispatch(setPaused(false));
   const campaign = createTestCampaign();
   campaign.levels[1].status = "locked";
   campaign.levels[2].status = "locked";
@@ -56,13 +58,15 @@ describe("application menu", () => {
   it("starts the tutorial and opens the pause menu with Escape", () => {
     act(() => button("Tutoriel").click());
     expect(host.textContent).toContain("Construis ta première usine");
+    expect(pauseGame).toHaveBeenCalled();
+    expect(startGame).not.toHaveBeenCalled();
     act(() => button("Quitter").click());
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
     expect(pauseGame).toHaveBeenCalled();
     expect(host.textContent).toContain("Jeu en pause");
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
     expect(host.textContent).toContain("Canvas");
-    expect(startGame).toHaveBeenCalledTimes(2);
+    expect(startGame).toHaveBeenCalledTimes(1);
   });
 
   it("opens the level tutorial once when its mechanics unlock", async () => {
@@ -71,8 +75,19 @@ describe("application menu", () => {
     next.campaign.levels[1].status = "active";
     await act(async () => { setWorldSnapshot(next); await Promise.resolve(); });
     expect(host.textContent).toContain("Le réseau d’eau");
+    expect(pauseGame).toHaveBeenCalled();
     act(() => button("Quitter").click());
     await act(async () => { setWorldSnapshot({...next, tick: 1}); await Promise.resolve(); });
     expect(host.textContent).not.toContain("Le réseau d’eau");
+  });
+
+  it("pauses when a level becomes completed", async () => {
+    act(() => button("Jouer").click());
+    vi.mocked(pauseGame).mockClear();
+    const next = structuredClone(getWorldSnapshot());
+    next.campaign.levels[0].status = "completed";
+    await act(async () => { setWorldSnapshot(next); await Promise.resolve(); });
+    expect(pauseGame).toHaveBeenCalledOnce();
+    expect(store.getState().control.paused).toBe(true);
   });
 });

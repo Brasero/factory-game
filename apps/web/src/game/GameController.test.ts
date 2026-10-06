@@ -73,4 +73,14 @@ describe("GameController", () => {
     expect(before.machines).toHaveLength(1);
     expect(controller.placeIronMine(1, 1)).toBe(true);
   });
+
+  it("publishes one result after a grouped destruction", async () => {
+    const controller = await import("./GameController");
+    const {getWorldSnapshot} = await import("./worldStore");
+    controller.placeConveyor(0, 0, "right");
+    controller.placeConveyor(1, 0, "right");
+
+    expect(controller.destroyEntities([{x: 0, y: 0}, {x: 1, y: 0}])).toBe(true);
+    expect(getWorldSnapshot().conveyors).toHaveLength(0);
+  });
 });

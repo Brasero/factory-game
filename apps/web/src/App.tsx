@@ -1,5 +1,5 @@
 import './App.scss'
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {continueCampaign, getCurrentSnapshot, hasSavedGame, startGame, pauseGame, startNewCampaign} from "./game/GameController.ts";
 import {Hud} from "./ui/Hud.tsx";
 import {GameCanvas} from "@web/render/GameCanvas.tsx";
@@ -28,6 +28,7 @@ function App() {
     const [hasSave, setHasSave] = useState(hasSavedGame());
     const currentTool = useAppSelector(selectCurentTool)
     const campaignLevels = useWorldSelector(world => world.campaign.levels);
+    const previousLevelStatuses = useRef<Map<string, string> | null>(null);
     const dispatch = useAppDispatch();
     useEffect(() => {
         let cancelled = false;
@@ -72,12 +73,25 @@ function App() {
       let cancelled = false;
       queueMicrotask(() => {
         if (cancelled) return;
+        pauseGame();
+        dispatch(setPaused(true));
         setShownTutorials(previous => new Set(previous).add(next));
         setTutorialSequence(next);
         setTutorialStep(0);
       });
       return () => { cancelled = true; };
-    }, [campaignLevels, hasStarted, screen, shownTutorials, tutorialStep]);
+    }, [campaignLevels, dispatch, hasStarted, screen, shownTutorials, tutorialStep]);
+
+    useEffect(() => {
+      const current = new Map(campaignLevels.map(level => [level.id, level.status]));
+      const previous = previousLevelStatuses.current;
+      previousLevelStatuses.current = current;
+      if (!hasStarted || !previous) return;
+      const newlyCompleted = campaignLevels.some(level => level.status === "completed" && previous.get(level.id) !== "completed");
+      if (!newlyCompleted) return;
+      pauseGame();
+      dispatch(setPaused(true));
+    }, [campaignLevels, dispatch, hasStarted]);
 
     const play = () => {
       setHasStarted(true);
@@ -86,7 +100,10 @@ function App() {
       startGame();
     };
     const openTutorial = () => {
-      play();
+      setHasStarted(true);
+      setScreen("game");
+      pauseGame();
+      dispatch(setPaused(true));
       setTutorialSequence("basics");
       setShownTutorials(previous => new Set(previous).add("basics"));
       setTutorialStep(0);
@@ -97,7 +114,10 @@ function App() {
       dispatch(setSelectedVariant("standard"));
       dispatch(setToolMode("build"));
       setHasSave(false);
-      play();
+      setHasStarted(true);
+      setScreen("game");
+      pauseGame();
+      dispatch(setPaused(true));
       setShownTutorials(new Set(["basics"]));
       setTutorialSequence("basics");
       setTutorialStep(0);
@@ -144,7 +164,9 @@ function App() {
       savePreview={hasSave ? getCurrentSnapshot() : undefined}
       onPlay={play} onNewCampaign={newCampaign} onTutorial={openTutorial} />}
     {screen === "pause" && <GameMenu mode="pause" onPlay={play} onTutorial={() => {
-      play();
+      setScreen("game");
+      pauseGame();
+      dispatch(setPaused(true));
       setTutorialSequence("basics");
       setShownTutorials(previous => new Set(previous).add("basics"));
       setTutorialStep(0);

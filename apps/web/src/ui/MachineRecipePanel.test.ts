@@ -68,6 +68,22 @@ describe("Machine recipe panel", () => {
       machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
     })));
 
-    expect(host.textContent).toContain("Dépollution à l’eau1 Eau → −12 pollution20 ticks");
+    expect(host.textContent).toContain("Dépollution à l’eau1 Eau → −4 pollution30 ticks");
+  });
+
+  it("explains that the recycler accepts any resource", () => {
+    const world = createTestWorld();
+    const engine = new GameEngine(world);
+    engine.placeMachine(0, 0, "recycler");
+    const snapshot = engine.getSnapshot();
+    setWorldSnapshot(snapshot);
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(MachineRecipePanel, {
+      machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
+    })));
+
+    expect(host.textContent).toContain("Recyclage1 ressource au choix → 1 matériau de construction25 ticks");
   });
 });

@@ -24,7 +24,7 @@ export function Tutorial({step, onStepChange, onClose, steps}: TutorialProps) {
       : null;
     target?.classList.add("tutorial-target");
     return () => target?.classList.remove("tutorial-target");
-  }, [current.target]);
+  }, [current.target, currentTool, selectedItem]);
 
   return <aside className="tutorial-card" aria-live="polite" aria-label="Tutoriel">
     <div className="tutorial-progress" aria-label={`Étape ${step + 1} sur ${steps.length}`}>
@@ -39,7 +39,9 @@ export function Tutorial({step, onStepChange, onClose, steps}: TutorialProps) {
     </div>
     <p>{current.description}</p>
     {current.tip && <p className="tutorial-tip">💡 {current.tip}</p>}
-    {!interactionComplete && <p className="tutorial-action">Sélectionne l’élément mis en évidence pour continuer.</p>}
+    {!interactionComplete && <p className="tutorial-action">{current.expectedSelection
+      ? <>Ouvre le menu de construction avec <kbd>A</kbd>, puis sélectionne la construction mise en évidence pour continuer.</>
+      : "Active l’outil mis en évidence pour continuer."}</p>}
     <div className="tutorial-actions">
       <button className="text-button" onClick={onClose}>Quitter</button>
       <div>

@@ -1,6 +1,6 @@
 import {createSession, isGameSave, TickLoop} from "@engine/api/index.ts";
 import type {GameSave} from "@engine/api/index.ts";
-import type {DirectionType, WorldSnapshot, SelectedItem} from "@engine/api/types.ts";
+import type {DirectionType, WorldSnapshot, SelectedItem, Conveyor, SmartSplitterFilter, SmartSplitterPort} from "@engine/api/types.ts";
 import type {MachineType, MachineVariant} from "@engine/models/Machine";
 import {setWorldSnapshot} from "@web/game/worldStore.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
@@ -71,7 +71,7 @@ export function placeIronSmelter(x: number, y: number) {
     return placeMachine(x, y, "iron-smelter");
 }
 
-export function placeConveyor(x: number, y: number, direction: DirectionType, conveyorType: "conveyor" | "splitter" | "merger" = "conveyor") {
+export function placeConveyor(x: number, y: number, direction: DirectionType, conveyorType: Conveyor["type"] = "conveyor") {
     const success = session.dispatch({
         type: "place-conveyor",
         x,
@@ -83,6 +83,12 @@ export function placeConveyor(x: number, y: number, direction: DirectionType, co
         updateWorld();
     }
     return success
+}
+
+export function setSmartSplitterFilter(splitterId: string, port: SmartSplitterPort, filter: SmartSplitterFilter) {
+    const success = session.dispatch({type: "set-smart-splitter-filter", splitterId, port, filter});
+    if (success) updateWorld();
+    return success;
 }
 
 export function placeConveyorLine(
@@ -161,6 +167,13 @@ export function destroyEntity(x: number, y: number) {
         y
     })
     updateWorld();
+    return success;
+}
+
+export function destroyEntities(positions: {x: number; y: number}[]) {
+    if (!positions.length) return false;
+    const success = session.dispatch({type: "destroy-entities", positions});
+    if (success) updateWorld();
     return success;
 }
 
