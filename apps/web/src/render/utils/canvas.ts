@@ -100,7 +100,8 @@ function isPathValid(
 export function getBestPath(
     start: Position,
     end: Position,
-    canPlace: (pos: Position) => boolean
+    canPlace: (pos: Position) => boolean,
+    horizontalFirst = true
 ): Position[] {
   const pathA = buildLPath(start, end, true)
   const pathB = buildLPath(start, end, false)
@@ -111,7 +112,7 @@ export function getBestPath(
   if (isValidA && !isValidB) return pathA;
   if (!isValidA && isValidB) return pathB;
   if (isValidA && isValidB) {
-    return pathA.length <= pathB.length ? pathA : pathB
+    return horizontalFirst ? pathA : pathB
   }
   return [];
 }

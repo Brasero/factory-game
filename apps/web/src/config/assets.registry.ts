@@ -31,6 +31,10 @@ import assemblerIndustrialIdle from "../assets/machines/Assembler_Machine_3.png"
 import assemblerIndustrialRunning from "../assets/machines/Assembler_Machine_3_Running.png";
 import boilerIdle from "../assets/machines/Boiler.png";
 import boilerRunning from "../assets/machines/Boiler_Running.png";
+import recyclerIdle from "../assets/machines/Recycler.png";
+import recyclerRunning from "../assets/machines/RecyclerRunning.png";
+import tunnelInput from "../assets/machines/TunnelInput.png";
+import tunnelOutput from "../assets/machines/TunnelOutput.png";
 import crate from "../assets/logistic/storage/crate.png";
 import waterNode from "../assets/ore-nodeTiles/Materials/Water/Tiles/Water_Tileset.png";
 import ironNode from "../assets/ore-nodeTiles/Materials/Iron/Tiles/Tile-0003.png";
@@ -92,8 +96,10 @@ export const imagePath = {
         standard: {idle: assemblerStandardIdle, running: assemblerStandardRunning},
         industrial: {idle: assemblerIndustrialIdle, running: assemblerIndustrialRunning}
       },
-      boiler: {idle: boilerIdle, running: boilerRunning}
-    }
+      boiler: {idle: boilerIdle, running: boilerRunning},
+      recycler: {idle: recyclerIdle, running: recyclerRunning}
+    },
+    tunnel: {input: tunnelInput, output: tunnelOutput}
   },
   storage: {
     crate

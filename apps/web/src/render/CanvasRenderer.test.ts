@@ -3,6 +3,7 @@ import {findPreviousConveyor, interpolatedConveyorProgress, pollutionHazeOpacity
 import type {Conveyor, DirectionType, WorldSnapshot} from "@engine/api/types";
 import {assetManager} from "@web/render/manager/AssetManager";
 import {createTestCampaign} from "@engine/test/createTestWorld";
+import {emptyResources} from "@engine/models/Resources";
 
 vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn((key: string) => ({width: 192, key}))}}));
 
@@ -64,6 +65,63 @@ it("cuts the running boiler into two complete 64 pixel frames", () => {
   const machineDraw = drawImage.mock.calls.find(([image]) => image.key === "machine.automation.boiler.running");
   expect(machineDraw).toEqual([expect.anything(), 64, 0, 64, 48, 16, 16, 64, 48]);
 });
+
+it("cuts the active recycler into four complete animation frames", () => {
+  const recycler = {
+    id: "recycler", x: 1, y: 1, type: "recycler" as const, entityType: "machine" as const,
+    spriteName: "recycler", progress: 1, active: true, buffer: {iron: 1}, capacity: 100,
+    efficiency: 1, production: 1, variant: "standard" as const, recipeId: "recycling" as const
+  };
+  const world: WorldSnapshot = {
+    tick: 0, machines: [recycler], storages: [], tunnels: [], conveyors: [], campaign: createTestCampaign(),
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 3, height: 3, resources: [], tiles: Array.from({length: 3}, () =>
+      Array.from({length: 3}, () => ({biome: "sea" as const, variant: 0})))}
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 96, height: 96}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+
+  render(ctx, world);
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.automation.recycler.running"))
+    .toEqual([expect.anything(), 0, 0, 48, 48, 24, 16, 48, 48]);
+
+  drawImage.mockClear();
+  world.tick = 4;
+  render(ctx, world);
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.automation.recycler.running"))
+    .toEqual([expect.anything(), 48, 0, 48, 48, 24, 16, 48, 48]);
+
+  drawImage.mockClear();
+  world.machines[0].active = false;
+  render(ctx, world);
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.automation.recycler.idle"))
+    .toEqual([expect.anything(), 0, 0, 48, 48, 24, 16, 48, 48]);
+});
+
+it("draws distinct oversized sprites for island input and output tunnels", () => {
+  const world: WorldSnapshot = {
+    tick: 0, machines: [], storages: [], conveyors: [], campaign: createTestCampaign(),
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    tunnels: [
+      {id: "input", x: 1, y: 1, entityType: "tunnel", type: "input", levelId: "level-2",
+        direction: "right", capacity: 200, stored: emptyResources()},
+      {id: "output", x: 3, y: 1, entityType: "tunnel", type: "output", levelId: "level-2",
+        direction: "right", capacity: 200, stored: emptyResources()}
+    ],
+    grid: {width: 5, height: 3, resources: [], tiles: Array.from({length: 3}, () =>
+      Array.from({length: 5}, () => ({biome: "sea" as const, variant: 0})))}
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 160, height: 96}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+
+  render(ctx, world);
+
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.tunnel.input"))
+    .toEqual([expect.anything(), 16, 0, 64, 64]);
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.tunnel.output"))
+    .toEqual([expect.anything(), 80, 0, 64, 64]);
+});
+
 it("uses indexed predecessors for both resources and sprites, including disconnected belts", () => {
   const world: WorldSnapshot = {
     tick: 1, machines: [], storages: [], tunnels: [], campaign: createTestCampaign(), resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},

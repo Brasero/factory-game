@@ -13,14 +13,14 @@ export function drawPreviewConveyor(ctx: CanvasRenderingContext2D, conveyors: {x
     const px = c.x * CELL_SIZE;
     const py = c.y * CELL_SIZE;
     ctx.globalAlpha = 0.5;
-    if (c.type === "splitter" || c.type === "merger") {
+    if (c.type === "splitter" || c.type === "smart-splitter" || c.type === "merger") {
       const preview: Conveyor = {...c, type: c.type, id: "preview", entityType: "conveyor", carrying: [], speed: 0, capacity: 3};
       const neighbors = world?.conveyors.filter(belt => belt.x !== c.x || belt.y !== c.y) ?? [];
       drawRouter(ctx, c.x, c.y, c.direction, c.type, 0, connectedRouterIds([...neighbors, preview]).has(preview.id));
     }
     else drawBeltSprite(ctx, px, py, c.direction, c.direction, 0, c.tier, "middle")
     ctx.globalAlpha = 1;
-    if (c.type === "splitter" || c.type === "merger") drawRouterArrows(ctx, c.x, c.y, c.direction, c.type);
+    if (c.type === "splitter" || c.type === "smart-splitter" || c.type === "merger") drawRouterArrows(ctx, c.x, c.y, c.direction, c.type);
   })
 }
 
@@ -130,20 +130,33 @@ export function connectedRouterIds(conveyors: Conveyor[]): Set<string> {
 }
 
 export function drawRouter(ctx: CanvasRenderingContext2D, x: number, y: number,
-  direction: DirectionType, type: "splitter" | "merger", tick = 0, connected = false) {
+  direction: DirectionType, type: "splitter" | "smart-splitter" | "merger", tick = 0, connected = false) {
   // Chaque orientation a une ligne jaune (8 frames), puis rouge (4 frames).
-  const rows = type === "splitter"
+  const rows = type === "splitter" || type === "smart-splitter"
     ? {down: 0, up: 2, left: 4, right: 6}
     : {down: 0, up: 2, right: 4, left: 6};
   const row = rows[direction] + (connected ? 0 : 1);
   const frame = Math.floor(tick / 2) % (connected ? 8 : 4);
-  ctx.drawImage(assetManager.getImage(`router.${type}`), frame * 64, row * 64, 64, 64,
+  const assetType = type === "smart-splitter" ? "splitter" : type;
+  ctx.drawImage(assetManager.getImage(`router.${assetType}`), frame * 64, row * 64, 64, 64,
     x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+  if (type === "smart-splitter") {
+    const cx = (x + 0.5) * CELL_SIZE, cy = (y + 0.5) * CELL_SIZE;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = "#6d3fc0";
+    ctx.strokeStyle = "#d9c7ff";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-5, -5, 10, 10);
+    ctx.strokeRect(-5, -5, 10, 10);
+    ctx.restore();
+  }
 }
 
 /** Placement only: input arrows point inward, output arrows point outward. */
 export function drawRouterArrows(ctx: CanvasRenderingContext2D, x: number, y: number,
-  direction: DirectionType, type: "splitter" | "merger") {
+  direction: DirectionType, type: "splitter" | "smart-splitter" | "merger") {
   const vectors = {up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0]} as const;
   const [forwardX, forwardY] = vectors[direction];
   ctx.save();
@@ -154,7 +167,7 @@ export function drawRouterArrows(ctx: CanvasRenderingContext2D, x: number, y: nu
   for (const [dx, dy] of Object.values(vectors)) {
     const isForward = dx === forwardX && dy === forwardY;
     const isRear = dx === -forwardX && dy === -forwardY;
-    const input = type === "splitter" ? isRear : !isForward;
+    const input = type === "splitter" || type === "smart-splitter" ? isRear : !isForward;
     const sign = input ? -1 : 1;
     ctx.save();
     ctx.translate((x + 0.5) * CELL_SIZE + dx * (CELL_SIZE / 2 + 9),

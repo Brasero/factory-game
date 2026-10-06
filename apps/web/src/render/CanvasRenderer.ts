@@ -219,6 +219,7 @@ function statusPresentation(reason: MachineIdleReason): {label: string; color: s
   switch (reason.type) {
     case "paused": return {label: "⏸ PAUSE", color: "#4f86c6"};
     case "no-recipe": return {label: "? RECETTE", color: "#9b59b6"};
+    case "missing-any-input": return {label: "! RESSOURCE", color: "#d88924"};
     case "missing-input": return {label: `! ${RESOURCE_SHORT_NAMES[reason.resource]}`, color: "#d88924"};
     case "output-full": return {label: `■ ${RESOURCE_SHORT_NAMES[reason.resource]}`, color: "#c0392b"};
     case "buffer-full": return {label: "■ STOCK", color: "#c0392b"};
@@ -345,6 +346,14 @@ function drawMachineAt(
           machine.x * CELL_SIZE - 16, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
         return;
     }
+    if (machine.type === "recycler") {
+        const sprite = assetManager.getImage(`machine.automation.recycler.${isWorking ? "running" : "idle"}`);
+        const drawX = machine.x * CELL_SIZE - 8;
+        const drawY = machine.y * CELL_SIZE - 16;
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % 4 : 0;
+        ctx.drawImage(sprite, frame * 48, 0, 48, 48, drawX, drawY, 48, 48);
+        return;
+    }
     const spritePrefix = machine.spriteName!
     const state = isWorking ? "running": "idle";
     const type = machine.type === "water-pump" ? "pump" : "miner"
@@ -386,15 +395,8 @@ function drawMachineAt(
 function drawTunnel(ctx: CanvasRenderingContext2D, tunnel: WorldSnapshot["tunnels"][number]) {
   const x = tunnel.x * CELL_SIZE;
   const y = tunnel.y * CELL_SIZE;
-  ctx.fillStyle = tunnel.type === "output" ? "#24324d" : "#193f43";
-  ctx.fillRect(x, y + 4, CELL_SIZE, CELL_SIZE - 4);
-  ctx.fillStyle = tunnel.type === "output" ? "#fdcb6e" : "#00cec9";
-  ctx.fillRect(x + 5, y + 9, CELL_SIZE - 10, CELL_SIZE - 9);
-  ctx.fillStyle = "#0e111b";
-  ctx.fillRect(x + 9, y + 13, CELL_SIZE - 18, CELL_SIZE - 13);
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 13px sans-serif";
-  ctx.fillText(tunnel.type === "output" ? "→" : "⇥", x + 10, y + 27);
+  const sprite = assetManager.getImage(`machine.tunnel.${tunnel.type}`);
+  ctx.drawImage(sprite, x - 16, y - 32, 64, 64);
 }
 
 function drawCampaignFog(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
