@@ -208,7 +208,6 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     {smartSplitter && inspectedSplitter && <SmartSplitterPanel splitter={smartSplitter} left={inspectedSplitter.left}
       top={inspectedSplitter.top} onClose={() => setInspectedSplitter(null)} />}
     <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
-    style={{border: "1px solid black"}}
     onMouseDown={event => {
       if (event.button !== 0) return;
       suppressClick.current = false;

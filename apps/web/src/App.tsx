@@ -19,7 +19,7 @@ type AppScreen = "main" | "game" | "pause";
 function App() {
   const [isGameBooting, setIsGameBooting] = useState<boolean>(true)
     const [bootError, setBootError] = useState<string | null>(null);
-    const [size, setSize] = useState({width: window.innerWidth - 20, height: window.innerHeight - 18});
+    const [size, setSize] = useState({width: window.innerWidth, height: window.innerHeight});
     const [screen, setScreen] = useState<AppScreen>("main");
     const [hasStarted, setHasStarted] = useState(false);
     const [tutorialStep, setTutorialStep] = useState<number | null>(null);
@@ -38,7 +38,7 @@ function App() {
         }).catch(() => {
           if (!cancelled) setBootError("Impossible de charger les images du jeu. Recharge la page pour réessayer.");
         });
-        const resize = () => setSize({width: window.innerWidth - 20, height: window.innerHeight - 18});
+        const resize = () => setSize({width: window.innerWidth, height: window.innerHeight});
         window.addEventListener("resize", resize);
         return () => {
           cancelled = true;
