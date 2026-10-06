@@ -35,13 +35,14 @@ canvas {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at 20% 20%, rgba(c.$state-primary, 0.26), transparent 34%),
-    radial-gradient(circle at 80% 75%, rgba(c.$state-secondary, 0.18), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(c.$state-primary, 0.2), transparent 34%),
+    radial-gradient(circle at 80% 75%, rgba(c.$state-secondary, 0.14), transparent 30%),
     linear-gradient(145deg, #090b13 0%, c.$ui-background 55%, #12172b 100%);
 
   &.pause-menu {
-    background: rgba(8, 10, 18, 0.82);
-    backdrop-filter: blur(6px);
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 6px),
+      rgba(8, 13, 20, 0.9);
   }
 }
 
@@ -75,17 +76,34 @@ canvas {
   z-index: 1;
   width: min(520px, 100%);
   padding: 42px;
-  border: 1px solid c.$ui-border;
-  border-radius: 18px;
-  background: c.$ui-surface;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  border: 3px solid #657989;
+  outline: 4px solid #0a1119;
+  border-radius: 2px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035) 25%, transparent 25%) 0 0 / 10px 10px,
+    #111c28;
+  box-shadow: 12px 12px 0 rgba(5, 10, 15, .78), inset 0 0 0 2px #263847;
+  font-family: ui-monospace, "Courier New", monospace;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background: #a7b6c0;
+    box-shadow: inset 2px 2px #e4ebef, inset -2px -2px #425361;
+  }
+  &::before { top: 12px; left: 12px; }
+  &::after { right: 12px; bottom: 12px; }
 
   h1 {
     margin: 6px 0 10px;
     color: c.$text-primary;
     font-size: clamp(42px, 8vw, 70px);
     line-height: 0.95;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.04em;
+    text-shadow: 4px 4px 0 #27384a;
   }
 
   > p { color: c.$text-secondary; font-size: 17px; }
@@ -105,11 +123,9 @@ canvas {
 
   &::before,
   &::after {
-    content: "";
-    position: absolute;
     width: 12px;
     height: 12px;
-    border-radius: 50%;
+    border-radius: 0;
     background: #8293a2;
     box-shadow: inset 2px 2px #c0ccd5, inset -2px -2px #344453;
   }
@@ -208,30 +224,37 @@ button.secondary-button,
 button.text-button {
   min-height: 42px;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 1px;
+  font-family: ui-monospace, "Courier New", monospace;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 #080d12;
+  transition: transform 70ms steps(1), filter 70ms steps(1);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
 
   &:disabled { cursor: not-allowed; opacity: 0.45; }
+  &:not(:disabled):hover { transform: translate(-1px, -2px); filter: brightness(1.16); }
+  &:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #080d12; }
 }
 
 button.primary-button {
-  border: 1px solid c.$state-primary;
+  border: 3px solid #8978ff;
   background: c.$state-primary;
   color: white;
-  box-shadow: 0 8px 24px rgba(c.$state-primary, 0.28);
+  box-shadow: inset 2px 2px rgba(255,255,255,.18), inset -2px -2px rgba(0,0,0,.3), 4px 4px 0 #080d12;
 }
 
 button.secondary-button {
-  border: 1px solid c.$ui-border;
-  background: c.$ui-surface-alt;
+  border: 3px solid #405568;
+  background: #182838;
   color: c.$text-primary;
+  box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b, 4px 4px 0 #080d12;
 }
 
 button.text-button {
-  border: 0;
-  background: transparent;
+  border: 2px solid #314354;
+  background: #0c151f;
   color: c.$text-secondary;
 }
 
@@ -240,7 +263,7 @@ button.text-button {
 .goal-preview {
   padding: 16px 18px;
   border: 1px dashed c.$ui-border;
-  border-radius: 10px;
+  border-radius: 1px;
   background: c.$ui-background;
 
   span { color: c.$text-muted; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
@@ -258,29 +281,71 @@ button.text-button {
 .tutorial-card {
   position: fixed;
   z-index: 400;
-  top: 24px;
+  top: 50%;
   left: 24px;
   width: min(440px, calc(100vw - 48px));
-  overflow: hidden;
-  border: 1px solid c.$ui-border;
-  border-radius: 14px;
-  background: c.$ui-surface;
+  max-height: calc(100vh - 260px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: translateY(-50%);
+  border: 3px solid #657989;
+  outline: 4px solid #0a1119;
+  border-radius: 2px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035) 25%, transparent 25%) 0 0 / 10px 10px,
+    #111c28;
   color: c.$text-primary;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
+  box-shadow: 10px 10px 0 rgba(5, 10, 15, .78), inset 0 0 0 2px #263847;
   padding: 24px;
+  font-family: ui-monospace, "Courier New", monospace;
+  image-rendering: pixelated;
 
-  h2 { margin-top: 4px; font-size: 25px; line-height: 1.15; }
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 10px;
+    width: 8px;
+    height: 8px;
+    background: #a7b6c0;
+    box-shadow: inset 2px 2px #e4ebef, inset -2px -2px #425361;
+  }
+  &::before { left: 10px; }
+  &::after { right: 10px; }
+
+  h2 { margin-top: 6px; color: #f4ead4; font-size: 24px; line-height: 1.15; text-shadow: 3px 3px 0 #5d3924; }
   > p { margin-top: 14px; color: c.$text-secondary; line-height: 1.55; }
-  .tutorial-tip { padding: 10px 12px; border-radius: 8px; background: c.$ui-background; color: c.$text-secondary; font-size: 13px; }
-  .tutorial-action { color: c.$state-accent; font-size: 13px; font-weight: 700; }
+  .tutorial-tip {
+    padding: 10px 12px;
+    border: 2px solid #405568;
+    border-left-color: #d28c32;
+    border-radius: 1px;
+    background: #0c151f;
+    color: c.$text-secondary;
+    box-shadow: inset 2px 2px #172634;
+    font-size: 13px;
+  }
+  .tutorial-action { padding-left: 9px; border-left: 4px solid c.$state-accent; color: c.$state-accent; font-size: 13px; font-weight: 800; }
+  button {
+    border-radius: 1px;
+    font-family: inherit;
+    text-transform: uppercase;
+    box-shadow: 3px 3px 0 #080d12;
+  }
 }
 
 .tutorial-progress {
-  height: 4px;
+  height: 8px;
   margin: -24px -24px 22px;
-  background: c.$ui-background;
+  border-bottom: 2px solid #0a1119;
+  background: #071019;
 
-  span { display: block; height: 100%; background: c.$state-secondary; transition: width 0.25s ease; }
+  span {
+    display: block;
+    height: 100%;
+    background: repeating-linear-gradient(90deg, #59c7ba 0 8px, #267b78 8px 10px);
+    transition: width 0.25s steps(4);
+  }
 }
 
 .tutorial-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -291,19 +356,29 @@ button.text-button {
 .tutorial-target {
   position: relative;
   z-index: 450 !important;
-  outline: 3px solid c.$state-accent !important;
-  outline-offset: 4px;
+  outline: 4px solid #ffe36e !important;
+  outline-offset: 5px;
+  filter: brightness(1.18) saturate(1.15);
+  scale: 1.035;
   animation: tutorialPulse 1.3s ease-in-out infinite;
 }
 
 @keyframes tutorialPulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(c.$state-accent, 0.15), 0 0 18px rgba(c.$state-accent, 0.25); }
-  50% { box-shadow: 0 0 0 7px rgba(c.$state-accent, 0.12), 0 0 28px rgba(c.$state-accent, 0.55); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 227, 110, 0.3), 0 0 22px rgba(c.$state-accent, 0.55); }
+  50% { box-shadow: 0 0 0 9px rgba(255, 227, 110, 0.18), 0 0 38px rgba(c.$state-accent, 0.9); }
 }
 
 @media (max-width: 700px) {
   .menu-panel { padding: 28px; }
-  .tutorial-card { top: 12px; left: 12px; width: calc(100vw - 24px); padding: 18px; }
+  .tutorial-card {
+    top: auto;
+    bottom: 88px;
+    left: 12px;
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 230px);
+    padding: 18px;
+    transform: none;
+  }
   .tutorial-progress { margin: -18px -18px 16px; }
 }
 
@@ -331,11 +406,29 @@ button.text-button {
   width: min(980px, calc(100vw - 36px));
   box-sizing: border-box;
   padding: 12px 16px;
-  border: 2px solid c.$ui-border;
-  border-radius: 10px;
-  background: c.$ui-background;
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  border-radius: 2px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035) 25%, transparent 25%) 0 0 / 10px 10px,
+    #111c28;
   color: c.$text-primary;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  box-shadow: 8px 8px 0 rgba(5, 10, 15, .7), inset 0 0 0 2px #263847;
+  font-family: ui-monospace, "Courier New", monospace;
+  image-rendering: pixelated;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    width: 7px;
+    height: 7px;
+    background: #a7b6c0;
+    box-shadow: inset 2px 2px #e4ebef, inset -2px -2px #425361;
+  }
+  &::before { left: 6px; }
+  &::after { right: 6px; }
 }
 
 .campaign-resources {
@@ -344,7 +437,7 @@ button.text-button {
   flex-wrap: wrap;
   gap: 7px;
   padding-top: 9px;
-  border-top: 1px solid c.$ui-border;
+  border-top: 3px double #405568;
 }
 
 .campaign-resource {
@@ -353,9 +446,10 @@ button.text-button {
   min-width: 82px;
   gap: 6px;
   padding: 5px 8px;
-  border: 1px solid c.$ui-border;
-  border-radius: 6px;
-  background: c.$ui-surface-alt;
+  border: 2px solid #405568;
+  border-radius: 1px;
+  background: #182838;
+  box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b;
   color: c.$text-primary;
   font-size: 12px;
   .resource-icon { width: 20px; height: 20px; }
@@ -368,6 +462,8 @@ button.text-button {
   small { overflow: hidden; color: c.$text-muted; font-size: 9px; line-height: 1; text-overflow: ellipsis; }
   strong { margin-top: 2px; font-size: 12px; line-height: 1; }
 }
+
+.construction-material-icon { font-size: 20px; line-height: 1; }
 
 .level-heading {
   display: flex;
@@ -384,13 +480,14 @@ button.text-button {
   button {
     width: 28px;
     height: 28px;
-    border: 1px solid c.$ui-border;
-    border-radius: 5px;
-    background: c.$ui-surface-alt;
+    border: 2px solid #405568;
+    border-radius: 1px;
+    background: #182838;
     color: c.$text-secondary;
+    box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b;
     font-weight: 800;
     cursor: pointer;
-    &.selected { border-color: c.$state-accent; color: c.$state-accent; }
+    &.selected { border-color: c.$state-accent; color: c.$state-accent; box-shadow: inset 0 0 0 2px #0d1822, 2px 2px 0 #080d12; }
     &:disabled { cursor: not-allowed; opacity: 0.4; }
   }
 }
@@ -403,12 +500,17 @@ button.text-button {
   color: c.$text-secondary;
   font-size: 12px;
   strong { color: c.$text-primary; }
-  > div { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 5px; background: c.$ui-surface-alt; }
-  i { display: block; height: 100%; background: c.$state-secondary; transition: width 0.3s ease; }
+  > div { grid-column: 1 / -1; height: 8px; overflow: hidden; border: 2px solid #405568; border-radius: 0; background: #08111a; }
+  i {
+    display: block;
+    height: 100%;
+    background: repeating-linear-gradient(90deg, c.$state-secondary 0 8px, #267b78 8px 10px);
+    transition: width 0.3s steps(6);
+  }
 }
 
-.pollution-meter i { background: c.$state-warning; }
-.pollution-meter.danger i { background: c.$state-danger; }
+.pollution-meter i { background: repeating-linear-gradient(90deg, c.$state-warning 0 8px, #8a5b22 8px 10px); }
+.pollution-meter.danger i { background: repeating-linear-gradient(90deg, c.$state-danger 0 8px, #6e2033 8px 10px); }
 .pollution-meter small { grid-column: 1 / -1; color: c.$text-muted; font-size: 10px; }
 
 .level-result-backdrop {
@@ -419,18 +521,24 @@ button.text-button {
   place-items: center;
   padding: 24px;
   background: rgba(8, 10, 18, 0.76);
-  backdrop-filter: blur(5px);
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 6px),
+    rgba(8, 10, 18, 0.88);
 }
 
 .level-result {
   width: min(520px, 100%);
   padding: 34px;
-  border: 1px solid c.$ui-border;
-  border-radius: 16px;
-  background: c.$ui-surface;
+  border: 3px solid #657989;
+  outline: 4px solid #0a1119;
+  border-radius: 2px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035) 25%, transparent 25%) 0 0 / 10px 10px,
+    #111c28;
   color: c.$text-primary;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
-  h2 { margin: 5px 0 12px; font-size: 34px; }
+  box-shadow: 12px 12px 0 rgba(5, 10, 15, .78), inset 0 0 0 2px #263847;
+  font-family: ui-monospace, "Courier New", monospace;
+  h2 { margin: 5px 0 12px; color: #f4ead4; font-size: 34px; text-shadow: 4px 4px 0 #5d3924; }
   > p { color: c.$text-secondary; }
   &.game-over { border-color: c.$state-danger; }
 }
@@ -440,12 +548,32 @@ button.text-button {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin: 22px 0;
-  div { padding: 14px; border-radius: 8px; background: c.$ui-background; }
+  div { padding: 14px; border: 2px solid #405568; border-radius: 1px; background: #0c151f; box-shadow: inset 2px 2px #172634; }
   span { display: block; color: c.$text-muted; font-size: 11px; text-transform: uppercase; }
   strong { font-size: 18px; }
 }
 
 .level-result-actions { display: grid; gap: 9px; margin-top: 24px; }
+
+.finalization-warning {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 2px solid c.$state-danger;
+  border-radius: 1px;
+  background: rgba(190, 45, 65, .14);
+  color: c.$text-primary;
+  strong { color: c.$state-danger; font-size: 13px; letter-spacing: .08em; }
+  span { font-size: 13px; font-weight: 700; line-height: 1.45; }
+}
+
+.finalization-button {
+  border-color: c.$state-danger !important;
+  color: #fff !important;
+  background: c.$state-danger !important;
+  font-weight: 800;
+}
 
 @media (max-width: 760px) {
   .campaign-hud { grid-template-columns: 1fr; gap: 8px; right: 18px; }
@@ -456,19 +584,35 @@ button.text-button {
 }
 .conveyor-help {
   position: absolute;
-  top: 16px;
+  top: 224px;
   right: 16px;
-  z-index: 2;
+  z-index: 160;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
-  border-radius: 8px;
-  background: rgba(24, 40, 62, 0.92);
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  border-radius: 1px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px),
+    #111c28;
   color: #fff;
+  box-shadow: 6px 6px 0 rgba(5,10,15,.72), inset 0 0 0 2px #253746;
+  font-family: ui-monospace, "Courier New", monospace;
   font-size: 14px;
   pointer-events: none;
-  kbd { padding: 2px 5px; border: 1px solid #8294ad; border-radius: 4px; }
+  kbd { padding: 2px 5px; border: 2px solid #8294ad; border-radius: 0; background: #0b151f; color: #ffe36e; box-shadow: 2px 2px 0 #05090d; }
+}
+
+@media (max-width: 760px) {
+  .conveyor-help {
+    top: auto;
+    right: 12px;
+    bottom: 94px;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+  }
 }
 
 .machine-recipe-panel {
@@ -478,16 +622,20 @@ button.text-button {
   max-height: 360px;
   overflow-y: auto;
   padding: 14px;
-  border: 2px solid c.$ui-border;
-  border-radius: 10px;
-  background: c.$ui-background;
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  border-radius: 1px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035) 25%, transparent 25%) 0 0 / 10px 10px,
+    #111c28;
   color: c.$text-primary;
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.5);
+  box-shadow: 7px 7px 0 rgba(5,10,15,.72), inset 0 0 0 2px #253746;
+  font-family: ui-monospace, "Courier New", monospace;
 
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   header span { display: block; color: c.$text-muted; font-size: 10px; text-transform: uppercase; }
   header strong { font-size: 14px; }
-  header button { border: 0; background: transparent; color: c.$text-secondary; font-size: 22px; cursor: pointer; }
+  header button { width: 28px; height: 28px; border: 2px solid #6d3b49; border-radius: 0; background: #341923; color: #ff8da5; font: 800 20px/1 monospace; cursor: pointer; box-shadow: 2px 2px 0 #070b10; }
 }
 
 .machine-panel-section {
@@ -495,20 +643,33 @@ button.text-button {
   h3 { display: flex; justify-content: space-between; margin: 0 0 7px; color: c.$text-secondary; font-size: 11px; text-transform: uppercase; }
   p { margin: 0; color: c.$text-muted; font-size: 12px; }
   ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-  li { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: 5px; background: c.$ui-surface-alt; font-size: 12px; }
+  li { display: flex; justify-content: space-between; padding: 6px 8px; border: 1px solid #405568; border-radius: 0; background: #182838; font-size: 12px; }
 }
 
 .machine-pause-button {
   width: 100%;
   margin-top: 12px;
   padding: 8px 10px;
-  border: 1px solid c.$ui-border;
-  border-radius: 7px;
-  background: c.$ui-surface-alt;
+  border: 2px solid #405568;
+  border-radius: 0;
+  background: #182838;
   color: c.$text-primary;
+  box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b, 3px 3px 0 #080d12;
+  font-family: inherit;
   font-weight: 700;
   cursor: pointer;
   &.paused { border-color: c.$state-warning; color: c.$state-warning; }
+}
+
+.smart-splitter-help { margin: 10px 0 0; color: c.$text-muted; font-size: 12px; line-height: 1.4; }
+.smart-splitter-ports {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  label { display: grid; gap: 5px; }
+  label > span { display: flex; align-items: center; gap: 7px; color: c.$text-secondary; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  b { color: #b995ff; font-size: 18px; }
+  select { width: 100%; padding: 8px; border: 2px solid #405568; border-radius: 0; background: #182838; color: c.$text-primary; font-family: inherit; box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b; }
 }
 
 .recipe-choice {
@@ -517,13 +678,15 @@ button.text-button {
   gap: 3px;
   margin-top: 6px;
   padding: 9px;
-  border: 1px solid c.$ui-border;
-  border-radius: 7px;
-  background: c.$ui-surface-alt;
+  border: 2px solid #405568;
+  border-radius: 0;
+  background: #182838;
   color: c.$text-secondary;
+  box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
   strong { color: c.$text-primary; }
   span, small { font-size: 11px; }
-  &.selected { border-color: c.$state-accent; box-shadow: inset 3px 0 c.$state-accent; }
+  &.selected { border-color: c.$state-accent; box-shadow: inset 4px 0 c.$state-accent, inset -2px -2px #0b121b; }
 }

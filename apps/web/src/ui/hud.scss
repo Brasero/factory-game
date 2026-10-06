@@ -10,13 +10,17 @@
   overflow: visible;
   white-space: nowrap;
   margin: 0 auto;
-  border: 3px solid c.$ui-border;
-  background: c.$ui-background;
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.045) 25%, transparent 25%) 0 0 / 8px 8px,
+    #111c28;
   color: c.$text-primary;
   gap: 12px;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-family: 'Arial', sans-serif;
+  padding: 10px 16px;
+  border-radius: 2px;
+  box-shadow: 7px 7px 0 rgba(5, 10, 15, .72), inset 0 0 0 2px #253746;
+  font-family: ui-monospace, "Courier New", monospace;
   font-size: 14px;
   z-index: 100;
   position: fixed;
@@ -25,6 +29,19 @@
   transform: translateX(-50%);
 
   > * { flex-shrink: 0; }
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    width: 6px;
+    height: 6px;
+    background: #a7b6c0;
+    box-shadow: inset 2px 2px #e4ebef, inset -2px -2px #425361;
+  }
+  &::before { left: 5px; }
+  &::after { right: 5px; }
 }
 
 #hud_info {
@@ -53,10 +70,13 @@
   bottom: calc(100% + 12px);
   transform: translateX(-50%);
   padding: 14px;
-  border: 3px solid c.$ui-border;
-  border-radius: 10px;
-  background: c.$ui-background;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .45);
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px),
+    #111c28;
+  box-shadow: 8px 8px 0 rgba(5, 10, 15, .72), inset 0 0 0 2px #253746;
 
   &.open { display: flex; }
 
@@ -98,24 +118,26 @@
     width: 48px;
     height: 48px;
     padding: 2px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    background: c.$ui-surface-alt;
+    border-radius: 1px;
+    border: 2px solid #405568;
+    background: #182838;
+    box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: transform 0.1s, filter 0.2s;
+    transition: transform 70ms steps(1), filter 70ms steps(1);
 
     &:hover {
-      transform: scale(1.05);
+      transform: translateY(-2px);
       filter: brightness(1.2);
+      border-color: #8ca0ae;
     }
 
     &.selected {
       border-color: c.$state-accent;
-      box-shadow: 0 0 10px 2px rgba(c.$state-accent, 0.65);
+      box-shadow: inset 0 0 0 2px #17222e, 0 0 0 2px c.$state-accent, 4px 4px 0 rgba(0,0,0,.55);
     }
   }
 }
@@ -124,9 +146,10 @@ button.destroyBtn {
   width: 48px;
   height: 48px;
   padding: 0;
-  border: 1px solid #ff7096;
-  border-radius: 7px;
-  background: c.$state-danger;
+  border: 3px solid #ff7895;
+  border-radius: 1px;
+  background: #8e2940;
+  box-shadow: inset 2px 2px #c84b65, inset -2px -2px #531525, 3px 3px 0 #080d12;
   color: #fff;
   font-size: 20px;
   font-weight: 800;
@@ -135,17 +158,18 @@ button.destroyBtn {
   cursor: pointer;
 
   &.selected {
-    outline: 2px solid #fff;
-    box-shadow: 0 0 12px rgba(255, 70, 110, .8);
+    outline: 2px solid #fff0d2;
+    box-shadow: inset 2px 2px #e26079, inset -2px -2px #531525, 4px 4px 0 #080d12;
   }
 }
 
 .build-menu-toggle {
   height: 42px;
   padding: 0 12px;
-  border: 1px solid c.$state-accent;
-  border-radius: 7px;
-  background: c.$ui-surface-alt;
+  border: 2px solid c.$state-accent;
+  border-radius: 1px;
+  background: #182838;
+  box-shadow: inset 2px 2px #2a4255, inset -2px -2px #0a1119, 3px 3px 0 #080d12;
   color: c.$text-primary;
   font-weight: 800;
   cursor: pointer;
@@ -160,9 +184,10 @@ button.destroyBtn {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid c.$state-accent;
-  border-radius: 7px;
-  background: c.$ui-surface-alt;
+  border: 2px solid c.$state-accent;
+  border-radius: 1px;
+  background: #182838;
+  box-shadow: inset 2px 2px #2a4255, inset -2px -2px #0a1119;
   color: c.$text-primary;
   font-weight: 700;
 
@@ -180,12 +205,36 @@ button.destroyBtn {
   }
 }
 
+.selected-build-choice { position: relative; }
+
+.selected-construction-label {
+  display: grid;
+  gap: 1px;
+
+  b { font-size: 12px; }
+  small { color: c.$state-accent; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+}
+
 .pipe-icon {
   width: 32px;
   height: 32px;
   background-size: 256px 160px;
   background-position: -96px -96px;
   image-rendering: pixelated;
+}
+
+.router-icon.smart-splitter { position: relative; }
+.router-icon.smart-splitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid #e1d3ff;
+  background: #6d3fc0;
+  box-shadow: 0 0 5px rgba(185, 149, 255, .9);
 }
 
 #hud_tick_container {
@@ -196,19 +245,20 @@ button.destroyBtn {
   #hud_pause_btn {
     background-color: c.$state-primary;
     color: #fff;
-    border: none;
-    border-radius: 6px;
+    border: 2px solid #6cc6d4;
+    border-radius: 1px;
     padding: 4px 8px;
     font-size: 14px;
     cursor: pointer;
     font-weight: bold;
-    transition: transform 0.1s, filter 0.2s;
+    box-shadow: inset 2px 2px rgba(255,255,255,.2), inset -2px -2px rgba(0,0,0,.35), 2px 2px 0 #080d12;
+    transition: transform 70ms steps(1), filter 70ms steps(1);
     display: flex;
     justify-content: center;
     align-items: center;
 
     &:hover {
-      transform: scale(1.1);
+      transform: translateY(-2px);
       filter: brightness(1.2);
     }
   }
@@ -217,10 +267,10 @@ button.destroyBtn {
     font-weight: bold;
     font-size: 16px;
     color: c.$state-accent;
-    animation: tickGlow 2s infinite alternate;
+    animation: tickGlow 1.6s steps(2) infinite;
 
     &.paused {
-      animation: pausedBlink 1s infinite alternate;
+      animation: pausedBlink 1s steps(2) infinite;
       color: #ff4d4d; // rouge pour pause
       text-shadow: 0 0 8px #ff4d4d;
     }
@@ -229,8 +279,8 @@ button.destroyBtn {
 
 /* Animations */
 @keyframes tickGlow {
-  0% { text-shadow: 0 0 2px c.$state-accent; }
-  100% { text-shadow: 0 0 10px c.$state-accent; }
+  0%, 49% { text-shadow: 2px 2px 0 #173844; }
+  50%, 100% { text-shadow: 2px 2px 0 #173844, 0 0 5px c.$state-accent; }
 }
 
 @keyframes pausedBlink {
@@ -289,21 +339,68 @@ button.destroyBtn {
   image-rendering: pixelated;
 }
 
-.machine-variants {
+.machine-variant-panel {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 10px;
+  border: 3px solid #657989;
+  outline: 3px solid #0a1119;
+  border-radius: 1px;
+  background: #111c28;
+  box-shadow: 7px 7px 0 rgba(5, 10, 15, .72), inset 0 0 0 2px #253746;
+  font-family: ui-monospace, "Courier New", monospace;
+  white-space: normal;
+
+  &.floating {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 15px);
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+}
+
+.machine-variant-heading {
   display: flex;
-  gap: 4px;
-  padding-left: 10px;
-  border-left: 1px solid c.$ui-border;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+
+  strong { color: c.$text-primary; font-size: 12px; text-transform: uppercase; }
+  span { color: c.$text-muted; font-size: 10px; }
+}
+
+.machine-variant-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
 
   button {
-    padding: 4px 7px;
+    display: grid;
+    gap: 5px;
+    padding: 8px;
     border: 1px solid c.$ui-border;
-    border-radius: 5px;
-    background: c.$ui-surface-alt;
+    border-radius: 1px;
+    background: #182838;
+    box-shadow: inset 2px 2px #263c50, inset -2px -2px #0b121b;
     color: c.$text-secondary;
-    font-size: 10px;
     cursor: pointer;
-    &.selected { border-color: c.$state-accent; color: c.$state-accent; }
+    text-align: left;
+
+    > strong { color: c.$text-primary; font-size: 11px; }
+    > span { display: flex; justify-content: space-between; gap: 5px; font-size: 9px; }
+    small { color: c.$text-muted; }
+    b { color: c.$text-secondary; }
+
+    &:hover { border-color: c.$text-secondary; }
+    &.selected {
+      border-color: c.$state-accent;
+      outline: 1px solid c.$state-accent;
+      background: rgba(c.$state-accent, .12);
+      > strong, b { color: c.$state-accent; }
+    }
   }
 }
 
