@@ -1,6 +1,7 @@
 import type {World} from "../models/World";
 import type {Machine} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
+import {RESOURCE_TYPES} from "@engine/models/Resources";
 import {MACHINE_BASE_POLLUTION, MACHINE_VARIANTS} from "@engine/config/machineConfig";
 import {recipeFor, recipeInputs, recipeOutputs} from "@engine/config/recipeConfig";
 import {campaignLevelAt, NATURAL_POLLUTION_RECOVERY} from "@engine/config/campaignConfig";
@@ -29,9 +30,12 @@ export function runProduction(world: World): World {
     const recipe = recipeFor(machine);
     if (recipe) {
       const buffer = {...machine.buffer};
-      const inputs = recipeInputs(machine);
+      const recycledResource = recipe.acceptsAnyResource
+        ? RESOURCE_TYPES.find(resource => (buffer[resource] ?? 0) > 0) : undefined;
+      const inputs = recycledResource ? [[recycledResource, 1] as [ResourcesType, number]] : recipeInputs(machine);
       const outputs = recipeOutputs(machine);
-      const canConsume = inputs.every(([resource, amount]) => (buffer[resource] ?? 0) >= amount);
+      const canConsume = (!recipe.acceptsAnyResource || !!recycledResource) &&
+        inputs.every(([resource, amount]) => (buffer[resource] ?? 0) >= amount);
       const canStoreOutputs = outputs.every(([resource, amount]) =>
         (buffer[resource] ?? 0) + amount * machine.production <= machine.capacity);
       const canReducePollution = !recipe.pollutionReduction || campaign.pollution > 0;
@@ -44,6 +48,9 @@ export function runProduction(world: World): World {
       recordCycle(machine, produced, false);
       if (recipe.pollutionReduction) {
         campaign.pollution = Math.max(0, campaign.pollution - recipe.pollutionReduction);
+      }
+      if (recipe.constructionMaterials) {
+        campaign.constructionMaterials += recipe.constructionMaterials * machine.production;
       }
       return {...machine, buffer, progress: 0, active: true};
     }

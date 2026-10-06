@@ -5,6 +5,7 @@ import {runStorageOutputs} from "./StorageOutputSystem";
 import {createTestWorld} from "@engine/test/createTestWorld";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor";
 import {GameEngine} from "@engine/core/GameEngine";
+import {emptyResources} from "@engine/models/Resources";
 
 function belt(x: number, y: number, direction: DirectionType, loaded = true): Conveyor {
   return {id: `${x},${y}`, x, y, direction, type: "conveyor", entityType: "conveyor",
@@ -201,6 +202,39 @@ describe("Conveyor transfers", () => {
     world = loaded.getWorld();
     expect(world.storages[0].stored.iron).toBe(0);
     expect(world.machines[0].buffer.ironPlate).toBe(1);
+  });
+
+  it("lets adjacent machines and outward belts extract resources from tunnels", () => {
+    const setup = new GameEngine(createTestWorld());
+    expect(setup.placeMachine(1, 0, "iron-smelter")).toBe(true);
+    const world = setup.getWorld();
+    world.machines[0].recipeId = "iron-smelting";
+    world.tunnels = [
+      {id: "machine-source", entityType: "tunnel", type: "input", levelId: "level-2", x: 0, y: 0,
+        direction: "right", capacity: 200, stored: {...emptyResources(), iron: 1}},
+      {id: "belt-source", entityType: "tunnel", type: "input", levelId: "level-2", x: 5, y: 0,
+        direction: "right", capacity: 200, stored: {...emptyResources(), coal: 1}}
+    ];
+    world.conveyors = [belt(6, 0, "right", false)];
+
+    const supplied = runStorageOutputs(world);
+
+    expect(supplied.tunnels[0].stored.iron).toBe(0);
+    expect(supplied.machines[0].buffer.iron).toBe(1);
+    expect(supplied.tunnels[1].stored.coal).toBe(0);
+    expect(supplied.conveyors[0].carrying).toEqual([{type: "coal", amount: 1, progress: 0}]);
+  });
+
+  it("includes tunnel inventories in the player resource totals", () => {
+    const world = createTestWorld();
+    world.storages = [{id: "storage", entityType: "storage", x: 4, y: 4, capacity: 200,
+      stored: {...emptyResources(), iron: 2}}];
+    world.tunnels = [{id: "tunnel", entityType: "tunnel", type: "input", levelId: "level-2", x: 8, y: 8,
+      direction: "right", capacity: 200, stored: {...emptyResources(), iron: 5, coal: 3}}];
+
+    const engine = new GameEngine(world);
+
+    expect(engine.getSnapshot().resources).toMatchObject({iron: 7, coal: 3});
   });
 
   it("exports storage resources only to belts that do not point back into the chest", () => {

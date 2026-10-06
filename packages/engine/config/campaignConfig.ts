@@ -29,8 +29,8 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     radius: 24,
     objective: {type: "export", resource: "steel", amount: 40},
     unlocks: {
-      machines: ["coal-mine", "water-pump", "boiler"],
-      recipes: ["steel-smelting", "water-purification"],
+      machines: ["coal-mine", "water-pump", "boiler", "recycler"],
+      recipes: ["steel-smelting", "water-purification", "recycling"],
       variants: ["eco", "industrial"],
       resources: ["coal", "water", "steel"]
     },

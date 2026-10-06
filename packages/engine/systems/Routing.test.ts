@@ -135,7 +135,35 @@ describe("Explicit conveyor routing", () => {
     expect(world.conveyors.map(c => c.carrying.length)).toEqual([0, 1]);
   });
 
-  it.each(["splitter", "merger"] as const)("places, rotates and destroys %s with cache invalidation", type => {
+  it("routes smart splitter resources through their configured relative outputs", () => {
+    const world = createTestWorld();
+    const splitter = node(3, 3, "right", "smart-splitter");
+    splitter.outputFilters = {forward: "iron", right: "coal", left: "unfiltered"};
+    splitter.carrying = [
+      {type: "iron", amount: 1, progress: 1},
+      {type: "coal", amount: 1, progress: 1},
+      {type: "copper", amount: 1, progress: 1}
+    ];
+    world.conveyors = [splitter, node(4, 3, "right"), node(3, 4, "down"), node(3, 2, "up")];
+    runConveyors(world);
+    expect(world.conveyors[0].carrying).toHaveLength(0);
+    expect(world.conveyors[1].carrying[0].type).toBe("iron");
+    expect(world.conveyors[2].carrying[0].type).toBe("coal");
+    expect(world.conveyors[3].carrying[0].type).toBe("copper");
+  });
+
+  it("does not send an explicitly filtered resource through the unfiltered fallback", () => {
+    const world = createTestWorld();
+    const splitter = node(3, 3, "right", "smart-splitter");
+    splitter.outputFilters = {forward: "iron", left: "unfiltered", right: "coal"};
+    splitter.carrying = [{type: "iron", amount: 1, progress: 1}];
+    world.conveyors = [splitter, node(3, 2, "up")];
+    runConveyors(world);
+    expect(world.conveyors[0].carrying).toHaveLength(1);
+    expect(world.conveyors[1].carrying).toHaveLength(0);
+  });
+
+  it.each(["splitter", "smart-splitter", "merger"] as const)("places, rotates and destroys %s with cache invalidation", type => {
     const engine = new GameEngine(createTestWorld());
     expect(engine.placeConveyor(0, 0, "right", type)).toBe(true);
     expect(engine.canPlaceMachine(0, 0, type)).toBe(true);

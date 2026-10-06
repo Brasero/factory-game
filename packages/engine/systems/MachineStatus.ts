@@ -5,6 +5,7 @@ import {MACHINE_RECIPE_OPTIONS, recipeFor, recipeInputs, recipeOutputs} from "@e
 export type MachineIdleReason =
   | {type: "paused"}
   | {type: "no-recipe"}
+  | {type: "missing-any-input"}
   | {type: "missing-input"; resource: ResourcesType}
   | {type: "output-full"; resource: ResourcesType}
   | {type: "buffer-full"}
@@ -19,6 +20,9 @@ export function machineIdleReason(machine: Machine, pollution: number): MachineI
   if (MACHINE_RECIPE_OPTIONS[machine.type] && !recipe) return {type: "no-recipe"};
   if (recipe) {
     if (recipe.pollutionReduction && pollution <= 0) return {type: "pollution-empty"};
+    if (recipe.acceptsAnyResource && !Object.values(machine.buffer).some(amount => (amount ?? 0) > 0)) {
+      return {type: "missing-any-input"};
+    }
     const missing = recipeInputs(machine).find(([resource, amount]) => (machine.buffer[resource] ?? 0) < amount);
     if (missing) return {type: "missing-input", resource: missing[0]};
     const full = recipeOutputs(machine).find(([resource, amount]) =>

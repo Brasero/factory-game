@@ -3,9 +3,10 @@ import {TileMap} from "@engine/world/TileMap";
 import type {World} from "@engine/models/World";
 import {emptyResources} from "@engine/models/Resources";
 import type {CampaignState} from "@engine/models/Campaign";
+import {INITIAL_CONSTRUCTION_MATERIALS} from "@engine/config/constructionConfig";
 
 export const createTestCampaign = (): CampaignState => ({
-  activeLevelId: "level-1", pollution: 0, pollutionLimit: 1000, status: "playing",
+  activeLevelId: "level-1", constructionMaterials: INITIAL_CONSTRUCTION_MATERIALS, pollution: 0, pollutionLimit: 1000, status: "playing",
   levels: [
     {id: "level-1", status: "active", pollution: 0},
     {id: "level-2", status: "active", pollution: 0},

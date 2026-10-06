@@ -73,7 +73,7 @@ class EntityManager implements EntityManagerType {
       const existingConveyor = conveyors.find(c => c.x === x && c.y === y);
 
       if (existingConveyor) {
-        const canUpgrade = existingConveyor.type === "conveyor" && (type === "splitter" || type === "merger");
+        const canUpgrade = existingConveyor.type === "conveyor" && (type === "splitter" || type === "smart-splitter" || type === "merger");
         if (existingConveyor.type !== type && !canUpgrade) return false;
         const updated: Conveyor = {
           ...existingConveyor,
@@ -81,6 +81,7 @@ class EntityManager implements EntityManagerType {
           type,
           tier: type === "conveyor" ? tier ?? existingConveyor.tier ?? 1 : undefined,
           routingCursor: canUpgrade ? 0 : existingConveyor.routingCursor
+          ,outputFilters: type === "smart-splitter" ? existingConveyor.outputFilters ?? {} : undefined
         };
         return {
           ...world,
@@ -98,6 +99,7 @@ class EntityManager implements EntityManagerType {
         type,
         tier: type === "conveyor" ? tier ?? 1 : undefined,
         routingCursor: 0,
+        outputFilters: type === "smart-splitter" ? {} : undefined,
         direction,
         entityType: 'conveyor',
         speed: 0.2,

@@ -1,12 +1,13 @@
 import type {World} from "@engine/models/World";
 import type {Machine} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
-import {machineInputSpace, recipeInputs} from "@engine/config/recipeConfig";
+import {machineInputSpace, recipeAcceptsResource} from "@engine/config/recipeConfig";
 import {buildNetworkTopology, inputPort, type NetworkTopology} from "./NetworkTopology";
+import type {SmartSplitterPort} from "@engine/models/Conveyor";
 
 // Une machine n'accepte que l'ingredient de sa recette ; les extracteurs n'acceptent rien.
 const acceptsResource = (machine: Machine, resource: ResourcesType) =>
-  recipeInputs(machine).some(([input]) => input === resource);
+  recipeAcceptsResource(machine, resource);
 
 export function runConveyors(world: World, network: NetworkTopology = buildNetworkTopology(world)): void {
   const next = world.conveyors.map(c => ({...c, carrying: [] as typeof c.carrying}));
@@ -31,11 +32,20 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
       }
       if (item.progress >= 1) {
         const outputs = network.outputs[index];
-        const start = belt.type === "splitter" ? (next[index].routingCursor ?? 0) % outputs.length : 0;
+        const isSplitter = belt.type === "splitter" || belt.type === "smart-splitter";
+        const start = isSplitter ? (next[index].routingCursor ?? 0) % outputs.length : 0;
         for (let offset = 0; offset < outputs.length; offset++) {
           const port = (start + offset) % outputs.length;
           const target = outputs[port];
           if (!target) continue;
+          if (belt.type === "smart-splitter") {
+            const relativePort: SmartSplitterPort = (["forward", "right", "left"] as const)[port];
+            const filter = belt.outputFilters?.[relativePort] ?? "any";
+            if (filter === "unfiltered") {
+              const explicitlyFiltered = Object.values(belt.outputFilters ?? {}).some(value => value === item.type);
+              if (explicitlyFiltered) continue;
+            } else if (filter !== "any" && filter !== item.type) continue;
+          }
           let moved = 0;
           if (target.kind === "belt" && slots[target.index] > 0) {
             arrivals[target.index].push({...item, amount: remaining, progress: 0});
@@ -50,8 +60,8 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
             machine.buffer[item.type] = (machine.buffer[item.type] ?? 0) + moved;
           } else if (target.kind === "storage" || target.kind === "tunnel") {
             const entity = target.kind === "storage" ? world.storages[target.index] : world.tunnels[target.index];
-            if (target.kind === "tunnel" && world.tunnels[target.index].type === "output") {
-              moved = remaining;
+            if (target.kind === "tunnel") {
+              moved = Math.min(remaining, Math.max(0, entity.capacity - (entity.stored[item.type] ?? 0)));
             } else {
               const used = Object.values(entity.stored).reduce((sum, amount) => sum + amount, 0);
               moved = Math.min(remaining, Math.max(0, entity.capacity - used));
@@ -63,7 +73,7 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
           }
           remaining -= moved;
           if (moved > 0) {
-            if (belt.type === "splitter") next[index].routingCursor = (port + 1) % outputs.length;
+            if (isSplitter) next[index].routingCursor = (port + 1) % outputs.length;
             break;
           }
         }

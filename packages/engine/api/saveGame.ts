@@ -9,6 +9,7 @@ import {createWorld} from "@engine/world/WorldFactory";
 import {CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
 import type {Pipe} from "@engine/models/Pipe";
 import type {Position} from "@engine/models/Position";
+import {INITIAL_CONSTRUCTION_MATERIALS} from "@engine/config/constructionConfig";
 
 export type GameSave = {
   version: 1;
@@ -54,6 +55,7 @@ export function restoreWorld(save: GameSave): World {
   });
   world.resources = structuredClone(save.resources);
   world.campaign = structuredClone(save.campaign);
+  world.campaign.constructionMaterials ??= INITIAL_CONSTRUCTION_MATERIALS;
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;
   if (save.decorations) world.grid?.replaceDecorations(save.decorations);
   else for (const position of save.removedDecorations ?? []) world.grid?.removeDecoration(position);

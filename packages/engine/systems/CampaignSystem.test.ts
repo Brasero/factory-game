@@ -48,32 +48,29 @@ describe("Campaign progression", () => {
     world.campaign.statistics.exported.ironPlate = 3;
     world.tunnels = [
       {id: "out", x: 1, y: 1, entityType: "tunnel", type: "output", levelId: "level-1", linkedTunnelId: "in", direction: "right", capacity: 20, stored: {...emptyResources(), ironPlate: 3}},
-      {id: "in", x: 5, y: 1, entityType: "tunnel", type: "input", levelId: "level-2", direction: "right", capacity: 20, stored: emptyResources()}
+      {id: "in", x: 5, y: 1, entityType: "tunnel", type: "input", levelId: "level-2", direction: "right", capacity: 20, stored: {...emptyResources(), coal: 20}}
     ];
     const moved = runTunnels(world);
     expect(moved.tunnels.map(tunnel => tunnel.stored.ironPlate)).toEqual([0, 3]);
+    expect(moved.tunnels[1].stored.coal).toBe(20);
     expect(moved.campaign.statistics.exported.ironPlate).toBe(3);
     const stable = runTunnels(moved);
     expect(stable.campaign.statistics.exported.ironPlate).toBe(3);
   });
 
-  it("lets output tunnels accumulate resources without a storage limit", () => {
+  it("stores up to 200 units of each resource in a tunnel", () => {
     const world = createTestWorld();
     world.tunnels = [
-      {id: "out", x: 1, y: 1, entityType: "tunnel", type: "output", levelId: "level-1", linkedTunnelId: "in", direction: "right", capacity: 1, stored: emptyResources()},
-      {id: "in", x: 5, y: 1, entityType: "tunnel", type: "input", levelId: "level-2", direction: "right", capacity: 2, stored: emptyResources()}
+      {id: "out", x: 1, y: 1, entityType: "tunnel", type: "output", levelId: "level-1", direction: "right", capacity: 200,
+        stored: {...emptyResources(), ironPlate: 199, coal: 200}}
     ];
     world.conveyors = [{id: "belt", x: 0, y: 1, entityType: "conveyor", type: "conveyor", direction: "right",
-      speed: 0.2, capacity: 3, carrying: [{type: "ironPlate", amount: 50, progress: 1}]}];
+      speed: 0.2, capacity: 3, carrying: [{type: "ironPlate", amount: 3, progress: 1}]}];
 
     runConveyors(world);
-    expect(world.tunnels[0].stored.ironPlate).toBe(50);
-    expect(world.conveyors[0].carrying).toHaveLength(0);
-    expect(world.campaign.statistics.exported.ironPlate).toBe(50);
-
-    const transferred = runTunnels(world);
-    expect(transferred.tunnels.map(tunnel => tunnel.stored.ironPlate)).toEqual([48, 2]);
-    expect(transferred.campaign.statistics.exported.ironPlate).toBe(50);
+    expect(world.tunnels[0].stored).toMatchObject({ironPlate: 200, coal: 200});
+    expect(world.conveyors[0].carrying).toEqual([{type: "ironPlate", amount: 2, progress: 1}]);
+    expect(world.campaign.statistics.exported.ironPlate).toBe(1);
   });
 
   it("completes an objective and unlocks the next island", () => {
@@ -84,6 +81,7 @@ describe("Campaign progression", () => {
     const next = runCampaign(world);
     expect(next.campaign.levels.map(level => level.status)).toEqual(["completed", "active", "locked"]);
     expect(next.campaign.levels[0].completedAt).toBe(0);
+    expect(next.campaign.constructionMaterials).toBe(world.campaign.constructionMaterials + 50);
   });
 
   it("locks finalized islands against structural edits", () => {

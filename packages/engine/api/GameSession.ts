@@ -43,6 +43,8 @@ export class GameSession {
         return this.engine.placeStorage(command.x, command.y);
       case "destroy-entity":
         return this.engine.destroyEntityAt(command.x, command.y);
+      case "destroy-entities":
+        return this.engine.destroyEntitiesAt(command.positions);
       case "activate-level":
         return this.engine.activateLevel(command.levelId);
       case "finalize-level":
@@ -51,6 +53,8 @@ export class GameSession {
         return this.engine.selectMachineRecipe(command.machineId, command.recipeId);
       case "set-machine-paused":
         return this.engine.setMachinePaused(command.machineId, command.paused);
+      case "set-smart-splitter-filter":
+        return this.engine.setSmartSplitterFilter(command.splitterId, command.port, command.filter);
       case "continue-campaign":
         return this.engine.continueCampaign();
       default:

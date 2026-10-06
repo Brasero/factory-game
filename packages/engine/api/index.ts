@@ -10,6 +10,7 @@ export type {
   PlaceConveyorCommand,
   PlaceStorageCommand,
   DestroyEntityCommand,
+  DestroyEntitiesCommand,
   MachineType,
   DirectionType,
   Conveyor,

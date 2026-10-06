@@ -1,6 +1,6 @@
 import type {World} from "@engine/models/World.ts";
 import type {MachineType, MachineVariant} from "@engine/models/Machine.ts";
-import type {DirectionType, Conveyor, ConveyorTier} from "@engine/models/Conveyor.ts";
+import type {DirectionType, Conveyor, ConveyorTier, SmartSplitterFilter, SmartSplitterPort} from "@engine/models/Conveyor.ts";
 import type {Position} from "@engine/models/Position.ts";
 import type {Storage} from "@engine/models/Storage.ts";
 import type {SelectedItem, ToolMode, Controls} from "@engine/models/Controls.ts";
@@ -29,6 +29,8 @@ export type {
   MachineType,
   DirectionType,
   Conveyor,
+  SmartSplitterFilter,
+  SmartSplitterPort,
   Pipe,
   Position,
   Storage,
@@ -70,11 +72,13 @@ export type DestroyEntityCommand = {
   x: number;
   y: number;
 };
+export type DestroyEntitiesCommand = {type: "destroy-entities"; positions: Position[]};
 
 export type ActivateLevelCommand = {type: "activate-level"; levelId: string};
 export type FinalizeLevelCommand = {type: "finalize-level"; levelId: string};
 export type SelectMachineRecipeCommand = {type: "select-machine-recipe"; machineId: string; recipeId: RecipeId};
 export type SetMachinePausedCommand = {type: "set-machine-paused"; machineId: string; paused: boolean};
+export type SetSmartSplitterFilterCommand = {type: "set-smart-splitter-filter"; splitterId: string; port: SmartSplitterPort; filter: SmartSplitterFilter};
 export type ContinueCampaignCommand = {type: "continue-campaign"};
 
 export type EngineCommand =
@@ -83,8 +87,10 @@ export type EngineCommand =
   | PlacePipeCommand
   | PlaceStorageCommand
   | DestroyEntityCommand
+  | DestroyEntitiesCommand
   | ActivateLevelCommand
   | FinalizeLevelCommand
   | SelectMachineRecipeCommand
   | SetMachinePausedCommand
+  | SetSmartSplitterFilterCommand
   | ContinueCampaignCommand;

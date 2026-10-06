@@ -5,6 +5,7 @@ import {createTestWorld} from "@engine/test/createTestWorld";
 import type {Conveyor} from "@engine/models/Conveyor";
 import {Grid} from "@engine/world/Grid";
 import {TileMap} from "@engine/world/TileMap";
+import {createBenchmarkWorld} from "@engine/test/createBenchmarkWorld";
 
 it.skipIf(!process.env.PERF)("reports reproducible simulation and snapshot timings", () => {
   const measure = (fn: () => void) => {
@@ -32,3 +33,35 @@ it.skipIf(!process.env.PERF)("reports reproducible simulation and snapshot timin
     }
   }
 });
+
+it.skipIf(!process.env.PERF)("reports bulk destruction timings", () => {
+  const run = (count: number, mode: "sequential" | "sequential-snapshots" | "batch") => {
+    const world = createBenchmarkWorld(count);
+    const positions = world.conveyors.map(({x, y}) => ({x, y}));
+    const engine = new GameEngine(world);
+    const start = performance.now();
+    if (mode === "batch") {
+      if (!engine.destroyEntitiesAt(positions)) throw new Error("La suppression groupée n’a rien supprimé");
+      engine.getSnapshot();
+    } else {
+      let removed = 0;
+      for (const position of positions) {
+        if (engine.destroyEntityAt(position.x, position.y)) removed++;
+        if (mode === "sequential-snapshots") engine.getSnapshot();
+      }
+      if (removed !== count) throw new Error(`Suppression incomplète : ${removed}/${count}`);
+    }
+    const duration = performance.now() - start;
+    if (engine.getSnapshot().conveyors.length !== 0) throw new Error("Suppression incomplète");
+    return duration;
+  };
+
+  for (const count of [100, 1000, 5000]) {
+    for (const mode of ["sequential", "sequential-snapshots", "batch"] as const) {
+      const samples = Array.from({length: 3}, () => run(count, mode)).sort((a, b) => a - b);
+      const median = samples[1];
+      console.log(JSON.stringify({count, mode,
+        totalMs: +median.toFixed(3), perEntityMs: +(median / count).toFixed(4)}));
+    }
+  }
+}, 20_000);

@@ -16,6 +16,30 @@ describe("GameEngine", () => {
     expect(game.getWorld().tick).toBe(2);
   });
 
+  it("removes many entities in one batch and ignores duplicate positions", () => {
+    expect(engine.placeConveyor(0, 0, "right")).toBe(true);
+    expect(engine.placeConveyor(1, 0, "right")).toBe(true);
+    expect(engine.placeStorage(2, 0)).toBe(true);
+
+    expect(engine.destroyEntitiesAt([{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}])).toBe(true);
+    expect(engine.getWorld()).toMatchObject({conveyors: [], storages: []});
+    expect(engine.destroyEntitiesAt([{x: 0, y: 0}])).toBe(false);
+  });
+
+  it("charges construction materials and refunds 75 percent on destruction", () => {
+    expect(engine.getSnapshot().campaign.constructionMaterials).toBe(150);
+    expect(engine.placeStorage(0, 0)).toBe(true);
+    expect(engine.getSnapshot().campaign.constructionMaterials).toBe(140);
+    expect(engine.destroyEntityAt(0, 0)).toBe(true);
+    expect(engine.getSnapshot().campaign.constructionMaterials).toBe(147);
+
+    const world = engine.getWorld();
+    world.campaign.constructionMaterials = 0;
+    engine = new GameEngine(world);
+    expect(engine.canPlaceMachine(0, 0, "storage")).toBe(false);
+    expect(engine.placeStorage(0, 0)).toBe(false);
+  });
+
   it.each([
     ["iron-mine", 1, "iron"], ["coal-mine", 2, "coal"], ["water-pump", 3, "water"]
   ] as const)("produces %s into its buffer after ten ticks", (type, x, resource) => {

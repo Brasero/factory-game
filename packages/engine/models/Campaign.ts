@@ -27,6 +27,7 @@ export type CampaignStatistics = {
 
 export type CampaignState = {
   activeLevelId: string;
+  constructionMaterials: number;
   pollution: number;
   pollutionLimit: number;
   status: "playing" | "game-over" | "finished";

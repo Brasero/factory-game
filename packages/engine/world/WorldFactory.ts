@@ -6,6 +6,7 @@ import {levels} from "@engine/config/LevelConfig.ts";
 import {CAMPAIGN_LEVELS, CAMPAIGN_MAP, CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
 import {emptyResources} from "@engine/models/Resources";
 import type {Tunnel} from "@engine/models/Tunnel";
+import {INITIAL_CONSTRUCTION_MATERIALS} from "@engine/config/constructionConfig";
 
 export function createWorld(): World {
     const gridWidth = CAMPAIGN_MAP.width;
@@ -42,6 +43,7 @@ export function createWorld(): World {
         } satisfies Tunnel))),
         campaign: {
             activeLevelId: "level-1",
+            constructionMaterials: INITIAL_CONSTRUCTION_MATERIALS,
             pollution: 0,
             pollutionLimit: CAMPAIGN_POLLUTION_LIMIT,
             status: "playing",

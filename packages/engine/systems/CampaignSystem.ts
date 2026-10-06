@@ -1,5 +1,6 @@
 import type {World} from "@engine/models/World";
 import {CAMPAIGN_LEVELS, objectiveValue} from "@engine/config/campaignConfig";
+import {LEVEL_CONSTRUCTION_REWARD} from "@engine/config/constructionConfig";
 
 export function runCampaign(world: World): World {
   if (world.campaign.status !== "playing") return world;
@@ -12,6 +13,7 @@ export function runCampaign(world: World): World {
     if (objectiveValue(campaign.statistics, stored, definition) < definition.objective.amount) continue;
     progress.status = "completed";
     progress.completedAt = world.tick;
+    campaign.constructionMaterials += LEVEL_CONSTRUCTION_REWARD;
     const next = campaign.levels[index + 1];
     if (next?.status === "locked") next.status = "active";
     if (!next) campaign.status = "finished";

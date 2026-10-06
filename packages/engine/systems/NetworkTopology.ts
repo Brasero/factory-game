@@ -28,9 +28,7 @@ export function buildNetworkTopology(world: World): NetworkTopology {
   world.conveyors.forEach((c, index) => occupied.set(positionKey(c), {kind: "belt", index}));
   world.storages.forEach((s, index) => occupied.set(positionKey(s), {kind: "storage", index}));
   world.machines.forEach((m, index) => occupied.set(positionKey(m), {kind: "machine", index}));
-  world.tunnels.forEach((tunnel, index) => {
-    if (tunnel.type === "output") occupied.set(positionKey(tunnel), {kind: "tunnel", index});
-  });
+  world.tunnels.forEach((tunnel, index) => occupied.set(positionKey(tunnel), {kind: "tunnel", index}));
   // Seules les entrees acceptees comptent : un tapis refuse par son receveur ne cree pas de jonction.
   const incoming = new Map<string, number>();
   const connections = world.conveyors.map(source => outputDirections(source).map(direction => {
@@ -63,7 +61,7 @@ export function buildNetworkTopology(world: World): NetworkTopology {
 export const directions: DirectionType[] = ["right", "down", "left", "up"];
 export function outputDirections(belt: Conveyor): DirectionType[] {
   const forward = directions.indexOf(belt.direction);
-  return belt.type === "splitter"
+  return belt.type === "splitter" || belt.type === "smart-splitter"
     ? [belt.direction, directions[(forward + 1) % 4], directions[(forward + 3) % 4]]
     : [belt.direction];
 }
@@ -75,5 +73,5 @@ export function inputPort(belt: Conveyor, source: Position): number {
 export function acceptsInput(belt: Conveyor, source: Position): boolean {
   const forward = directions.indexOf(belt.direction);
   const port = inputPort(belt, source);
-  return belt.type === "splitter" ? port === (forward + 2) % 4 : port !== forward;
+  return belt.type === "splitter" || belt.type === "smart-splitter" ? port === (forward + 2) % 4 : port !== forward;
 }

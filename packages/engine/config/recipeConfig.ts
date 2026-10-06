@@ -1,7 +1,7 @@
 import type {Machine, MachineType} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
 
-export type RecipeId = "iron-smelting" | "steel-smelting" | "copper-wire" | "circuit-assembly" | "water-purification";
+export type RecipeId = "iron-smelting" | "steel-smelting" | "copper-wire" | "circuit-assembly" | "water-purification" | "recycling";
 
 export type MachineRecipe = {
   id: RecipeId;
@@ -10,6 +10,8 @@ export type MachineRecipe = {
   outputs: Partial<Record<ResourcesType, number>>;
   duration: number;
   pollutionReduction?: number;
+  acceptsAnyResource?: boolean;
+  constructionMaterials?: number;
 };
 
 export const RECIPES: Record<RecipeId, MachineRecipe> = {
@@ -17,7 +19,8 @@ export const RECIPES: Record<RecipeId, MachineRecipe> = {
   "steel-smelting": {id: "steel-smelting", name: "Acier", inputs: {ironPlate: 1, coal: 1}, outputs: {steel: 1}, duration: 30},
   "copper-wire": {id: "copper-wire", name: "Fil de cuivre", inputs: {copper: 1}, outputs: {copperWire: 2}, duration: 18},
   "circuit-assembly": {id: "circuit-assembly", name: "Circuit", inputs: {ironPlate: 1, copperWire: 2}, outputs: {circuit: 1}, duration: 35},
-  "water-purification": {id: "water-purification", name: "Dépollution à l’eau", inputs: {water: 1}, outputs: {}, duration: 20, pollutionReduction: 12}
+  "water-purification": {id: "water-purification", name: "Dépollution à l’eau", inputs: {water: 1}, outputs: {}, duration: 30, pollutionReduction: 4},
+  recycling: {id: "recycling", name: "Recyclage", inputs: {}, outputs: {}, duration: 25, acceptsAnyResource: true, constructionMaterials: 1}
 };
 
 export const MACHINE_RECIPE_OPTIONS: Partial<Record<MachineType, RecipeId[]>> = {
@@ -25,7 +28,8 @@ export const MACHINE_RECIPE_OPTIONS: Partial<Record<MachineType, RecipeId[]>> = 
   "steel-smelter": ["steel-smelting", "iron-smelting"],
   "wire-mill": ["copper-wire"],
   assembler: ["copper-wire", "circuit-assembly"],
-  boiler: ["water-purification"]
+  boiler: ["water-purification"],
+  recycler: ["recycling"]
 };
 
 export const defaultRecipe = (type: MachineType): RecipeId | undefined => MACHINE_RECIPE_OPTIONS[type]?.[0];
@@ -36,7 +40,12 @@ export const recipeInputs = (machine: Pick<Machine, "type" | "recipeId">) =>
 export const recipeOutputs = (machine: Pick<Machine, "type" | "recipeId">) =>
   Object.entries(recipeFor(machine)?.outputs ?? {}) as [ResourcesType, number][];
 
+export const recipeAcceptsResource = (machine: Pick<Machine, "type" | "recipeId">, resource: ResourcesType) => {
+  const recipe = recipeFor(machine);
+  return !!recipe && (recipe.acceptsAnyResource || recipe.inputs[resource] !== undefined);
+};
+
 export const machineInputSpace = (machine: Pick<Machine, "type" | "recipeId" | "buffer" | "capacity">, resource: ResourcesType) =>
-  recipeInputs(machine).some(([input]) => input === resource)
+  recipeAcceptsResource(machine, resource)
     ? Math.max(0, machine.capacity - (machine.buffer[resource] ?? 0))
     : 0;
