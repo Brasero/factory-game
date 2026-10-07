@@ -53,6 +53,25 @@ describe("Machine recipe panel", () => {
 
     expect(host.textContent).toContain("Fil de cuivre1 Cuivre → 2 Fil de cuivre18 ticks");
     expect(host.textContent).toContain("Circuit1 Lingot de fer + 2 Fil de cuivre → 1 Circuit35 ticks");
+    expect(host.textContent).not.toContain("Cœur d’automatisation");
+  });
+
+  it("offers the four-input recipe only on the advanced assembler", () => {
+    const world = createTestWorld();
+    const engine = new GameEngine(world);
+    engine.placeMachine(0, 0, "advanced-assembler");
+    const snapshot = engine.getSnapshot();
+    setWorldSnapshot(snapshot);
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    act(() => root.render(createElement(MachineRecipePanel, {
+      machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
+    })));
+
+    expect(host.textContent).toContain(
+      "Cœur d’automatisation2 Cellule d’uranium + 2 Unité de calcul + 4 Acier + 5 Eau → 1 Cœur d’automatisation70 ticks"
+    );
   });
 
   it("explains the boiler pollution reduction", () => {

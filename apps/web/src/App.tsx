@@ -67,8 +67,8 @@ function App() {
     useEffect(() => {
       if (!hasStarted || screen !== "game" || tutorialStep !== null) return;
       const unlocked = (id: string) => campaignLevels.find(level => level.id === id)?.status !== "locked";
-      const next: TutorialSequenceId | undefined = unlocked("level-2") && !shownTutorials.has("level-2") ? "level-2"
-        : unlocked("level-3") && !shownTutorials.has("level-3") ? "level-3" : undefined;
+      const next = (["level-2", "level-3", "level-4", "level-5", "level-6"] as TutorialSequenceId[])
+        .find(sequence => unlocked(sequence) && !shownTutorials.has(sequence));
       if (!next) return;
       let cancelled = false;
       queueMicrotask(() => {

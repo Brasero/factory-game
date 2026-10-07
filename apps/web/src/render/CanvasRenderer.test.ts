@@ -1,16 +1,71 @@
 import {it, expect, vi} from "vitest";
-import {findPreviousConveyor, interpolatedConveyorProgress, pollutionHazeOpacity, render} from "./CanvasRenderer";
+import {
+  findPreviousConveyor,
+  interpolatedConveyorProgress,
+  pollutionSmokeLayerVisibility,
+  pollutionSmokeMotion,
+  pollutionSmokeState,
+  render
+} from "./CanvasRenderer";
 import type {Conveyor, DirectionType, WorldSnapshot} from "@engine/api/types";
 import {assetManager} from "@web/render/manager/AssetManager";
 import {createTestCampaign} from "@engine/test/createTestWorld";
 import {emptyResources} from "@engine/models/Resources";
 
-vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn((key: string) => ({width: 192, key}))}}));
+vi.mock("@web/render/manager/AssetManager", () => ({assetManager: {getImage: vi.fn((key: string) => ({
+  width: 192, naturalWidth: 512, naturalHeight: 512, key
+}))}}));
 
-it("progressively obscures the world as pollution approaches its limit", () => {
-  expect(pollutionHazeOpacity(90, 900)).toBe(0);
-  expect(pollutionHazeOpacity(450, 900)).toBeGreaterThan(0.15);
-  expect(pollutionHazeOpacity(900, 900)).toBeCloseTo(0.52);
+it("moves thicker pollution smoke from the viewport edges toward the center", () => {
+  expect(pollutionSmokeState(90, 900)).toEqual({intensity: 0, reach: 0, opacity: 0});
+  const medium = pollutionSmokeState(450, 900);
+  const critical = pollutionSmokeState(900, 900);
+  expect(medium.reach).toBeGreaterThan(0.2);
+  expect(critical.reach).toBeCloseTo(0.48);
+  expect(critical.opacity).toBeGreaterThan(medium.opacity);
+});
+
+it("fades pollution smoke layers in progressively", () => {
+  expect(pollutionSmokeLayerVisibility(0.3, 1)).toBe(0);
+  expect(pollutionSmokeLayerVisibility(0.5, 1)).toBeCloseTo(0.5);
+  expect(pollutionSmokeLayerVisibility(0.7, 1)).toBe(1);
+});
+
+it("moves pollution smoke continuously between rendered frames", () => {
+  const firstFrame = pollutionSmokeMotion(1_000, 0, 120);
+  const nextFrame = pollutionSmokeMotion(1_016, 0, 120);
+  expect(nextFrame.offset).toBeGreaterThan(firstFrame.offset);
+  expect(nextFrame.offset - firstFrame.offset).toBeLessThan(0.1);
+});
+
+it("keeps smoke texture variants aligned when their movement loops", () => {
+  const beforeLoop = pollutionSmokeMotion(35_550, 0, 120);
+  const afterLoop = pollutionSmokeMotion(35_560, 0, 120);
+  expect(beforeLoop.offset).toBeGreaterThan(119);
+  expect(afterLoop.offset).toBeLessThan(1);
+  expect(afterLoop.tileShift).toBe(beforeLoop.tileShift + 1);
+});
+
+it("draws reusable smoke texture frames around a polluted viewport", () => {
+  const campaign = createTestCampaign();
+  campaign.pollution = campaign.pollutionLimit;
+  const world: WorldSnapshot = {
+    tick: 10, machines: [], storages: [], tunnels: [], conveyors: [], campaign,
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 1, height: 1, resources: [], tiles: [[{biome: "sea", variant: 0}]]}
+  };
+  const drawImage = vi.fn();
+  const addColorStop = vi.fn();
+  const ctx = {
+    canvas: {width: 320, height: 180}, setTransform: vi.fn(), clearRect: vi.fn(), translate: vi.fn(), scale: vi.fn(),
+    save: vi.fn(), restore: vi.fn(), rotate: vi.fn(), drawImage, fillRect: vi.fn(),
+    createRadialGradient: vi.fn(() => ({addColorStop}))
+  } as unknown as CanvasRenderingContext2D;
+
+  render(ctx, world, undefined, undefined, undefined, undefined, 0.5, 1_000);
+
+  expect(ctx.createRadialGradient).toHaveBeenCalledTimes(4);
+  expect(drawImage.mock.calls.filter(([image]) => image.key === "effect.pollutionSmoke").length).toBeGreaterThan(8);
 });
 
 it("interpolates conveyor movement between simulation ticks without overshooting", () => {
@@ -63,7 +118,27 @@ it("cuts the running boiler into two complete 64 pixel frames", () => {
   const ctx = {canvas: {width: 96, height: 96}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
   render(ctx, world);
   const machineDraw = drawImage.mock.calls.find(([image]) => image.key === "machine.automation.boiler.running");
-  expect(machineDraw).toEqual([expect.anything(), 64, 0, 64, 48, 16, 16, 64, 48]);
+  expect(machineDraw).toEqual([expect.anything(), 64, 0, 64, 48, 32, 16, 64, 48]);
+});
+
+it("draws the two-cell advanced assembler from its four-frame animation", () => {
+  const world: WorldSnapshot = {
+    tick: 4,
+    machines: [{id: "advanced", x: 1, y: 2, type: "advanced-assembler", entityType: "machine",
+      spriteName: "advancedAssembler", progress: 1, active: true, buffer: {}, capacity: 100, efficiency: 1,
+      production: 1, variant: "standard", recipeId: "automation-core"}],
+    storages: [], tunnels: [], conveyors: [], campaign: createTestCampaign(),
+    resources: {iron: 0, coal: 0, water: 0, ironPlate: 0},
+    grid: {width: 4, height: 4, resources: [], tiles: Array.from({length: 4}, () =>
+      Array.from({length: 4}, () => ({biome: "sea" as const, variant: 0})))}
+  };
+  const drawImage = vi.fn();
+  const ctx = {canvas: {width: 128, height: 128}, setTransform: vi.fn(), clearRect: vi.fn(), drawImage} as unknown as CanvasRenderingContext2D;
+
+  render(ctx, world);
+
+  expect(drawImage.mock.calls.find(([image]) => image.key === "machine.automation.advancedAssembler.running"))
+    .toEqual([expect.anything(), 96, 0, 96, 80, 16, 16, 96, 80]);
 });
 
 it("cuts the active recycler into four complete animation frames", () => {

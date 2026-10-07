@@ -26,6 +26,9 @@ export function drawResourceNodes(
       case "copper":
         img = assetManager.getImage("node.copper");
         break;
+      case "uranium":
+        img = assetManager.getImage("node.uranium");
+        break;
       default:
         return;
     }

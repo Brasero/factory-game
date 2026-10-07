@@ -4,7 +4,9 @@ import {setSmartSplitterFilter} from "@web/game/GameController";
 
 const resourceNames: Record<ResourcesType, string> = {
   iron: "Minerai de fer", coal: "Charbon", water: "Eau", ironPlate: "Lingot de fer",
-  steel: "Acier", copper: "Cuivre", copperWire: "Fil de cuivre", circuit: "Circuit"
+  steel: "Acier", copper: "Cuivre", copperWire: "Fil de cuivre", circuit: "Circuit",
+  uranium: "Uranium", uraniumCell: "Cellule d’uranium", processingUnit: "Unité de calcul",
+  automationCore: "Cœur d’automatisation"
 };
 const ports: Array<{id: SmartSplitterPort; label: string; arrow: string}> = [
   {id: "left", label: "Sortie gauche", arrow: "↰"},

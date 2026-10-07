@@ -31,5 +31,35 @@ export const levels: LevelDefinition[] = [
         {x: 7, y: 4, radius: 3, resources: Array.from({length: 4}, () => ({type: "water" as const}))}
       ]
     }]
+  },
+  {
+    id: "level-4", seed: 410247, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "grass", center: CAMPAIGN_LEVELS[3].center, shape: {type: "smoothSquare", size: 19},
+      clearings: [
+        {x: -6, y: -4, radius: 4, resources: Array.from({length: 8}, () => ({type: "uranium" as const}))},
+        {x: 7, y: 5, radius: 3, resources: Array.from({length: 4}, () => ({type: "water" as const}))}
+      ]
+    }]
+  },
+  {
+    id: "level-5", seed: 550381, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "desert", center: CAMPAIGN_LEVELS[4].center, shape: {type: "organique", size: 19},
+      clearings: [
+        {x: -6, y: -4, radius: 4, resources: Array.from({length: 6}, () => ({type: "copper" as const}))},
+        {x: 7, y: 5, radius: 3, resources: Array.from({length: 5}, () => ({type: "coal" as const}))}
+      ]
+    }]
+  },
+  {
+    id: "level-6", seed: 690517, map: CAMPAIGN_MAP,
+    islands: [{
+      biome: "snow", center: CAMPAIGN_LEVELS[5].center, shape: {type: "smoothSquare", size: 19},
+      clearings: [
+        {x: -6, y: -4, radius: 4, resources: Array.from({length: 6}, () => ({type: "iron" as const}))},
+        {x: 7, y: 5, radius: 3, resources: Array.from({length: 5}, () => ({type: "water" as const}))}
+      ]
+    }]
   }
 ];

@@ -1,13 +1,15 @@
 import type {MachineType, MachineVariant} from "@engine/models/Machine";
 
 export const MACHINE_CAPACITY: Record<MachineType, number> = {
-  "iron-mine": 100, "coal-mine": 100, "copper-mine": 100, "water-pump": 100,
-  "iron-smelter": 100, "steel-smelter": 100, "wire-mill": 100, assembler: 100, boiler: 100, recycler: 100, conveyor: 1
+  "iron-mine": 100, "coal-mine": 100, "copper-mine": 100, "uranium-mine": 100, "water-pump": 100,
+  "iron-smelter": 100, "steel-smelter": 100, "wire-mill": 100, assembler: 100, "advanced-assembler": 100,
+  boiler: 100, recycler: 100, conveyor: 1
 };
 
 export const MACHINE_SPRITE_SHEET: Record<MachineType, string> = {
-  "iron-mine": "miner2", "coal-mine": "miner2", "copper-mine": "miner2", "water-pump": "water",
-  "iron-smelter": "ironSmelter", "steel-smelter": "steelSmelter", "wire-mill": "wireMill", assembler: "assembler", boiler: "boiler", recycler: "recycler", conveyor: ""
+  "iron-mine": "miner2", "coal-mine": "miner2", "copper-mine": "miner2", "uranium-mine": "miner2", "water-pump": "water",
+  "iron-smelter": "ironSmelter", "steel-smelter": "steelSmelter", "wire-mill": "wireMill", assembler: "assembler",
+  "advanced-assembler": "advancedAssembler", boiler: "boiler", recycler: "recycler", conveyor: ""
 };
 
 export type MachineProfile = {speed: number; production: number; pollution: number};
@@ -18,6 +20,7 @@ export const MACHINE_VARIANTS: Record<MachineVariant, MachineProfile> = {
 };
 
 export const MACHINE_BASE_POLLUTION: Record<MachineType, number> = {
-  "iron-mine": 1, "coal-mine": 1.3, "copper-mine": 1.2, "water-pump": 0.2,
-  "iron-smelter": 2, "steel-smelter": 3, "wire-mill": 1.2, assembler: 1.5, boiler: 0, recycler: 1, conveyor: 0
+  "iron-mine": 1, "coal-mine": 1.3, "copper-mine": 1.2, "uranium-mine": 1.6, "water-pump": 0.2,
+  "iron-smelter": 2, "steel-smelter": 3, "wire-mill": 1.2, assembler: 1.5, "advanced-assembler": 2.4,
+  boiler: 0, recycler: 1, conveyor: 0
 };

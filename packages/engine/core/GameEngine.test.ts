@@ -105,6 +105,15 @@ describe("GameEngine", () => {
     expect(engine.getWorld().machines[0].recipeId).toBe("steel-smelting");
   });
 
+  it("reserves the four-input recipe for the advanced assembler", () => {
+    expect(engine.placeMachine(0, 0, "assembler")).toBe(true);
+    expect(engine.placeMachine(3, 0, "advanced-assembler")).toBe(true);
+    const [assembler, advanced] = engine.getWorld().machines;
+
+    expect(engine.selectMachineRecipe(assembler.id, "automation-core")).toBe(false);
+    expect(engine.selectMachineRecipe(advanced.id, "automation-core")).toBe(true);
+  });
+
   it("pauses and resumes a machine after its island is finalized", () => {
     engine.placeMachine(1, 1, "iron-mine");
     const world = engine.getWorld();

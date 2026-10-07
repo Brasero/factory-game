@@ -2,8 +2,9 @@ import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
 
-export type MachineType = "iron-mine" | "coal-mine" | "copper-mine" | "water-pump" |
-    "iron-smelter" | "steel-smelter" | "wire-mill" | "assembler" | "boiler" | "recycler" | "conveyor";
+export type MachineType = "iron-mine" | "coal-mine" | "copper-mine" | "uranium-mine" | "water-pump" |
+    "iron-smelter" | "steel-smelter" | "wire-mill" | "assembler" | "advanced-assembler" |
+    "boiler" | "recycler" | "conveyor";
 export type MachineVariant = "eco" | "standard" | "industrial";
 
 export interface Machine extends BaseEntity {

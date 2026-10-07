@@ -1,5 +1,6 @@
 import type {ConveyorPlacement, DirectionType, Pipe, Position, WorldSnapshot} from "@engine/api/types";
 import {recipeInputs} from "@engine/config/recipeConfig";
+import {machineOccupies, machineOutputPosition} from "@engine/config/machineFootprint";
 import {assetManager} from "../manager/AssetManager";
 
 const DELTA: Record<DirectionType, Position> = {
@@ -40,8 +41,10 @@ function pipeConnections(world: WorldSnapshot, pipe: Pipe): Set<DirectionType> {
     connections.add("left");
   }
   const output = DELTA[pipe.direction];
-  const machine = world.machines.find(item => item.x === pipe.x + output.x && item.y === pipe.y + output.y);
-  if (machine && recipeInputs(machine).some(([resource]) => resource === "water")) connections.add(pipe.direction);
+  const target = {x: pipe.x + output.x, y: pipe.y + output.y};
+  const machine = world.machines.find(item => machineOccupies(item, target));
+  if (machine && (pipe.x !== machineOutputPosition(machine).x || pipe.y !== machineOutputPosition(machine).y) &&
+    recipeInputs(machine).some(([resource]) => resource === "water")) connections.add(pipe.direction);
   return connections;
 }
 

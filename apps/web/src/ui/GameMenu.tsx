@@ -105,7 +105,7 @@ export function GameMenu({mode, onPlay, onTutorial, onMainMenu, onNewCampaign, h
       </div>
       {isMain && <div className="goal-preview">
         <span>OBJECTIFS</span>
-        <strong>Trois îles à industrialiser</strong>
+        <strong>Six îles à industrialiser</strong>
         <p>Produis vite, maîtrise la pollution et relie tes usines par les tunnels.</p>
       </div>}
       <small>{isMain ? "Version de développement" : "Échap pour reprendre"}</small>

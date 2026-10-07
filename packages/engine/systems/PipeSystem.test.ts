@@ -31,4 +31,19 @@ describe("PipeSystem", () => {
     expect(next.pipes[0].water).toBe(1);
     expect(next.machines[0].buffer.water).toBeUndefined();
   });
+
+  it("feeds the advanced assembler through its fourth input while preserving the output port", () => {
+    const world = createTestWorld();
+    world.machines.push({id: "advanced", x: 2, y: 1, type: "advanced-assembler", entityType: "machine", progress: 0,
+      active: false, buffer: {}, capacity: 100, efficiency: 1, production: 1, recipeId: "automation-core"});
+    world.pipes.push(
+      {id: "input", x: 2, y: 2, entityType: "pipe", direction: "up", water: 1, capacity: 10},
+      {id: "output", x: 3, y: 2, entityType: "pipe", direction: "up", water: 1, capacity: 10}
+    );
+
+    const next = runPipes(world);
+
+    expect(next.machines[0].buffer.water).toBe(1);
+    expect(next.pipes.map(pipe => pipe.water)).toEqual([0, 1]);
+  });
 });

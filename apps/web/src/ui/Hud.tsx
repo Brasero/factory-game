@@ -13,7 +13,7 @@ import {MACHINE_VARIANTS} from "@engine/config/machineConfig";
 import {constructionCost} from "@engine/config/constructionConfig";
 import {useEffect, useState} from "react";
 
-const machineSelections: SelectedItem[] = ["miner", "water-pump", "iron-smelter", "assembler", "boiler", "recycler"];
+const machineSelections: SelectedItem[] = ["miner", "water-pump", "iron-smelter", "assembler", "advanced-assembler", "boiler", "recycler"];
 const variantLabels: Record<MachineVariant, string> = {eco: "Écologique", standard: "Standard", industrial: "Industrielle"};
 const multiplier = (value: number) => `×${value.toLocaleString("fr-FR")}`;
 
@@ -106,7 +106,7 @@ export function Hud() {
     if (!selectedItem || currentTool !== "build") return null;
     const labels: Partial<Record<SelectedItem, string>> = {
       miner: "Mineur", "water-pump": "Pompe à eau", "iron-smelter": "Fonderie",
-      assembler: "Machine de production", boiler: "Boiler", conveyor: "Tapis roulant",
+      assembler: "Machine de production", "advanced-assembler": "Assembleuse avancée", boiler: "Boiler", conveyor: "Tapis roulant",
       recycler: "Recycleur",
       pipe: "Tuyau", merger: "Merger", splitter: "Splitter", "smart-splitter": "Splitter intelligent", storage: "Coffre"
     };
@@ -130,6 +130,8 @@ export function Hud() {
       src={assetManager.getImage("machine.automation.ironSmelter.idle").src} alt=""/>;
     else if (selectedItem === "assembler") icon = <img className="hud-tool-icon"
       src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt=""/>;
+    else if (selectedItem === "advanced-assembler") icon = <img className="hud-tool-icon"
+      src={assetManager.getImage("machine.automation.advancedAssembler.idle").src} alt=""/>;
     else if (selectedItem === "boiler") icon = <img className="hud-tool-icon"
       src={assetManager.getImage("machine.automation.boiler.idle").src} alt=""/>;
     else if (selectedItem === "recycler") icon = <img className="hud-tool-icon"
@@ -177,6 +179,11 @@ export function Hud() {
           <img className="hud-tool-icon"
             src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt="" />
           </button>}
+        {unlockedMachines.has("advanced-assembler") && <button data-tutorial="advanced-assembler" aria-label="Assembleuse avancée"
+          title="Assembleuse avancée — machine de deux cases pour les recettes à quatre entrées"
+          className={buttonMachineStyle("advanced-assembler")} onClick={() => handleClick("advanced-assembler")}>
+          <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.advancedAssembler.idle").src} alt="" />
+        </button>}
         {unlockedMachines.has("boiler") && <button data-tutorial="boiler" aria-label="Boiler dépolluant"
           title="Boiler — consomme de l’eau pour réduire la pollution"
           className={buttonMachineStyle("boiler")} onClick={() => handleClick("boiler")}>

@@ -6,10 +6,12 @@ import type {Tunnel} from "@engine/models/Tunnel";
 import type {CampaignState} from "@engine/models/Campaign";
 import type {Resources} from "@engine/models/Resources";
 import {createWorld} from "@engine/world/WorldFactory";
-import {CAMPAIGN_POLLUTION_LIMIT} from "@engine/config/campaignConfig";
+import {CAMPAIGN_LEVELS, CAMPAIGN_POLLUTION_LIMIT, campaignLevelAt} from "@engine/config/campaignConfig";
 import type {Pipe} from "@engine/models/Pipe";
 import type {Position} from "@engine/models/Position";
 import {INITIAL_CONSTRUCTION_MATERIALS} from "@engine/config/constructionConfig";
+import {emptyResources} from "@engine/models/Resources";
+import {machineFootprintCells} from "@engine/config/machineFootprint";
 
 export type GameSave = {
   version: 1;
@@ -53,13 +55,43 @@ export function restoreWorld(save: GameSave): World {
     const saved = save.tunnels.find(item => item.id === tunnel.id);
     return saved ? {...tunnel, stored: structuredClone(saved.stored)} : tunnel;
   });
-  world.resources = structuredClone(save.resources);
-  world.campaign = structuredClone(save.campaign);
+  world.resources = {...emptyResources(), ...structuredClone(save.resources)};
+  const savedCampaign = structuredClone(save.campaign);
+  const savedLevelIds = new Set(savedCampaign.levels.map(level => level.id));
+  let expansionUnlocked = savedCampaign.status === "finished";
+  savedCampaign.levels = CAMPAIGN_LEVELS.map((definition, index) => {
+    const saved = save.campaign.levels.find(level => level.id === definition.id);
+    if (saved) {
+      expansionUnlocked ||= saved.status === "completed" || saved.status === "finalized";
+      return structuredClone(saved);
+    }
+    const previous = savedCampaign.levels[index - 1];
+    const status = expansionUnlocked && previous && previous.status !== "locked" ? "active" as const : "locked" as const;
+    expansionUnlocked = false;
+    return {id: definition.id, status, pollution: 0};
+  });
+  savedCampaign.statistics = {
+    extracted: {...emptyResources(), ...savedCampaign.statistics.extracted},
+    produced: {...emptyResources(), ...savedCampaign.statistics.produced},
+    exported: {...emptyResources(), ...savedCampaign.statistics.exported}
+  };
+  if (savedCampaign.status === "finished" && CAMPAIGN_LEVELS.some(level => !savedLevelIds.has(level.id))) {
+    savedCampaign.status = "playing";
+    savedCampaign.activeLevelId = savedCampaign.levels.find(level => level.status === "active")?.id ?? savedCampaign.activeLevelId;
+  }
+  world.campaign = savedCampaign;
   world.campaign.constructionMaterials ??= INITIAL_CONSTRUCTION_MATERIALS;
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;
-  if (save.decorations) world.grid?.replaceDecorations(save.decorations);
+  if (save.decorations) {
+    const expansionDecorations = world.grid?.getDecorations().filter(decoration => {
+      const level = campaignLevelAt(decoration.x, decoration.y);
+      return level && !savedLevelIds.has(level.id);
+    }) ?? [];
+    world.grid?.replaceDecorations([...save.decorations, ...expansionDecorations]);
+  }
   else for (const position of save.removedDecorations ?? []) world.grid?.removeDecoration(position);
-  for (const entity of [...world.machines, ...world.conveyors, ...world.pipes, ...world.storages]) world.grid?.occupy(entity);
+  for (const machine of world.machines) machineFootprintCells(machine).forEach(position => world.grid?.occupy(position));
+  for (const entity of [...world.conveyors, ...world.pipes, ...world.storages]) world.grid?.occupy(entity);
   return world;
 }
 

@@ -13,6 +13,7 @@ import type {Position} from "@engine/models/Position.ts";
 import {MACHINE_VARIANTS} from "@engine/config/machineConfig";
 import type {Pipe} from "@engine/models/Pipe";
 import {isPipe} from "@engine/models/Pipe";
+import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
 
 class EntityManager implements EntityManagerType {
   placeMachine(x: number, y: number, type: MachineType, world: World, variant: MachineVariant = "standard"): World | false {
@@ -20,10 +21,16 @@ class EntityManager implements EntityManagerType {
     if (!grid) throw new Error("Le monde n'a pas de grille définie.");
     
     try {
-      const canPlace = grid.canPlaceMachine({x, y}, type);
-      if (!canPlace) return false;
-      const success = grid.occupy({x, y})// Marque la case comme occupée
-      if (!success) return false;
+      const footprint = machineFootprintCells({x, y, type});
+      if (!footprint.every((cell, index) => grid.canPlaceMachine(cell, index === 0 ? type : "machine"))) return false;
+      const occupied: Position[] = [];
+      for (const cell of footprint) {
+        if (!grid.occupy(cell)) {
+          occupied.forEach(position => grid.free(position));
+          return false;
+        }
+        occupied.push(cell);
+      }
       const newMachine: Machine = {
         id: crypto.randomUUID(),
         buffer: {} as Record<ResourcesType, number>,
@@ -33,7 +40,7 @@ class EntityManager implements EntityManagerType {
         capacity: MACHINE_CAPACITY[type],
         progress: 0,
         active: false,
-        spriteName: (type === "iron-mine" || type === "coal-mine" || type === "copper-mine") && variant === "eco"
+        spriteName: (type === "iron-mine" || type === "coal-mine" || type === "copper-mine" || type === "uranium-mine") && variant === "eco"
           ? "miner1" : MACHINE_SPRITE_SHEET[type],
         entityType: 'machine',
         efficiency: MACHINE_VARIANTS[variant].speed,
@@ -66,7 +73,7 @@ class EntityManager implements EntityManagerType {
     
     try {
       const hasBlockingEntity =
-        world.machines.some(m => m.x === x && m.y === y) ||
+        world.machines.some(machine => machineOccupies(machine, {x, y})) ||
         world.storages.some(s => s.x === x && s.y === y);
       if (hasBlockingEntity) return false;
 
@@ -148,7 +155,8 @@ class EntityManager implements EntityManagerType {
     const entity = this.getEntityAt(x, y, world);
     if (!entity) return world;
     if (!world.grid) return world;
-    world.grid.free({x, y});
+    if (isMachineType(entity)) machineFootprintCells(entity).forEach(position => world.grid!.free(position));
+    else world.grid.free({x, y});
     
     if (isStorageType(entity)) {
       const storages = this.removeStorage(entity.id, world);
@@ -179,7 +187,7 @@ class EntityManager implements EntityManagerType {
     const findFn = (e: Position) => e.x === x && e.y === y;
     const storage = world.storages.find(findFn);
     if (storage) return storage;
-    const machine = world.machines.find(findFn);
+    const machine = world.machines.find(item => machineOccupies(item, {x, y}));
     if (machine) return machine;
     const conveyor = world.conveyors.find(findFn);
     if (conveyor) return conveyor;

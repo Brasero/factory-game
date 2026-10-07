@@ -4,7 +4,7 @@ import {createTestWorld} from "@engine/test/createTestWorld";
 import type {Machine} from "@engine/models/Machine";
 import type {World} from "@engine/models/World";
 import {runProduction} from "./ProductionSystem";
-import type {ResourcesType} from "@engine/models/Resources";
+import {RESOURCE_TYPES, type ResourcesType} from "@engine/models/Resources";
 
 function smelterWorld(buffer: Partial<Machine["buffer"]>): World {
   const engine = new GameEngine(createTestWorld());
@@ -66,6 +66,34 @@ describe("Recipe production", () => {
     expect(world.machines[0].buffer).toMatchObject({ironPlate: 0, copperWire: 0, circuit: 1});
   });
 
+  it("produces the three advanced resources from increasingly complex recipes", () => {
+    const engine = new GameEngine(createTestWorld());
+    engine.placeMachine(0, 0, "assembler");
+    let world = engine.getWorld();
+    const machine = world.machines[0];
+
+    machine.recipeId = "uranium-cell";
+    machine.buffer = {uranium: 2, steel: 1};
+    world = run(world, 45);
+    expect(world.machines[0].buffer).toMatchObject({uranium: 0, steel: 0, uraniumCell: 1});
+
+    world.machines[0].recipeId = "processing-unit";
+    world.machines[0].progress = 0;
+    world.machines[0].buffer = {circuit: 3, copperWire: 4, steel: 2};
+    world = run(world, 55);
+    expect(world.machines[0].buffer).toMatchObject({circuit: 0, copperWire: 0, steel: 0, processingUnit: 1});
+
+    const advanced = new GameEngine(createTestWorld());
+    advanced.placeMachine(5, 5, "advanced-assembler");
+    world = advanced.getWorld();
+    world.machines[0].recipeId = "automation-core";
+    world.machines[0].buffer = {uraniumCell: 2, processingUnit: 2, steel: 4, water: 5};
+    world = run(world, 70);
+    expect(world.machines[0].buffer).toMatchObject({
+      uraniumCell: 0, processingUnit: 0, steel: 0, water: 0, automationCore: 1
+    });
+  });
+
   it("consumes one unit of water to reduce pollution", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(0, 0, "boiler");
@@ -113,7 +141,7 @@ describe("Recipe production", () => {
     expect(world.machines[0]).toMatchObject({active: false, progress: 0, buffer: {water: 2}});
   });
 
-  it.each(["iron", "coal", "water", "ironPlate", "steel", "copper", "copperWire", "circuit"] as ResourcesType[])(
+  it.each([...RESOURCE_TYPES] as ResourcesType[])(
     "recycles %s into construction materials", resource => {
     const engine = new GameEngine(createTestWorld());
     expect(engine.placeMachine(0, 0, "recycler")).toBe(true);

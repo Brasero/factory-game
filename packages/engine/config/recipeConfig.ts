@@ -1,7 +1,8 @@
 import type {Machine, MachineType} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
 
-export type RecipeId = "iron-smelting" | "steel-smelting" | "copper-wire" | "circuit-assembly" | "water-purification" | "recycling";
+export type RecipeId = "iron-smelting" | "steel-smelting" | "copper-wire" | "circuit-assembly" |
+  "uranium-cell" | "processing-unit" | "automation-core" | "water-purification" | "recycling";
 
 export type MachineRecipe = {
   id: RecipeId;
@@ -19,6 +20,9 @@ export const RECIPES: Record<RecipeId, MachineRecipe> = {
   "steel-smelting": {id: "steel-smelting", name: "Acier", inputs: {ironPlate: 1, coal: 1}, outputs: {steel: 1}, duration: 30},
   "copper-wire": {id: "copper-wire", name: "Fil de cuivre", inputs: {copper: 1}, outputs: {copperWire: 2}, duration: 18},
   "circuit-assembly": {id: "circuit-assembly", name: "Circuit", inputs: {ironPlate: 1, copperWire: 2}, outputs: {circuit: 1}, duration: 35},
+  "uranium-cell": {id: "uranium-cell", name: "Cellule d’uranium", inputs: {uranium: 2, steel: 1}, outputs: {uraniumCell: 1}, duration: 45},
+  "processing-unit": {id: "processing-unit", name: "Unité de calcul", inputs: {circuit: 3, copperWire: 4, steel: 2}, outputs: {processingUnit: 1}, duration: 55},
+  "automation-core": {id: "automation-core", name: "Cœur d’automatisation", inputs: {uraniumCell: 2, processingUnit: 2, steel: 4, water: 5}, outputs: {automationCore: 1}, duration: 70},
   "water-purification": {id: "water-purification", name: "Dépollution à l’eau", inputs: {water: 1}, outputs: {}, duration: 30, pollutionReduction: 4},
   recycling: {id: "recycling", name: "Recyclage", inputs: {}, outputs: {}, duration: 25, acceptsAnyResource: true, constructionMaterials: 1}
 };
@@ -27,7 +31,8 @@ export const MACHINE_RECIPE_OPTIONS: Partial<Record<MachineType, RecipeId[]>> = 
   "iron-smelter": ["iron-smelting", "steel-smelting"],
   "steel-smelter": ["steel-smelting", "iron-smelting"],
   "wire-mill": ["copper-wire"],
-  assembler: ["copper-wire", "circuit-assembly"],
+  assembler: ["copper-wire", "circuit-assembly", "uranium-cell", "processing-unit"],
+  "advanced-assembler": ["automation-core"],
   boiler: ["water-purification"],
   recycler: ["recycling"]
 };

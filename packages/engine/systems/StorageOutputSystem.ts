@@ -4,6 +4,7 @@ import type {Storage} from "@engine/models/Storage";
 import type {Tunnel} from "@engine/models/Tunnel";
 import type {World} from "@engine/models/World";
 import {acceptsInput, directions, nextPosition, positionKey} from "@engine/systems/NetworkTopology";
+import {machineFootprintCells, machineOutputPosition} from "@engine/config/machineFootprint";
 
 type StoredEntity = Storage | Tunnel;
 
@@ -16,7 +17,8 @@ export function runStorageOutputs(world: World): World {
   const tunnels = world.tunnels.map(tunnel => ({...tunnel, stored: {...tunnel.stored}}));
   const machines = world.machines.map(machine => ({...machine, buffer: {...machine.buffer}}));
   const conveyors = world.conveyors.map(conveyor => ({...conveyor, carrying: [...conveyor.carrying]}));
-  const machinesByPosition = new Map(machines.map((machine, index) => [positionKey(machine), index]));
+  const machinesByPosition = new Map(machines.flatMap((machine, index) =>
+    machineFootprintCells(machine).map(cell => [positionKey(cell), index] as const)));
   const conveyorsByPosition = new Map(conveyors.map((conveyor, index) => [positionKey(conveyor), index]));
 
   for (const storage of [...storages, ...tunnels]) {
@@ -25,6 +27,7 @@ export function runStorageOutputs(world: World): World {
       const machineIndex = machinesByPosition.get(positionKey(pos));
       if (machineIndex !== undefined) {
         const machine = machines[machineIndex];
+        if (positionKey(storage) === positionKey(machineOutputPosition(machine))) continue;
         const input = (Object.keys(storage.stored) as ResourcesType[]).find(resource =>
           (storage.stored[resource] ?? 0) > 0 && recipeAcceptsResource(machine, resource) && machineInputSpace(machine, resource) > 0);
         if (!input) continue;

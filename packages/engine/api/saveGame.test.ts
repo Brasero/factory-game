@@ -18,6 +18,20 @@ describe("Campaign saves", () => {
     expect(restored.grid?.isOccupied({x: 1, y: 2})).toBe(true);
   });
 
+  it.each(["boiler", "advanced-assembler"] as const)("restores both occupied cells of a %s", type => {
+    const engine = new GameEngine(createTestWorld());
+    expect(engine.placeMachine(5, 5, type)).toBe(true);
+
+    const restored = restoreWorld(serializeWorld(engine.getWorld()));
+
+    expect(restored.grid?.isOccupied({x: 5, y: 5})).toBe(true);
+    expect(restored.grid?.isOccupied({x: 6, y: 5})).toBe(true);
+    const restoredEngine = new GameEngine(restored);
+    expect(restoredEngine.destroyEntityAt(6, 5)).toBe(true);
+    expect(restoredEngine.getWorld().grid?.isOccupied({x: 5, y: 5})).toBe(false);
+    expect(restoredEngine.getWorld().grid?.isOccupied({x: 6, y: 5})).toBe(false);
+  });
+
   it("migrates the former steel foundry to the shared foundry", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeMachine(0, 0, "iron-smelter");
@@ -40,6 +54,23 @@ describe("Campaign saves", () => {
     expect(restoreWorld(saved).machines[0]).toMatchObject({
       type: "assembler", recipeId: "copper-wire", spriteName: "assembler"
     });
+  });
+
+  it("unlocks the campaign expansion after restoring a completed three-island save", () => {
+    const save = serializeWorld(new GameEngine(createTestWorld()).getWorld());
+    save.campaign.levels = save.campaign.levels.slice(0, 3).map(level => ({...level, status: "finalized"}));
+    save.campaign.activeLevelId = "level-3";
+    save.campaign.status = "finished";
+    save.resources = {iron: 0, coal: 0, water: 0, ironPlate: 0};
+
+    const restored = restoreWorld(save);
+
+    expect(restored.campaign.status).toBe("playing");
+    expect(restored.campaign.activeLevelId).toBe("level-4");
+    expect(restored.campaign.levels.map(level => level.status)).toEqual([
+      "finalized", "finalized", "finalized", "active", "locked", "locked"
+    ]);
+    expect(restored.resources).toMatchObject({uranium: 0, uraniumCell: 0, processingUnit: 0, automationCore: 0});
   });
 
   it("preserves removed scenery", () => {

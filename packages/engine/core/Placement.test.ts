@@ -38,6 +38,25 @@ describe("Placement rules", () => {
     expect(engine.canPlaceMachine(0, 0, "storage", "industrial")).toBe(true);
     expect(engine.canPlaceMachine(0, 0, "conveyor", "industrial")).toBe(true);
   });
+
+  it.each(["boiler", "advanced-assembler"] as const)("occupies and frees both cells of a %s", type => {
+    const engine = new GameEngine(createTestWorld());
+    expect(engine.placeMachine(5, 5, type)).toBe(true);
+    expect(engine.getWorld().grid?.isOccupied({x: 5, y: 5})).toBe(true);
+    expect(engine.getWorld().grid?.isOccupied({x: 6, y: 5})).toBe(true);
+    expect(engine.canPlaceMachine(6, 5, "storage")).toBe(false);
+
+    expect(engine.destroyEntityAt(6, 5)).toBe(true);
+    expect(engine.getWorld().grid?.isOccupied({x: 5, y: 5})).toBe(false);
+    expect(engine.getWorld().grid?.isOccupied({x: 6, y: 5})).toBe(false);
+  });
+
+  it("rejects a two-cell machine when its second cell is unavailable", () => {
+    const occupied = createTestWorld();
+    occupied.grid!.occupy({x: 6, y: 5});
+    expect(new GameEngine(occupied).placeMachine(5, 5, "boiler")).toBe(false);
+    expect(new GameEngine(createTestWorld()).placeMachine(9, 5, "advanced-assembler")).toBe(false);
+  });
   it.each(["sea", "decoration", "occupied", "fractional", "outside"])("rejects storage and belts on %s", reason => {
     const world = createTestWorld();
     world.grid = new Grid(1, 1, new TileMap(1, 1, [[{

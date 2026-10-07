@@ -10,11 +10,13 @@ const BASE_COSTS: Partial<Record<SelectedItem, number>> = {
   "iron-mine": 20,
   "coal-mine": 20,
   "copper-mine": 20,
+  "uranium-mine": 20,
   "water-pump": 20,
   "iron-smelter": 30,
   "steel-smelter": 30,
   "wire-mill": 40,
   assembler: 40,
+  "advanced-assembler": 70,
   boiler: 25,
   recycler: 25,
   storage: 10,
@@ -32,8 +34,8 @@ const VARIANT_COST_MULTIPLIER: Record<MachineVariant, number> = {
 };
 
 const variantMachines = new Set<SelectedItem>([
-  "miner", "iron-mine", "coal-mine", "copper-mine", "water-pump", "iron-smelter",
-  "steel-smelter", "wire-mill", "assembler", "boiler", "recycler"
+  "miner", "iron-mine", "coal-mine", "copper-mine", "uranium-mine", "water-pump", "iron-smelter",
+  "steel-smelter", "wire-mill", "assembler", "advanced-assembler", "boiler", "recycler"
 ]);
 
 export function constructionCost(item: SelectedItem, variant: MachineVariant = "standard"): number {

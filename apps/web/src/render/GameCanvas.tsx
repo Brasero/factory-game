@@ -9,22 +9,25 @@ import {destroyEntity, placeMiner, placeMachine, placeConveyor, placeCoalMine, p
 import {selectCurentTool, selectGamePaused, selectSelectedItem, selectSelectedVariant} from "@web/store/selectors";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
 import type {Position, ConveyorPlacement, DirectionType, Conveyor} from "@engine/api/types";
-import {buildConveyorPlacements, getBestPath} from "./utils/canvas";
+import {buildConveyorPlacements, getBestPath, getRectangleCells} from "./utils/canvas";
 import type {Camera} from "@web/model/Camera";
 import {CAMPAIGN_LEVELS, campaignLevelAt} from "@engine/config/campaignConfig";
 import {MachineRecipePanel} from "@web/ui/MachineRecipePanel";
-import {createDestructionParticles, drawDestructionParticles, type DestructionParticle} from "./utils/destructionParticles";
+import {createDestructionParticles, drawDestructionParticles, drawDestructionPreview, type DestructionParticle} from "./utils/destructionParticles";
 import {SmartSplitterPanel} from "@web/ui/SmartSplitterPanel";
+import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
+import type {MachineType} from "@engine/models/Machine";
 
 interface GameCanvasProps {width: number; height: number; cellSize: number}
 type Drag = {start: Position; last: Position; mode: "pan" | "network" | "destroy"; moved: boolean; lastCell?: Position;
-  destructionCells?: Map<string, Position>};
+  button: 0 | 1 | 2; startCell?: Position};
 
 export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drag = useRef<Drag | null>(null);
   const horizontalFirst = useRef(true);
   const suppressClick = useRef(false);
+  const suppressContextMenu = useRef(false);
   const camera = useRef<Camera>({scale: 1, minScale: 0.5, maxScale: 2.5, x: 0, y: 0});
   const world = useWorldSnapshot();
   const lastActiveLevel = useRef<string>("");
@@ -82,10 +85,6 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const destroyAt = (cell: Position) => {
     if (destroyEntity(cell.x, cell.y)) addDestructionParticles(cell);
   };
-  const queueDestruction = (cell: Position) => {
-    drag.current?.destructionCells?.set(`${cell.x},${cell.y}`, cell);
-  };
-
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
@@ -93,9 +92,15 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     const drawFrame = (now: number) => {
       const storage = hover ? world.storages.find(s => s.x === hover.x && s.y === hover.y) : undefined;
       const highlight = hover && (selectedItem || currentTool === "destroy")
-        ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)} : undefined;
+        ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant),
+          footprint: selectedItem === "boiler" || selectedItem === "advanced-assembler"
+            ? machineFootprintCells({...hover, type: selectedItem as MachineType}) : undefined} : undefined;
       const tickInterpolation = paused ? 0 : Math.min(1, (now - snapshotTime.current) / 100);
-      render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation);
+      render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation, now);
+      const destruction = drag.current;
+      if (destruction?.mode === "destroy" && destruction.startCell && destruction.lastCell) {
+        drawDestructionPreview(ctx, destruction.startCell, destruction.lastCell, cellSize);
+      }
       destructionParticles.current = destructionParticles.current.filter(particle => now - particle.bornAt < particle.lifetime);
       if (destructionParticles.current.length) drawDestructionParticles(ctx, destructionParticles.current, now);
       if (isDirectionalTool && selectedItem !== "pipe" && currentTool === "build") {
@@ -116,20 +121,24 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
 
   // Stable subscriptions; effect events read the latest tool and camera state.
   const finishDrag = useEffectEvent((event: MouseEvent) => {
-    if (event.button !== 0 || !drag.current) return;
+    if (!drag.current || event.button !== drag.current.button) return;
     const active = drag.current;
-    suppressClick.current = active.moved || active.mode === "destroy";
+    if (active.button === 0) suppressClick.current = active.moved || active.mode === "destroy";
+    if (active.button === 2 && active.moved) suppressContextMenu.current = true;
     if (active.mode === "network" && (selectedItem === "conveyor" || selectedItem === "pipe") && event.target === canvasRef.current) {
       const line = pathTo(cellAt(event.clientX, event.clientY));
       if (selectedItem === "pipe") placePipeLine(line);
       else placeConveyorLine(line);
     }
     if (active.mode === "destroy") {
-      const positions = [...(active.destructionCells?.values() ?? [])];
+      const positions = active.startCell
+        ? getRectangleCells(active.startCell, cellAt(event.clientX, event.clientY)) : [];
       const levelThree = world.campaign.levels.find(level => level.id === "level-3");
       const levelThreeUnlocked = !!levelThree && levelThree.status !== "locked";
-      const entityPositions = new Set([...world.machines, ...world.conveyors, ...(world.pipes ?? []), ...world.storages]
-        .map(entity => `${entity.x},${entity.y}`));
+      const entityPositions = new Set([
+        ...world.machines.flatMap(machine => machineFootprintCells(machine)),
+        ...world.conveyors, ...(world.pipes ?? []), ...world.storages
+      ].map(entity => `${entity.x},${entity.y}`));
       const destroyedPositions = positions.filter(position => {
         const definition = campaignLevelAt(position.x, position.y) ??
           CAMPAIGN_LEVELS.find(level => level.id === world.campaign.activeLevelId);
@@ -200,8 +209,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     {isDirectionalTool && currentTool === "build" && <div className="conveyor-help" role="status">
       <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "pipe" ? "Tuyau" : selectedItem === "merger" ? "Merger" : selectedItem === "smart-splitter" ? "Splitter intelligent" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
       {selectedItem !== "conveyor" && selectedItem !== "pipe" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
-      <span><kbd>R</kbd> Rotation horaire · pendant un tracé : inverser le virage</span>
-      <span><kbd>Maj</kbd> + <kbd>R</kbd> Rotation antihoraire</span>
+      <span><kbd>R</kbd> horaire / virage · <kbd>Maj+R</kbd> antihoraire</span>
+      <span>Glisser droit ou molette : déplacer la caméra</span>
     </div>}
     {machine && inspectedMachine && <MachineRecipePanel machine={machine} left={inspectedMachine.left}
       top={inspectedMachine.top} onClose={() => setInspectedMachine(null)} />}
@@ -209,23 +218,31 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       top={inspectedSplitter.top} onClose={() => setInspectedSplitter(null)} />}
     <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
     onMouseDown={event => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 && event.button !== 1 && event.button !== 2) return;
+      if (event.button !== 0) {
+        if (currentTool === "destroy") return;
+        event.preventDefault();
+        const pos = {x: event.clientX, y: event.clientY};
+        drag.current = {start: pos, last: pos, moved: false, mode: "pan", button: event.button as 1 | 2};
+        return;
+      }
       suppressClick.current = false;
       if (currentTool === "destroy") {
         const cell = cellAt(event.clientX, event.clientY);
         drag.current = {start: {x: event.clientX, y: event.clientY}, last: {x: event.clientX, y: event.clientY},
-          lastCell: cell, moved: false, mode: "destroy", destructionCells: new Map()};
-        queueDestruction(cell);
+          startCell: cell, lastCell: cell, moved: false, mode: "destroy", button: 0};
         setInspectedMachine(null);
       } else if (selectedItem === "conveyor" || selectedItem === "pipe" || (!selectedItem && currentTool === "build")) {
         const pos = {x: event.clientX, y: event.clientY};
         horizontalFirst.current = true;
-        drag.current = {start: pos, last: pos, moved: false, mode: selectedItem === "conveyor" || selectedItem === "pipe" ? "network" : "pan"};
+        drag.current = {start: pos, last: pos, moved: false,
+          mode: selectedItem === "conveyor" || selectedItem === "pipe" ? "network" : "pan", button: 0};
       }
     }}
     onMouseMove={event => {
       const active = drag.current;
-      if (active && event.buttons === 1) {
+      const activeButtonMask = active ? ({0: 1, 1: 4, 2: 2} as const)[active.button] : 0;
+      if (active && (event.buttons & activeButtonMask) !== 0) {
         active.moved ||= Math.hypot(event.clientX - active.start.x, event.clientY - active.start.y) > 3;
         if (active.mode === "pan") {
           camera.current.x += event.clientX - active.last.x;
@@ -238,16 +255,6 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
           setPreview(pathTo(nextCell));
         } else {
           const nextCell = cellAt(event.clientX, event.clientY);
-          const previous = active.lastCell ?? nextCell;
-          const dx = Math.abs(nextCell.x - previous.x), sx = previous.x < nextCell.x ? 1 : -1;
-          const dy = -Math.abs(nextCell.y - previous.y), sy = previous.y < nextCell.y ? 1 : -1;
-          let x = previous.x, y = previous.y, error = dx + dy;
-          while (x !== nextCell.x || y !== nextCell.y) {
-            const twice = 2 * error;
-            if (twice >= dy) { error += dy; x += sx; }
-            if (twice <= dx) { error += dx; y += sy; }
-            queueDestruction({x, y});
-          }
           active.lastCell = nextCell;
         }
       }
@@ -257,6 +264,10 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     onMouseLeave={() => setHover(null)}
     onContextMenu={event => {
       event.preventDefault();
+      if (suppressContextMenu.current) {
+        suppressContextMenu.current = false;
+        return;
+      }
       drag.current = null;
       setPreview([]);
       dispatch(setSelectedItem(""));
@@ -268,7 +279,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       if (suppressClick.current) { suppressClick.current = false; return; }
       const {x, y} = cellAt(event.clientX, event.clientY);
       if (currentTool === "destroy") { destroyAt({x, y}); setInspectedMachine(null); return; }
-      const clickedMachine = world.machines.find(item => item.x === x && item.y === y);
+      const clickedMachine = world.machines.find(item => machineOccupies(item, {x, y}));
       if (clickedMachine) {
         const rect = canvasRef.current!.getBoundingClientRect();
         setInspectedMachine({id: clickedMachine.id,
@@ -296,6 +307,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         case "water-pump": placeMachine(x, y, "water-pump", selectedVariant); break;
         case "iron-smelter": placeMachine(x, y, "iron-smelter", selectedVariant); break;
         case "assembler": placeMachine(x, y, "assembler", selectedVariant); break;
+        case "advanced-assembler": placeMachine(x, y, "advanced-assembler", selectedVariant); break;
         case "boiler": placeMachine(x, y, "boiler", selectedVariant); break;
         case "recycler": placeMachine(x, y, "recycler", selectedVariant); break;
         case "storage": placeStorage(x, y); break;

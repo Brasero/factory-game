@@ -54,7 +54,61 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     },
     tunnels: [
       {id: "level-3-input", type: "input", position: {x: 179, y: 55}, levelId: "level-3"},
-      {id: "level-3-output", type: "output", position: {x: 211, y: 55}, levelId: "level-3"}
+      {id: "level-3-output", type: "output", position: {x: 211, y: 55}, levelId: "level-3", linkedTunnelId: "level-4-input"}
+    ]
+  },
+  {
+    id: "level-4",
+    name: "Énergie instable",
+    description: "Conditionner l’uranium dans une enveloppe d’acier sans perdre le contrôle de la pollution.",
+    center: {x: 45, y: 135},
+    radius: 24,
+    objective: {type: "export", resource: "uraniumCell", amount: 25},
+    unlocks: {
+      machines: ["uranium-mine"],
+      recipes: ["uranium-cell"],
+      variants: [],
+      resources: ["uranium", "uraniumCell"]
+    },
+    tunnels: [
+      {id: "level-4-input", type: "input", position: {x: 29, y: 135}, levelId: "level-4"},
+      {id: "level-4-output", type: "output", position: {x: 61, y: 135}, levelId: "level-4", linkedTunnelId: "level-5-input"}
+    ]
+  },
+  {
+    id: "level-5",
+    name: "Calcul industriel",
+    description: "Rassembler trois chaînes de production pour fabriquer des unités de calcul avancées.",
+    center: {x: 120, y: 135},
+    radius: 24,
+    objective: {type: "export", resource: "processingUnit", amount: 18},
+    unlocks: {
+      machines: [],
+      recipes: ["processing-unit"],
+      variants: [],
+      resources: ["processingUnit"]
+    },
+    tunnels: [
+      {id: "level-5-input", type: "input", position: {x: 104, y: 135}, levelId: "level-5"},
+      {id: "level-5-output", type: "output", position: {x: 136, y: 135}, levelId: "level-5", linkedTunnelId: "level-6-input"}
+    ]
+  },
+  {
+    id: "level-6",
+    name: "Cœur de l’archipel",
+    description: "Synchroniser les productions de toutes les îles pour assembler le composant final.",
+    center: {x: 195, y: 135},
+    radius: 24,
+    objective: {type: "export", resource: "automationCore", amount: 10},
+    unlocks: {
+      machines: ["advanced-assembler"],
+      recipes: ["automation-core"],
+      variants: [],
+      resources: ["automationCore"]
+    },
+    tunnels: [
+      {id: "level-6-input", type: "input", position: {x: 179, y: 135}, levelId: "level-6"},
+      {id: "level-6-output", type: "output", position: {x: 211, y: 135}, levelId: "level-6"}
     ]
   }
 ];

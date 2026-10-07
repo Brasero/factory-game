@@ -19,6 +19,7 @@ import {MACHINE_RECIPE_OPTIONS, RECIPES, recipeInputs, type RecipeId} from "@eng
 import {runPipes} from "@engine/systems/PipeSystem";
 import type {Position} from "@engine/models/Position";
 import {CONSTRUCTION_REFUND_RATIO, constructionCost} from "@engine/config/constructionConfig";
+import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
 
 export class GameEngine {
     private network?: NetworkTopology;
@@ -79,7 +80,6 @@ export class GameEngine {
         const progress = world.campaign.levels.find(item => item.id === level?.id);
         if (!level || !progress || progress.status === "locked" || progress.status === "finalized") return false;
         if (world.campaign.constructionMaterials < this.placementCost(x, y, machineType, variant)) return false;
-        if (world.tunnels.some(tunnel => tunnel.x === x && tunnel.y === y)) return false;
         const unlockedLevels = CAMPAIGN_LEVELS.filter(definition => world.campaign.levels.find(item => item.id === definition.id)?.status !== "locked");
         const actualType = machineType === "miner" ? undefined : machineType;
         if (actualType && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType) &&
@@ -87,8 +87,21 @@ export class GameEngine {
         const usesVariant = machineType === "miner" ||
             (actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType));
         if (usesVariant && !unlockedLevels.some(definition => definition.unlocks.variants.includes(variant))) return false;
+        const isMachine = actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType);
+        if (isMachine) {
+            const footprint = machineFootprintCells({x, y, type: actualType as MachineType});
+            if (footprint.some((cell, index) => {
+                const cellLevel = campaignLevelAt(cell.x, cell.y) ?? level;
+                const cellProgress = world.campaign.levels.find(item => item.id === cellLevel?.id);
+                return !cellLevel || cellLevel.id !== level.id || !cellProgress || cellProgress.status === "locked" ||
+                    cellProgress.status === "finalized" || world.tunnels.some(tunnel => tunnel.x === cell.x && tunnel.y === cell.y) ||
+                    !world.grid?.canPlaceMachine(cell, index === 0 ? actualType : "machine");
+            })) return false;
+            return true;
+        }
+        if (world.tunnels.some(tunnel => tunnel.x === x && tunnel.y === y)) return false;
         if (machineType === "conveyor" || machineType === "splitter" || machineType === "smart-splitter" || machineType === "merger") {
-            const blocked = world.machines.some(m => m.x === x && m.y === y) ||
+            const blocked = world.machines.some(m => machineOccupies(m, {x, y})) ||
                 world.storages.some(s => s.x === x && s.y === y);
             if (blocked) return false;
             const existing = world.conveyors.find(c => c.x === x && c.y === y);
@@ -97,7 +110,7 @@ export class GameEngine {
         }
         if (machineType === "pipe") {
             if (!unlockedLevels.some(definition => definition.unlocks.machines.includes("water-pump"))) return false;
-            if (world.machines.some(m => m.x === x && m.y === y) || world.storages.some(s => s.x === x && s.y === y) ||
+            if (world.machines.some(m => machineOccupies(m, {x, y})) || world.storages.some(s => s.x === x && s.y === y) ||
                 world.conveyors.some(c => c.x === x && c.y === y)) return false;
             if (world.pipes.some(pipe => pipe.x === x && pipe.y === y)) return true;
         }
@@ -203,12 +216,14 @@ export class GameEngine {
         }
         if (!editable.size) return false;
 
-        const entityKeys = new Set<string>();
+        const entityIds = new Set<string>();
+        const entityCells = new Set<string>();
         let refund = 0;
         for (const entity of [...this.#world.machines, ...this.#world.conveyors, ...this.#world.pipes, ...this.#world.storages]) {
-            const key = `${entity.x},${entity.y}`;
-            if (!editable.has(key)) continue;
-            entityKeys.add(key);
+            const cells = entity.entityType === "machine" ? machineFootprintCells(entity) : [{x: entity.x, y: entity.y}];
+            if (!cells.some(cell => editable.has(`${cell.x},${cell.y}`))) continue;
+            entityIds.add(entity.id);
+            cells.forEach(cell => entityCells.add(`${cell.x},${cell.y}`));
             const item = entity.entityType === "machine" ? entity.type
                 : entity.entityType === "conveyor" ? entity.type
                 : entity.entityType === "pipe" ? "pipe" : "storage";
@@ -216,13 +231,16 @@ export class GameEngine {
             refund += Math.floor(constructionCost(item, variant) * CONSTRUCTION_REFUND_RATIO);
         }
         this.#world.campaign.constructionMaterials += refund;
-        if (entityKeys.size) {
-            const keep = <T extends Position>(entity: T) => !entityKeys.has(`${entity.x},${entity.y}`);
+        if (entityIds.size) {
+            const keep = <T extends {id: string}>(entity: T) => !entityIds.has(entity.id);
             this.#world.machines = this.#world.machines.filter(keep);
             this.#world.conveyors = this.#world.conveyors.filter(keep);
             this.#world.pipes = this.#world.pipes.filter(keep);
             this.#world.storages = this.#world.storages.filter(keep);
-            for (const key of entityKeys) this.#world.grid?.free(editable.get(key)!);
+            for (const key of entityCells) {
+                const [cellX, cellY] = key.split(",").map(Number);
+                this.#world.grid?.free({x: cellX, y: cellY});
+            }
             this.network = undefined;
         }
 
@@ -231,11 +249,11 @@ export class GameEngine {
         let decorationsRemoved = 0;
         if (levelThreeUnlocked) {
             for (const [key, position] of editable) {
-                if (!entityKeys.has(key) && this.#world.grid?.removeDecoration(position)) decorationsRemoved++;
+                if (!entityCells.has(key) && this.#world.grid?.removeDecoration(position)) decorationsRemoved++;
             }
         }
         this.updateResourceTotals();
-        return entityKeys.size > 0 || decorationsRemoved > 0;
+        return entityIds.size > 0 || decorationsRemoved > 0;
     }
 
     activateLevel(levelId: string): boolean {

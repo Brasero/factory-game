@@ -10,7 +10,10 @@ export const createTestCampaign = (): CampaignState => ({
   levels: [
     {id: "level-1", status: "active", pollution: 0},
     {id: "level-2", status: "active", pollution: 0},
-    {id: "level-3", status: "active", pollution: 0}
+    {id: "level-3", status: "active", pollution: 0},
+    {id: "level-4", status: "active", pollution: 0},
+    {id: "level-5", status: "active", pollution: 0},
+    {id: "level-6", status: "active", pollution: 0}
   ],
   statistics: {extracted: emptyResources(), produced: emptyResources(), exported: emptyResources()}
 });
@@ -23,6 +26,7 @@ export function createTestWorld(): World {
   grid.setResource(1, 1, "iron");
   grid.setResource(2, 1, "coal");
   grid.setResource(3, 1, "water");
+  grid.setResource(4, 1, "uranium");
   return {tick: 0, grid, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [],
     resources: emptyResources(), campaign: createTestCampaign()};
 }

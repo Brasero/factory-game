@@ -1,4 +1,7 @@
-export const RESOURCE_TYPES = ["iron", "coal", "water", "ironPlate", "steel", "copper", "copperWire", "circuit"] as const;
+export const RESOURCE_TYPES = [
+    "iron", "coal", "water", "ironPlate", "steel", "copper", "copperWire", "circuit",
+    "uranium", "uraniumCell", "processingUnit", "automationCore"
+] as const;
 
 export type ResourcesType = typeof RESOURCE_TYPES[number];
 
@@ -11,6 +14,10 @@ export interface Resources {
     copper?: number;
     copperWire?: number;
     circuit?: number;
+    uranium?: number;
+    uraniumCell?: number;
+    processingUnit?: number;
+    automationCore?: number;
 }
 
 export const emptyResources = (): Required<Resources> => ({
@@ -21,5 +28,9 @@ export const emptyResources = (): Required<Resources> => ({
     steel: 0,
     copper: 0,
     copperWire: 0,
-    circuit: 0
+    circuit: 0,
+    uranium: 0,
+    uraniumCell: 0,
+    processingUnit: 0,
+    automationCore: 0
 });

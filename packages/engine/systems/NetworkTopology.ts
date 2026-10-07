@@ -1,6 +1,7 @@
 import type {World} from "@engine/models/World";
 import type {Position} from "@engine/models/Position";
 import type {Conveyor, DirectionType} from "@engine/models/Conveyor";
+import {machineFootprintCells, machineOutputPosition, machineOutputSource} from "@engine/config/machineFootprint";
 
 export function nextPosition({x, y}: Position, direction: DirectionType): Position {
   switch (direction) {
@@ -27,13 +28,17 @@ export function buildNetworkTopology(world: World): NetworkTopology {
   const occupied = new Map<string, Target>();
   world.conveyors.forEach((c, index) => occupied.set(positionKey(c), {kind: "belt", index}));
   world.storages.forEach((s, index) => occupied.set(positionKey(s), {kind: "storage", index}));
-  world.machines.forEach((m, index) => occupied.set(positionKey(m), {kind: "machine", index}));
+  world.machines.forEach((machine, index) => machineFootprintCells(machine)
+    .forEach(cell => occupied.set(positionKey(cell), {kind: "machine", index})));
   world.tunnels.forEach((tunnel, index) => occupied.set(positionKey(tunnel), {kind: "tunnel", index}));
   // Seules les entrees acceptees comptent : un tapis refuse par son receveur ne cree pas de jonction.
   const incoming = new Map<string, number>();
   const connections = world.conveyors.map(source => outputDirections(source).map(direction => {
     const key = positionKey(nextPosition(source, direction));
     const target = occupied.get(key);
+    if (target?.kind === "machine" && positionKey(source) === positionKey(machineOutputPosition(world.machines[target.index]))) {
+      return {key, target: undefined};
+    }
     if (target?.kind !== "belt") return {key, target};
     if (!acceptsInput(world.conveyors[target.index], source)) return {key, target: undefined};
     incoming.set(key, (incoming.get(key) ?? 0) + 1);
@@ -48,10 +53,9 @@ export function buildNetworkTopology(world: World): NetworkTopology {
     targets: outputs.map(targets => targets[0]),
     outputs,
     machineOutputs: world.machines.map(m => {
-      const pump = m.type === "water-pump";
-      const target = occupied.get(positionKey({x: m.x + (pump ? 1 : 0), y: m.y + (pump ? 0 : 1)}));
+      const target = occupied.get(positionKey(machineOutputPosition(m)));
       if (target?.kind !== "belt") return undefined;
-      return acceptsInput(world.conveyors[target.index], m) ? target.index : undefined;
+      return acceptsInput(world.conveyors[target.index], machineOutputSource(m)) ? target.index : undefined;
     }),
     beltOrder: spatialOrder(world.conveyors),
     machineOrder: spatialOrder(world.machines)

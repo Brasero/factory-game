@@ -5,8 +5,22 @@ import {runCampaign} from "./CampaignSystem";
 import {runTunnels} from "./TunnelSystem";
 import {runConveyors} from "./ConveyorSystem";
 import {emptyResources} from "@engine/models/Resources";
+import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
+import {RECIPES} from "@engine/config/recipeConfig";
 
 describe("Campaign progression", () => {
+  it("chains three increasingly complex recipes across the new islands", () => {
+    const advancedLevels = CAMPAIGN_LEVELS.slice(3);
+    const recipeIds = advancedLevels.map(level => level.unlocks.recipes[0]);
+    expect(recipeIds).toEqual(["uranium-cell", "processing-unit", "automation-core"]);
+    expect(recipeIds.map(id => Object.keys(RECIPES[id].inputs).length)).toEqual([2, 3, 4]);
+    expect(advancedLevels.map(level => level.objective.resource)).toEqual([
+      "uraniumCell", "processingUnit", "automationCore"
+    ]);
+    expect(CAMPAIGN_LEVELS.slice(0, -1).map(level => level.tunnels.find(tunnel => tunnel.type === "output")?.linkedTunnelId))
+      .toEqual(["level-2-input", "level-3-input", "level-4-input", "level-5-input", "level-6-input"]);
+  });
+
   it("records pollution only when a machine completes production", () => {
     const engine = new GameEngine(createTestWorld());
     expect(engine.placeMachine(1, 1, "iron-mine", "standard")).toBe(true);
@@ -75,11 +89,12 @@ describe("Campaign progression", () => {
 
   it("completes an objective and unlocks the next island", () => {
     const world = createTestWorld();
-    world.campaign.levels[1].status = "locked";
-    world.campaign.levels[2].status = "locked";
+    for (const level of world.campaign.levels.slice(1)) level.status = "locked";
     world.campaign.statistics.exported.ironPlate = 50;
     const next = runCampaign(world);
-    expect(next.campaign.levels.map(level => level.status)).toEqual(["completed", "active", "locked"]);
+    expect(next.campaign.levels.map(level => level.status)).toEqual([
+      "completed", "active", "locked", "locked", "locked", "locked"
+    ]);
     expect(next.campaign.levels[0].completedAt).toBe(0);
     expect(next.campaign.constructionMaterials).toBe(world.campaign.constructionMaterials + 50);
   });

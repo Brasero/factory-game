@@ -1,6 +1,6 @@
 import type {SelectedItem} from "@engine/api/types.ts";
 
-export type TutorialSequenceId = "basics" | "level-2" | "level-3";
+export type TutorialSequenceId = "basics" | "level-2" | "level-3" | "level-4" | "level-5" | "level-6";
 export type TutorialStep = {
   eyebrow: string; title: string; description: string; tip?: string; target?: string;
   expectedSelection?: SelectedItem; expectedTool?: "build" | "destroy";
@@ -16,7 +16,7 @@ const basics: TutorialStep[] = [
   {eyebrow: "Réseau logistique", title: "Splitter et merger", description: "Les tapis ordinaires ne créent pas de jonction. Le splitter répartit un flux et le merger rassemble plusieurs entrées.", tip: "Le splitter intelligent permet de filtrer chaque sortie, dont une règle pour toute ressource non filtrée. Ces pièces se posent directement sur un tapis existant."},
   {eyebrow: "Transformation", title: "Choisis une recette", description: "Une machine de fabrication est posée sans recette. Clique dessus pour choisir sa recette, consulter ses buffers ou la mettre en pause.", target: "iron-smelter", expectedSelection: "iron-smelter"},
   {eyebrow: "Stockage", title: "Le coffre", description: "Le coffre stocke les objets reçus. Une machine adjacente peut prendre ses ingrédients et un tapis orienté vers l’extérieur peut les extraire.", target: "storage", expectedSelection: "storage"},
-  {eyebrow: "Modifier l’usine", title: "Détruis rapidement", description: "Active la démolition puis clique ou glisse sur plusieurs constructions. La caméra reste verrouillée pendant cette opération.", target: "destroy", expectedTool: "destroy"},
+  {eyebrow: "Modifier l’usine", title: "Détruis rapidement", description: "Active la démolition puis clique, ou glisse entre deux cases pour supprimer toute la zone rectangulaire affichée en rouge. La caméra reste verrouillée pendant cette opération.", target: "destroy", expectedTool: "destroy"},
   {eyebrow: "Progression", title: "Objectifs et tunnels", description: "L’objectif courant apparaît en haut. Relie ta production au tunnel de sortie : son contenu sera disponible sur l’île suivante après la validation du niveau.", tip: "Tu peux finaliser une île ou continuer à l’améliorer avant de passer à la suite.", target: "campaign-objective"},
   {eyebrow: "Prêt à construire", title: "Lance ta production", description: "Mine du fer, sélectionne la recette de lingot dans la fonderie et exporte la quantité demandée.", tip: "Échap ouvre le menu et permet de revoir le tutoriel."}
 ];
@@ -34,10 +34,27 @@ const level2: TutorialStep[] = [
 
 const level3: TutorialStep[] = [
   {eyebrow: "Niveau 3 débloqué", title: "Production avancée", description: "Le cuivre et l’assembleuse sont disponibles. Une même machine peut proposer plusieurs recettes et plusieurs cadences."},
-  {eyebrow: "Aménagement", title: "Libère le terrain", description: "Le mode démolition peut maintenant retirer les arbres et les rochers. Clique ou glisse sur le décor pour dégager rapidement une zone de construction.", target: "destroy", expectedTool: "destroy"},
+  {eyebrow: "Aménagement", title: "Libère le terrain", description: "Le mode démolition peut maintenant retirer les arbres et les rochers. Sélectionne une zone rouge pour dégager rapidement une surface de construction.", target: "destroy", expectedTool: "destroy"},
   {eyebrow: "Assemblage", title: "Plusieurs ingrédients", description: "La recette de circuit demande plusieurs ressources. Chaque ingrédient dispose de son propre buffer de 100 unités dans la machine.", target: "assembler", expectedSelection: "assembler"},
-  {eyebrow: "Objectif final", title: "Optimise l’archipel", description: "Réutilise les productions exportées des îles précédentes, surveille la pollution globale et termine la campagne le plus vite possible avec une empreinte minimale."}
+  {eyebrow: "Objectif", title: "Optimise l’archipel", description: "Réutilise les productions exportées des îles précédentes et surveille la pollution globale : les prochaines îles demanderont des chaînes de plus en plus interdépendantes."}
 ];
 
-export const tutorialSequences: Record<TutorialSequenceId, TutorialStep[]> = {basics, "level-2": level2, "level-3": level3};
+const level4: TutorialStep[] = [
+  {eyebrow: "Niveau 4 débloqué", title: "L’uranium", description: "Le mineur peut maintenant extraire l’uranium. La nouvelle recette combine deux unités d’uranium et une unité d’acier pour produire une cellule d’uranium.", target: "miner", expectedSelection: "miner"},
+  {eyebrow: "Nouvelle recette", title: "Cellule d’uranium", description: "Pose une assembleuse, sélectionne la recette Cellule d’uranium et importe l’acier depuis les îles précédentes.", tip: "Chaque cellule demande 2 uranium + 1 acier.", target: "assembler", expectedSelection: "assembler"}
+];
+
+const level5: TutorialStep[] = [
+  {eyebrow: "Niveau 5 débloqué", title: "Unité de calcul", description: "La nouvelle recette mobilise trois chaînes : circuits, fils de cuivre et acier. Utilise les tunnels et les splitters intelligents pour stabiliser chaque approvisionnement.", tip: "Une unité demande 3 circuits + 4 fils de cuivre + 2 acier.", target: "assembler", expectedSelection: "assembler"}
+];
+
+const level6: TutorialStep[] = [
+  {eyebrow: "Niveau 6 débloqué", title: "L’assembleuse avancée", description: "Cette machine occupe deux cases et accepte les quatre flux nécessaires au composant final. Son port inférieur droit est réservé à la sortie.", tip: "Sélectionne-la dans le menu de construction et prévois son empreinte avant de raccorder les réseaux.", target: "advanced-assembler", expectedSelection: "advanced-assembler"},
+  {eyebrow: "Recette finale", title: "Cœur d’automatisation", description: "Le composant final combine les cellules d’uranium et les unités de calcul des niveaux précédents avec de l’acier et de l’eau.", tip: "Un cœur demande 2 cellules + 2 unités de calcul + 4 acier + 5 eau. L’eau doit arriver par tuyau."},
+  {eyebrow: "Dernier objectif", title: "Synchronise tout l’archipel", description: "Exporte 10 cœurs d’automatisation pour achever la campagne. Équilibre les cadences et la dépollution pendant que les six îles alimentent la chaîne finale.", target: "campaign-objective"}
+];
+
+export const tutorialSequences: Record<TutorialSequenceId, TutorialStep[]> = {
+  basics, "level-2": level2, "level-3": level3, "level-4": level4, "level-5": level5, "level-6": level6
+};
 export const tutorialSteps = basics;

@@ -46,6 +46,7 @@ export function placeMiner(x: number, y: number, variant: MachineVariant = "stan
     if (session.canPlaceMachine(x, y, "iron-mine", variant)) return placeMachine(x, y, "iron-mine", variant);
     if (session.canPlaceMachine(x, y, "coal-mine", variant)) return placeMachine(x, y, "coal-mine", variant);
     if (session.canPlaceMachine(x, y, "copper-mine", variant)) return placeMachine(x, y, "copper-mine", variant);
+    if (session.canPlaceMachine(x, y, "uranium-mine", variant)) return placeMachine(x, y, "uranium-mine", variant);
     return false;
 }
 

@@ -589,20 +589,23 @@ button.text-button {
   z-index: 160;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
-  border: 3px solid #657989;
-  outline: 3px solid #0a1119;
+  gap: 3px;
+  max-width: 340px;
+  padding: 7px 10px;
+  border: 2px solid #657989;
+  outline: 2px solid #0a1119;
   border-radius: 1px;
   background:
     repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 5px),
     #111c28;
   color: #fff;
-  box-shadow: 6px 6px 0 rgba(5,10,15,.72), inset 0 0 0 2px #253746;
+  box-shadow: 4px 4px 0 rgba(5,10,15,.72), inset 0 0 0 1px #253746;
   font-family: ui-monospace, "Courier New", monospace;
-  font-size: 14px;
+  font-size: 11px;
+  line-height: 1.25;
   pointer-events: none;
-  kbd { padding: 2px 5px; border: 2px solid #8294ad; border-radius: 0; background: #0b151f; color: #ffe36e; box-shadow: 2px 2px 0 #05090d; }
+  strong { font-size: 12px; }
+  kbd { padding: 1px 3px; border: 1px solid #8294ad; border-radius: 0; background: #0b151f; color: #ffe36e; box-shadow: 1px 1px 0 #05090d; }
 }
 
 @media (max-width: 760px) {

@@ -11,7 +11,7 @@ export type MachineIdleReason =
   | {type: "buffer-full"}
   | {type: "pollution-empty"};
 
-const extractorTypes = new Set<Machine["type"]>(["iron-mine", "coal-mine", "copper-mine", "water-pump"]);
+const extractorTypes = new Set<Machine["type"]>(["iron-mine", "coal-mine", "copper-mine", "uranium-mine", "water-pump"]);
 
 export function machineIdleReason(machine: Machine, pollution: number): MachineIdleReason | undefined {
   if (machine.paused) return {type: "paused"};

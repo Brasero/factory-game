@@ -28,8 +28,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   store.dispatch(setPaused(false));
   const campaign = createTestCampaign();
-  campaign.levels[1].status = "locked";
-  campaign.levels[2].status = "locked";
+  for (const level of campaign.levels.slice(1)) level.status = "locked";
   setWorldSnapshot({tick: 0, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [], resources: emptyResources(), campaign});
   host = document.createElement("div");
   document.body.append(host);

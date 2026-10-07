@@ -7,7 +7,9 @@ import type {ResourcesType} from "@engine/models/Resources";
 
 const resourceNames: Record<string, string> = {
   iron: "minerai de fer", coal: "charbon", water: "eau", ironPlate: "lingots de fer",
-  steel: "acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits"
+  steel: "acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits",
+  uranium: "uranium", uraniumCell: "cellules d’uranium", processingUnit: "unités de calcul",
+  automationCore: "cœurs d’automatisation"
 };
 
 const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
@@ -18,7 +20,11 @@ const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
   {type: "steel", label: "Acier", icon: "ore.steel"},
   {type: "copper", label: "Cuivre", icon: "ore.copperOre"},
   {type: "copperWire", label: "Fils", icon: "ore.copperWire"},
-  {type: "circuit", label: "Circuits", icon: "ore.circuit"}
+  {type: "circuit", label: "Circuits", icon: "ore.circuit"},
+  {type: "uranium", label: "Uranium", icon: "ore.uraniumOre"},
+  {type: "uraniumCell", label: "Cellules", icon: "ore.uraniumCell"},
+  {type: "processingUnit", label: "Calcul", icon: "ore.processingUnit"},
+  {type: "automationCore", label: "Cœurs", icon: "ore.automationCore"}
 ];
 
 export function CampaignHud({onRestart, onContinue, onMainMenu}: {
@@ -125,7 +131,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
           <div><span>Temps total</span><strong>{campaign.levels.at(-1)?.completedAt ?? 0} ticks</strong></div>
           <div><span>Pollution totale</span><strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong></div>
         </div>
-        <p>Les trois chaînes de production sont opérationnelles. Ton score combine maintenant rapidité et respect de l’archipel.</p>
+        <p>Les six chaînes de production sont opérationnelles. Ton score combine maintenant rapidité et respect de l’archipel.</p>
         <div className="level-result-actions">
           <button className="primary-button" onClick={onContinue}>Continuer à jouer</button>
           <button className="secondary-button" onClick={onRestart}>Relancer une campagne</button>

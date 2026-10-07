@@ -1,6 +1,7 @@
 import type {World} from "@engine/models/World";
 import type {DirectionType} from "@engine/models/Conveyor";
 import {machineInputSpace} from "@engine/config/recipeConfig";
+import {machineFootprintCells, machineOutputPosition} from "@engine/config/machineFootprint";
 
 const DELTA: Record<DirectionType, {x: number; y: number}> = {
   up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0}
@@ -12,6 +13,8 @@ export function runPipes(world: World): World {
   const pipes = world.pipes.map(pipe => ({...pipe}));
   const machines = world.machines.map(machine => ({...machine, buffer: {...machine.buffer}}));
   const pipeAt = new Map(pipes.map((pipe, index) => [key(pipe.x, pipe.y), index]));
+  const machineAt = new Map(machines.flatMap(machine => machineFootprintCells(machine)
+    .map(cell => [key(cell.x, cell.y), machine] as const)));
   const arrivals = pipes.map(() => 0);
   const available = pipes.map(pipe => pipe.capacity - pipe.water);
 
@@ -38,8 +41,10 @@ export function runPipes(world: World): World {
       available[targetPipe] -= moved;
       return;
     }
-    const targetMachine = machines.find(machine => machine.x === tx && machine.y === ty);
+    const targetMachine = machineAt.get(key(tx, ty));
     if (!targetMachine) return;
+    const output = machineOutputPosition(targetMachine);
+    if (pipe.x === output.x && pipe.y === output.y) return;
     const moved = Math.min(pipe.water, machineInputSpace(targetMachine, "water"), 1);
     if (moved <= 0) return;
     pipes[index].water -= moved;

@@ -46,3 +46,24 @@ export function drawDestructionParticles(
   }
   ctx.restore();
 }
+
+export function drawDestructionPreview(
+  ctx: CanvasRenderingContext2D,
+  start: Position,
+  end: Position,
+  cellSize: number
+) {
+  const left = Math.min(start.x, end.x) * cellSize;
+  const top = Math.min(start.y, end.y) * cellSize;
+  const width = (Math.abs(end.x - start.x) + 1) * cellSize;
+  const height = (Math.abs(end.y - start.y) + 1) * cellSize;
+  ctx.save();
+  ctx.fillStyle = "rgba(205, 35, 58, 0.38)";
+  ctx.fillRect(left, top, width, height);
+  ctx.strokeStyle = "rgba(255, 95, 115, 0.95)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 3]);
+  ctx.strokeRect(left + 1, top + 1, width - 2, height - 2);
+  ctx.setLineDash([]);
+  ctx.restore();
+}

@@ -8,7 +8,8 @@ import {campaignLevelAt, NATURAL_POLLUTION_RECOVERY} from "@engine/config/campai
 
 const extractorResource = (machine: Machine): ResourcesType | undefined =>
   machine.type === "iron-mine" ? "iron" : machine.type === "coal-mine" ? "coal" :
-    machine.type === "copper-mine" ? "copper" : machine.type === "water-pump" ? "water" : undefined;
+    machine.type === "copper-mine" ? "copper" : machine.type === "uranium-mine" ? "uranium" :
+      machine.type === "water-pump" ? "water" : undefined;
 
 export function runProduction(world: World): World {
   const campaign = structuredClone(world.campaign);

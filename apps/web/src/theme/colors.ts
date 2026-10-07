@@ -36,6 +36,10 @@ export const colors = {
     steel: '#6B7280',
     plastic: '#E5E7EB',
     circuit: '#2ECC71',
+    uranium: '#79E83D',
+    uraniumCell: '#64D73D',
+    processingUnit: '#25C7E8',
+    automationCore: '#5FE7EF',
   },
   
   machine: {

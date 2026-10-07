@@ -30,6 +30,18 @@ export function getLineCells(
   return cells;
 }
 
+export function getRectangleCells(start: Position, end: Position): Position[] {
+  const left = Math.min(start.x, end.x);
+  const right = Math.max(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const bottom = Math.max(start.y, end.y);
+  const cells: Position[] = [];
+  for (let y = top; y <= bottom; y += 1) {
+    for (let x = left; x <= right; x += 1) cells.push({x, y});
+  }
+  return cells;
+}
+
 export function getConveyorsDirection (
   from: Position,
   to: Position

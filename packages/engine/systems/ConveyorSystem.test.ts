@@ -163,6 +163,32 @@ describe("Conveyor transfers", () => {
     expect(world.conveyors.every(conveyor => conveyor.carrying.length === 0)).toBe(true);
   });
 
+  it("uses three solid inputs and a dedicated output on the two-cell advanced assembler", () => {
+    const engine = new GameEngine(createTestWorld());
+    expect(engine.placeMachine(5, 5, "advanced-assembler")).toBe(true);
+    expect(engine.placeConveyor(4, 5, "right")).toBe(true);
+    expect(engine.placeConveyor(5, 4, "down")).toBe(true);
+    expect(engine.placeConveyor(6, 4, "down")).toBe(true);
+    expect(engine.placeConveyor(6, 6, "down")).toBe(true);
+    let world = engine.getWorld();
+    world.machines[0].recipeId = "automation-core";
+    world.conveyors[0].carrying = [{type: "uraniumCell", amount: 2, progress: 1}];
+    world.conveyors[1].carrying = [{type: "processingUnit", amount: 2, progress: 1}];
+    world.conveyors[2].carrying = [{type: "steel", amount: 4, progress: 1}];
+
+    runConveyors(world);
+
+    expect(world.machines[0].buffer).toMatchObject({uraniumCell: 2, processingUnit: 2, steel: 4});
+    world.machines[0].buffer.automationCore = 1;
+    world = runOutputMachine(world);
+    expect(world.conveyors[3].carrying).toEqual([{type: "automationCore", amount: 1, progress: 0}]);
+
+    world.conveyors[3].direction = "up";
+    world.conveyors[3].carrying = [{type: "steel", amount: 1, progress: 1}];
+    runConveyors(world);
+    expect(world.conveyors[3].carrying).toEqual([{type: "steel", amount: 1, progress: 1}]);
+  });
+
   it("lets storage feed another ingredient when one machine input is full", () => {
     const engine = new GameEngine(createTestWorld());
     engine.placeStorage(4, 5);

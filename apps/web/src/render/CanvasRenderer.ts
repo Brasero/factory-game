@@ -20,16 +20,18 @@ import {drawDecorationTiles, drawTileMap} from "@web/render/utils/tiles.ts";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import {machineIdleReason, type MachineIdleReason} from "@engine/systems/MachineStatus";
 import {drawPipeAt} from "@web/render/utils/pipe";
+import {machineFootprint, machineFootprintCells, machineOutputPosition, machineOutputSource} from "@engine/config/machineFootprint";
 
 const CELL_SIZE = config.CELL_SIZE;
 export function render(
     ctx: CanvasRenderingContext2D,
     world: WorldSnapshot,
     camera?: Camera,
-    hoveredCell?: Position & {canPlace: boolean},
+    hoveredCell?: Position & {canPlace: boolean; footprint?: Position[]},
     hoveredStorage?: Storage,
     measure?: (layer: string, milliseconds: number) => void,
-    tickInterpolation = 0
+    tickInterpolation = 0,
+    visualTimeMs = 0
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -53,34 +55,102 @@ export function render(
     drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds, tickInterpolation));
     drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
     drawLayer("fog", () => drawCampaignFog(ctx, world));
-    drawLayer("pollution", () => drawPollutionHaze(ctx, world));
+    drawLayer("pollution", () => drawPollutionSmoke(ctx, world, visualTimeMs));
     drawHoveredCell(ctx, hoveredCell);
     if (hoveredStorage) {
         drawStorageTooltip(ctx, hoveredStorage);
     }
 }
 
-export function pollutionHazeOpacity(pollution: number, limit: number): number {
+export function pollutionSmokeState(pollution: number, limit: number): {intensity: number; reach: number; opacity: number} {
   const ratio = limit > 0 ? Math.min(1, Math.max(0, pollution / limit)) : 0;
-  const visibleRatio = Math.max(0, (ratio - 0.1) / 0.9);
-  return 0.52 * Math.pow(visibleRatio, 1.35);
+  const intensity = Math.max(0, (ratio - 0.1) / 0.9);
+  if (intensity === 0) return {intensity: 0, reach: 0, opacity: 0};
+  return {
+    intensity,
+    reach: 0.48 * Math.pow(intensity, 0.7),
+    opacity: 0.72 * Math.pow(intensity, 0.75)
+  };
 }
 
-function drawPollutionHaze(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
-  const opacity = pollutionHazeOpacity(world.campaign.pollution, world.campaign.pollutionLimit);
-  if (opacity === 0) return;
+function drawCornerSmokeGradient(ctx: CanvasRenderingContext2D, radius: number, opacity: number) {
+  const {width, height} = ctx.canvas;
+  const corners = [
+    {x: 0, y: 0},
+    {x: width, y: 0},
+    {x: width, y: height},
+    {x: 0, y: height}
+  ];
+  for (const corner of corners) {
+    const gradient = ctx.createRadialGradient(corner.x, corner.y, 0, corner.x, corner.y, radius);
+    gradient.addColorStop(0, `rgba(40, 38, 36, ${opacity})`);
+    gradient.addColorStop(0.58, `rgba(67, 62, 57, ${opacity * 0.48})`);
+    gradient.addColorStop(1, "rgba(78, 72, 66, 0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+}
+
+function drawSmokePatch(ctx: CanvasRenderingContext2D, texture: HTMLImageElement, variant: number,
+  x: number, y: number, size: number, rotation: number) {
+  const frameWidth = texture.naturalWidth / 2;
+  const frameHeight = texture.naturalHeight / 2;
+  const frame = ((variant % 4) + 4) % 4;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.drawImage(texture, frame % 2 * frameWidth, Math.floor(frame / 2) * frameHeight, frameWidth, frameHeight,
+    -size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+export function pollutionSmokeLayerVisibility(intensity: number, layer: number): number {
+  return Math.min(1, Math.max(0, intensity * 3 - layer));
+}
+
+export function pollutionSmokeMotion(visualTimeMs: number, layer: number, spacing: number): {offset: number; tileShift: number} {
+  const travel = visualTimeMs * 0.0075 * (0.45 + layer * 0.17);
+  return {offset: travel % spacing, tileShift: Math.floor(travel / spacing)};
+}
+
+function drawPollutionSmoke(ctx: CanvasRenderingContext2D, world: WorldSnapshot, visualTimeMs: number) {
+  const state = pollutionSmokeState(world.campaign.pollution, world.campaign.pollutionLimit);
+  if (state.intensity === 0) return;
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = `rgba(78, 68, 54, ${opacity})`;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  const vignette = ctx.createRadialGradient(
-    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.min(ctx.canvas.width, ctx.canvas.height) * 0.18,
-    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.max(ctx.canvas.width, ctx.canvas.height) * 0.72
-  );
-  vignette.addColorStop(0, "rgba(52, 57, 50, 0)");
-  vignette.addColorStop(1, `rgba(35, 31, 25, ${Math.min(0.38, opacity * 0.8)})`);
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const {width, height} = ctx.canvas;
+  const reachRadius = Math.hypot(width, height) * state.reach;
+  drawCornerSmokeGradient(ctx, reachRadius, state.opacity * 0.72);
+
+  const texture = assetManager.getImage("effect.pollutionSmoke");
+  const size = Math.max(112, Math.min(260, Math.min(width, height) * (0.18 + state.intensity * 0.12)));
+  const spacing = size * 0.68;
+  const layers = 3;
+  const corners = [
+    {x: 0, y: 0, startAngle: 0},
+    {x: width, y: 0, startAngle: Math.PI / 2},
+    {x: width, y: height, startAngle: Math.PI},
+    {x: 0, y: height, startAngle: Math.PI * 1.5}
+  ];
+  ctx.imageSmoothingEnabled = false;
+
+  for (let layer = 0; layer < layers; layer += 1) {
+    const visibility = pollutionSmokeLayerVisibility(state.intensity, layer);
+    if (visibility === 0) continue;
+    const radius = reachRadius * (layer + 0.55) / layers;
+    const angleStep = spacing / Math.max(radius, spacing);
+    const {offset, tileShift} = pollutionSmokeMotion(visualTimeMs, layer, spacing);
+    ctx.globalAlpha = state.opacity * (0.82 - layer / layers * 0.3) * visibility;
+    for (let cornerIndex = 0; cornerIndex < corners.length; cornerIndex += 1) {
+      const corner = corners[cornerIndex];
+      let index = layer + cornerIndex - tileShift;
+      for (let angle = corner.startAngle - angleStep + offset / Math.max(radius, 1);
+        angle <= corner.startAngle + Math.PI / 2 + angleStep; angle += angleStep) {
+        drawSmokePatch(ctx, texture, index++, corner.x + Math.cos(angle) * radius,
+          corner.y + Math.sin(angle) * radius, size, angle + Math.PI / 2);
+      }
+    }
+  }
   ctx.restore();
 }
 
@@ -141,18 +211,24 @@ function drawDynamicEntities(
     if (!receiver || !acceptsInput(receiver, source) || incomingByPos.has(key)) return;
     incomingByPos.set(key, direction);
   };
-  world.machines.forEach(machine => registerEntityOutput(machine, machine.type === "water-pump" ? "right" : "down"));
+  world.machines.forEach(machine => registerEntityOutput(machineOutputSource(machine), machine.type === "water-pump" ? "right" : "down"));
   world.tunnels.filter(tunnel => tunnel.type === "input")
     .forEach(tunnel => registerEntityOutput(tunnel, tunnel.direction));
   world.storages.forEach(storage => directions.forEach(direction => registerEntityOutput(storage, direction)));
 
   const receivers = new Set([
-    ...world.machines.map(positionKey),
+    ...world.machines.flatMap(machine => machineFootprintCells(machine).map(positionKey)),
     ...world.storages.map(positionKey),
     ...world.tunnels.filter(tunnel => tunnel.type === "output").map(positionKey)
   ]);
+  const machinesByCell = new Map(world.machines.flatMap(machine => machineFootprintCells(machine)
+    .map(cell => [positionKey(cell), machine] as const)));
   world.conveyors.forEach(conveyor => {
-    if (outputDirections(conveyor).some(direction => receivers.has(positionKey(nextPosition(conveyor, direction))))) {
+    if (outputDirections(conveyor).some(direction => {
+      const targetKey = positionKey(nextPosition(conveyor, direction));
+      const machine = machinesByCell.get(targetKey);
+      return receivers.has(targetKey) && (!machine || positionKey(conveyor) !== positionKey(machineOutputPosition(machine)));
+    })) {
       connectedOutputs.add(conveyor.id);
     }
   });
@@ -212,7 +288,8 @@ function drawDynamicEntities(
 
 const RESOURCE_SHORT_NAMES: Record<ResourcesType, string> = {
   iron: "FER", coal: "CHARBON", water: "EAU", ironPlate: "LINGOT",
-  steel: "ACIER", copper: "CUIVRE", copperWire: "FIL", circuit: "CIRCUIT"
+  steel: "ACIER", copper: "CUIVRE", copperWire: "FIL", circuit: "CIRCUIT",
+  uranium: "URANIUM", uraniumCell: "CELLULE", processingUnit: "CALCUL", automationCore: "CŒUR"
 };
 
 function statusPresentation(reason: MachineIdleReason): {label: string; color: string} {
@@ -237,7 +314,8 @@ function drawMachineStatus(
   if (!reason) return;
   const {label, color} = statusPresentation(reason);
   const width = Math.max(34, label.length * 5 + 8);
-  const x = machine.x * CELL_SIZE + CELL_SIZE / 2 - width / 2;
+  const footprint = machineFootprint(machine.type);
+  const x = machine.x * CELL_SIZE + footprint.width * CELL_SIZE / 2 - width / 2;
   const y = machine.y * CELL_SIZE - 24;
   ctx.fillStyle = "rgba(15, 20, 28, 0.94)";
   ctx.fillRect(x - 1, y - 1, width + 2, 13);
@@ -247,7 +325,7 @@ function drawMachineStatus(
   ctx.font = "bold 7px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, machine.x * CELL_SIZE + CELL_SIZE / 2, y + 5.5);
+  ctx.fillText(label, machine.x * CELL_SIZE + footprint.width * CELL_SIZE / 2, y + 5.5);
 }
 
 function drawCallsSorted(drawCalls: DrawCall[]) {
@@ -337,13 +415,22 @@ function drawMachineAt(
           machine.x * CELL_SIZE - (frameWidth - CELL_SIZE) / 2, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
         return;
     }
+    if (machine.type === "advanced-assembler") {
+        const sprite = assetManager.getImage(`machine.automation.advancedAssembler.${isWorking ? "running" : "idle"}`);
+        const frameWidth = 96;
+        const frameHeight = 80;
+        const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % 4 : 0;
+        ctx.drawImage(sprite, frame * frameWidth, 0, frameWidth, frameHeight,
+          machine.x * CELL_SIZE - 16, machine.y * CELL_SIZE - 48, frameWidth, frameHeight);
+        return;
+    }
     if (machine.type === "boiler") {
         const sprite = assetManager.getImage(`machine.automation.boiler.${isWorking ? "running" : "idle"}`);
         const frameWidth = 64;
         const frameHeight = 48;
         const frame = isWorking ? Math.floor(machineConfig.ANIMATION_SPEED * world.tick) % 2 : 0;
         ctx.drawImage(sprite, frame * frameWidth, 0, frameWidth, frameHeight,
-          machine.x * CELL_SIZE - 16, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
+          machine.x * CELL_SIZE, machine.y * CELL_SIZE - 16, frameWidth, frameHeight);
         return;
     }
     if (machine.type === "recycler") {
@@ -435,16 +522,13 @@ function drawCampaignFog(ctx: CanvasRenderingContext2D, world: WorldSnapshot) {
 
 function drawHoveredCell(
   ctx: CanvasRenderingContext2D,
-  cell?: Position & {canPlace: boolean}
+  cell?: Position & {canPlace: boolean; footprint?: Position[]}
 ) {
     if (!cell) return
     ctx.fillStyle = cell.canPlace ? colors.state.success : colors.state.danger;
-    ctx.fillRect(
-      cell.x * CELL_SIZE,
-      cell.y * CELL_SIZE,
-      CELL_SIZE,
-      CELL_SIZE
-    )
+    for (const position of cell.footprint ?? [cell]) {
+      ctx.fillRect(position.x * CELL_SIZE, position.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    }
 }
 
 
@@ -461,7 +545,11 @@ const resourceSprites: Record<ResourcesType, string> = {
   steel: "ore.steel",
   copper: "ore.copperOre",
   copperWire: "ore.copperWire",
-  circuit: "ore.circuit"
+  circuit: "ore.circuit",
+  uranium: "ore.uraniumOre",
+  uraniumCell: "ore.uraniumCell",
+  processingUnit: "ore.processingUnit",
+  automationCore: "ore.automationCore"
 };
 
 function drawResourceIcon(

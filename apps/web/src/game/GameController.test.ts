@@ -27,10 +27,10 @@ describe("GameController", () => {
     expect(controller.placeIronSmelter(10, 1)).toBe(false);
   });
 
-  it("places the generic miner on iron and coal only", async () => {
+  it("places the generic miner on every unlocked solid resource", async () => {
     const controller = await import("./GameController");
     const {getWorldSnapshot} = await import("./worldStore");
-    for (const x of [1, 2]) {
+    for (const x of [1, 2, 4]) {
       expect(controller.canPlaceAt(x, 1, "miner")).toBe(true);
       expect(controller.placeMiner(x, 1)).toBe(true);
       expect(controller.canPlaceAt(x, 1, "miner")).toBe(false);
@@ -40,7 +40,7 @@ describe("GameController", () => {
       expect(controller.canPlaceAt(x, y, "miner")).toBe(false);
       expect(controller.placeMiner(x, y)).toBe(false);
     }
-    expect(getWorldSnapshot().machines.map(machine => machine.type)).toEqual(["iron-mine", "coal-mine"]);
+    expect(getWorldSnapshot().machines.map(machine => machine.type)).toEqual(["iron-mine", "coal-mine", "uranium-mine"]);
   });
 
   it("runs one timer, allows editing while paused and resumes", async () => {

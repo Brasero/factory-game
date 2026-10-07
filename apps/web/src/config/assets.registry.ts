@@ -7,6 +7,9 @@ import ironPlate from "../assets/logistic/automation/iron-plate.png";
 import steel from "../assets/logistic/automation/steel.png";
 import copperWire from "../assets/logistic/automation/copper-wire.png";
 import circuit from "../assets/logistic/automation/circuit.png";
+import uraniumCell from "../assets/logistic/automation/uranium-cell.png";
+import processingUnit from "../assets/logistic/automation/processing-unit.png";
+import automationCore from "../assets/logistic/automation/automation-core.png";
 import conveyorTier1 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt.png";
 import conveyorTier2 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt_B.png";
 import conveyorTier3 from "../assets/logistic/conveyor/conveyor/Conveyor_Belt_C.png";
@@ -29,6 +32,8 @@ import assemblerStandardIdle from "../assets/machines/Assembler_Machine_2.png";
 import assemblerStandardRunning from "../assets/machines/Assembler_Machine_2_Running.png";
 import assemblerIndustrialIdle from "../assets/machines/Assembler_Machine_3.png";
 import assemblerIndustrialRunning from "../assets/machines/Assembler_Machine_3_Running.png";
+import advancedAssemblerIdle from "../assets/machines/Steam_Engine.png";
+import advancedAssemblerRunning from "../assets/machines/Steam_Engine_Running.png";
 import boilerIdle from "../assets/machines/Boiler.png";
 import boilerRunning from "../assets/machines/Boiler_Running.png";
 import recyclerIdle from "../assets/machines/Recycler.png";
@@ -41,10 +46,13 @@ import ironNode from "../assets/ore-nodeTiles/Materials/Iron/Tiles/Tile-0003.png
 import coalNode from "../assets/ore-nodeTiles/Materials/Coal/Tiles/Tile-0003.png";
 import copperNode from "../assets/ore-nodeTiles/Materials/Copper/Tiles/Tile-0003.png";
 import copperOre from "../assets/ore-nodeTiles/Materials/Copper/Ores/Ore-0003.png";
+import uraniumNode from "../assets/ore-nodeTiles/Materials/Uranium/Tiles/Tile-0003.png";
+import uraniumOre from "../assets/ore-nodeTiles/Materials/Uranium/Ores/Ore-0003.png";
 import environmentTileset from "../assets/ore-nodeTiles/Materials/Tiles/Environment_Tileset.png";
 import treesTileset from "../assets/ore-nodeTiles/Materials/Tiles/Trees.png";
 import waterTileset from "../assets/ore-nodeTiles/Materials/Tiles/Water_Tileset.png";
 import rockTileset from "../assets/ore-nodeTiles/Materials/Tiles/Rock_Tile.png";
+import pollutionSmoke from "../assets/effects/pollution-smoke.png";
 
 export const imagePath = {
   ore: {
@@ -55,7 +63,11 @@ export const imagePath = {
     ironPlate,
     steel,
     copperWire,
-    circuit
+    circuit,
+    uraniumOre,
+    uraniumCell,
+    processingUnit,
+    automationCore
   },
   conveyor: {
     tier1: conveyorTier1,
@@ -96,6 +108,7 @@ export const imagePath = {
         standard: {idle: assemblerStandardIdle, running: assemblerStandardRunning},
         industrial: {idle: assemblerIndustrialIdle, running: assemblerIndustrialRunning}
       },
+      advancedAssembler: {idle: advancedAssemblerIdle, running: advancedAssemblerRunning},
       boiler: {idle: boilerIdle, running: boilerRunning},
       recycler: {idle: recyclerIdle, running: recyclerRunning}
     },
@@ -108,12 +121,16 @@ export const imagePath = {
     water: waterNode,
     iron: ironNode,
     coal: coalNode,
-    copper: copperNode
+    copper: copperNode,
+    uranium: uraniumNode
   },
   tileset: {
     environment: environmentTileset,
     trees: treesTileset,
     water: waterTileset,
     rock: rockTileset
+  },
+  effect: {
+    pollutionSmoke
   }
 } as const;

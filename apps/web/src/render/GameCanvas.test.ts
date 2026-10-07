@@ -25,16 +25,18 @@ Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
 let host: HTMLDivElement;
 let canvas: HTMLCanvasElement;
+let canvasContext: CanvasRenderingContext2D;
 const world = (tick = 0) => ({tick, machines: [], conveyors: [], pipes: [], storages: [], tunnels: [], resources: emptyResources(), campaign: createTestCampaign()});
 const tree = (width = 640, height = 480) => createElement(Provider, {store, children: createElement(GameCanvas, {width, height, cellSize: 32})});
-const mouse = (target: EventTarget, type: string, x: number, y: number, buttons = 0) => {
-  act(() => { target.dispatchEvent(new MouseEvent(type, {bubbles: true, clientX: x, clientY: y, button: 0, buttons})); });
+const mouse = (target: EventTarget, type: string, x: number, y: number, buttons = 0, button = 0) => {
+  act(() => { target.dispatchEvent(new MouseEvent(type, {bubbles: true, clientX: x, clientY: y, button, buttons})); });
 };
 const frame = () => act(() => { vi.advanceTimersByTime(20); });
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
+  canvasContext = {save: vi.fn(), restore: vi.fn(), fillRect: vi.fn(), strokeRect: vi.fn(), setLineDash: vi.fn()} as unknown as CanvasRenderingContext2D;
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext);
   store.dispatch(setToolMode("build")); store.dispatch(setSelectedItem(""));
   setWorldSnapshot(world());
   host = document.createElement("div"); document.body.append(host);
@@ -100,15 +102,19 @@ describe("Canvas interactions (DOM)", () => {
       {x: 2, y: 2, direction: "right"}
     ]);
   });
-  it("destroys every crossed cell and keeps the camera locked in destroy mode", () => {
+  it("destroys the rectangle between drag endpoints, previews it, and keeps the camera locked", () => {
     act(() => store.dispatch(setToolMode("destroy")));
     frame();
     const cameraBefore = vi.mocked(render).mock.lastCall?.[2];
     mouse(canvas, "mousedown", 16, 16, 1);
-    mouse(canvas, "mousemove", 112, 16, 1);
-    mouse(canvas, "mouseup", 112, 16);
+    mouse(canvas, "mousemove", 80, 80, 1);
+    frame();
+    expect(canvasContext.fillRect).toHaveBeenLastCalledWith(0, 0, 96, 96);
+    mouse(canvas, "mouseup", 80, 80);
     expect(controller.destroyEntities).toHaveBeenLastCalledWith([
-      {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}
+      {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0},
+      {x: 0, y: 1}, {x: 1, y: 1}, {x: 2, y: 1},
+      {x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 2}
     ]);
     mouse(canvas, "mousedown", 100, 100, 1);
     mouse(canvas, "mousemove", 164, 132, 1);
@@ -123,7 +129,7 @@ describe("Canvas interactions (DOM)", () => {
   });
   it("rotates single belts in both directions and dismisses the shortcut hint", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));
-    expect(host.textContent).toContain("Rotation horaire");
+    expect(host.textContent).toContain("horaire / virage");
     const rotate = (shiftKey = false) => act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", {key: shiftKey ? "R" : "r", shiftKey}));
     });
@@ -135,7 +141,7 @@ describe("Canvas interactions (DOM)", () => {
     for (const direction of ["down", "left", "up", "right"]) { rotate(); place(direction); }
     rotate(true); place("up");
     act(() => store.dispatch(setSelectedItem("miner")));
-    expect(host.textContent).not.toContain("Rotation horaire");
+    expect(host.textContent).not.toContain("horaire / virage");
     rotate();
     mouse(canvas, "click", 48, 48);
     expect(controller.placeMiner).toHaveBeenCalledWith(1, 1, "standard");
@@ -152,7 +158,7 @@ describe("Canvas interactions (DOM)", () => {
     mouse(canvas, "click", 80, 112);
     expect(controller.placeConveyor).toHaveBeenLastCalledWith(2, 3, "right", type);
     mouse(canvas, "contextmenu", 80, 112);
-    expect(host.textContent).not.toContain("Rotation horaire");
+    expect(host.textContent).not.toContain("horaire / virage");
   });
   it("draws a belt drag and cancels a release outside the canvas", () => {
     act(() => store.dispatch(setSelectedItem("conveyor")));
@@ -196,6 +202,18 @@ describe("Canvas interactions (DOM)", () => {
     expect(vi.mocked(render).mock.lastCall?.[2]).toMatchObject({x: 64, y: 32});
     act(() => store.dispatch(setSelectedItem("storage")));
     mouse(canvas, "click", 64 + 80 * 1.1, 32 + 112 * 1.1);
+    expect(controller.placeStorage).toHaveBeenCalledWith(2, 3);
+  });
+  it("pans with a right drag while keeping the selected construction", () => {
+    act(() => store.dispatch(setSelectedItem("storage")));
+    mouse(canvas, "mousedown", 100, 100, 2, 2);
+    mouse(canvas, "mousemove", 164, 132, 2, 2);
+    mouse(canvas, "mouseup", 164, 132, 0, 2);
+    mouse(canvas, "contextmenu", 164, 132, 0, 2);
+    frame();
+
+    expect(vi.mocked(render).mock.lastCall?.[2]).toMatchObject({x: 64, y: 32, scale: 1});
+    mouse(canvas, "click", 144, 144);
     expect(controller.placeStorage).toHaveBeenCalledWith(2, 3);
   });
   it("redraws after resize and does not rebind global listeners every tick", () => {
