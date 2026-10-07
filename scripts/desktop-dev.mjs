@@ -1,10 +1,14 @@
 import {spawn} from "node:child_process";
 import net from "node:net";
 import path from "node:path";
+import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const executable = (name) => path.join(root, "node_modules", ".bin", `${name}${process.platform === "win32" ? ".cmd" : ""}`);
+const require = createRequire(import.meta.url);
+const packageBin = (packageName, relativePath) => path.join(path.dirname(require.resolve(`${packageName}/package.json`)), relativePath);
+const viteCli = packageBin("vite", "bin/vite.js");
+const forgeCli = packageBin("@electron-forge/cli", "dist/electron-forge.js");
 
 function availablePort() {
   return new Promise((resolve, reject) => {
@@ -34,7 +38,7 @@ async function waitForRenderer(url, vite) {
 
 const port = await availablePort();
 const rendererUrl = `http://127.0.0.1:${port}`;
-const vite = spawn(executable("vite"), ["--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
+const vite = spawn(process.execPath, [viteCli, "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
   cwd: root,
   stdio: "inherit"
 });
@@ -49,7 +53,7 @@ process.once("SIGTERM", stop);
 
 try {
   await waitForRenderer(rendererUrl, vite);
-  electron = spawn(executable("electron-forge"), ["start"], {
+  electron = spawn(process.execPath, [forgeCli, "start"], {
     cwd: root,
     env: {...process.env, VITE_DEV_SERVER_URL: rendererUrl},
     stdio: "inherit"

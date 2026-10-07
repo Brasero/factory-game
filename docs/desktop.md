@@ -28,7 +28,7 @@ Chaque installateur doit de préférence être produit sur son système cible : 
    npm run desktop:dev
    ```
 
-   Le script choisit automatiquement un port local disponible, démarre Vite, puis ouvre la fenêtre Electron.
+   Le script choisit automatiquement un port local disponible, démarre Vite, puis ouvre la fenêtre Electron. Il lance directement les points d'entrée JavaScript avec Node afin de fonctionner de la même manière sous macOS, Windows et Linux, sans dépendre des shims `.cmd` de Windows.
 
 ## 2. Choisir la version et l'architecture
 
