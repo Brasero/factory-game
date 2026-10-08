@@ -24,6 +24,7 @@ export interface MapGeneratorOptions {
   width: number;
   height: number;
   islands: IslandDefinition[];
+  legacy?: boolean;
 }
 
 /* ============================================================
@@ -566,7 +567,7 @@ function pickTile(
 /**
  * Peint une silhouette d'ile bruitée dans la carte logique.
  */
-function carveIsland(
+function carveLegacyIsland(
   map: LogicalBiome[][],
   cx: number,
   cy: number,
@@ -588,6 +589,50 @@ function carveIsland(
         map[py][px] = biome;
       }
     }
+  }
+}
+
+function smoothSquareDistance(
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  size: number,
+  n: number
+): number {
+  const dx = Math.abs(x - cx) / size;
+  const dy = Math.abs(y - cy) / size;
+
+  const randN = n + pseudoNoise(x * 0.5, y * 0.5) * 4;
+  const squareDist = Math.pow(
+    Math.pow(dx, randN) + Math.pow(dy, randN),
+    1 / n
+  ) * size;
+
+  return squareDist;
+}
+
+
+
+function carveIsland(map: LogicalBiome[][], island: IslandDefinition) {
+  const {center: {x: cx, y: cy}, shape, biome} = island;
+  const size = shape.size;
+  const range = Math.ceil(size * 1.4);
+  const rotation = shape.rotation ?? 0;
+  for (let y = -range; y <= range; y++) for (let x = -range; x <= range; x++) {
+    const px = cx + x, py = cy + y;
+    if (!map[py]?.[px]) continue;
+    const dx = (x * Math.cos(rotation) + y * Math.sin(rotation)) / (shape.stretchX ?? 1);
+    const dy = (-x * Math.sin(rotation) + y * Math.cos(rotation)) / (shape.stretchY ?? 1);
+    const angle = Math.atan2(dy, dx);
+    const exponent = shape.type === "smoothSquare" ? 4 : 2;
+    const distance = Math.pow(Math.pow(Math.abs(dx), exponent) + Math.pow(Math.abs(dy), exponent), 1 / exponent);
+    const outline = size * (1 + (shape.roughness ?? 0.08) * Math.sin(angle * (shape.lobes ?? 5) + cx * 0.1))
+      * (1 - (shape.waist ?? 0) * Math.exp(-Math.pow(dx / (size * 0.25), 2)));
+    const clearing = island.clearings.some(c => Math.hypot(x - c.x, y - c.y) <= c.radius + 2);
+    // Axe logistique et gisements garantis ; le reste conserve sa silhouette.
+    const corridor = Math.abs(x) <= Math.min(36, size * 0.95) && Math.abs(y) <= Math.min(8, size * 0.3);
+    if (distance < outline || clearing || corridor) map[py][px] = biome;
   }
 }
 
@@ -669,27 +714,6 @@ function pseudoNoise(x: number, y: number, seed = 1337): number {
   const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
   return n - Math.floor(n);
 }
-
-function smoothSquareDistance(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  size: number,
-  n: number
-): number {
-  const dx = Math.abs(x - cx) / size;
-  const dy = Math.abs(y - cy) / size;
-  
-  const randN = n + pseudoNoise(x * 0.5, y * 0.5) * 4;
-  const squareDist = Math.pow(
-    Math.pow(dx, randN) + Math.pow(dy, randN),
-    1 / n
-  ) * size;
-  
-  return squareDist;
-}
-
 
 /**
  * Creuse une clairiere circulaire et la marque en plage.
@@ -886,9 +910,8 @@ export class MapGenerator {
     
     // Etape 1 : sculpter les iles dans la sous-grille logique.
     for (const island of scaledIslands) {
-      const cursorX = island.center.x;
-      const cursorY = island.center.y;
-      carveIsland(subLogical, cursorX, cursorY, island.shape.size, island.biome);
+      if (options.legacy) carveLegacyIsland(subLogical, island.center.x, island.center.y, island.shape.size, island.biome);
+      else carveIsland(subLogical, island);
     }
     
     // Etape 2 : convertir les mers fermees (lacs) en terre.

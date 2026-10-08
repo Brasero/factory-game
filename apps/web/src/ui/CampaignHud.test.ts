@@ -37,8 +37,9 @@ describe("Campaign game over", () => {
     expect(restart).toHaveBeenCalledOnce();
   });
 
-  it("shows every stored resource even when all counters are zero", () => {
+  it("shows only unlocked resources and reveals later resources when an island unlocks", () => {
     const world = createTestWorld();
+    world.campaign.levels.forEach((level, index) => { level.status = index === 0 ? "active" : "locked"; });
     setWorldSnapshot(buildWorldSnapshot(world));
     host = document.createElement("div");
     document.body.append(host);
@@ -46,12 +47,25 @@ describe("Campaign game over", () => {
     act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn(), onContinue: vi.fn(), onMainMenu: vi.fn()})));
 
     const resources = host.querySelector('[aria-label="Ressources stockées"]')!;
-    expect(resources.children).toHaveLength(13);
+    expect(resources.children).toHaveLength(3);
     expect(resources.querySelector('[aria-label="Matériaux de construction : 150"]')).toBeTruthy();
     expect(resources.querySelector('[aria-label="Fer : 0"]')).toBeTruthy();
-    expect(resources.querySelector('[aria-label="Uranium : 0"]')).toBeTruthy();
-    expect(resources.querySelector('[aria-label="Cœurs : 0"]')).toBeTruthy();
+    expect(resources.querySelector('[aria-label="Uranium : 0"]')).toBeNull();
+    expect(resources.querySelector('[aria-label="Cœurs : 0"]')).toBeNull();
+    expect(resources.querySelector('[aria-label="Circuits : 0"]')).toBeNull();
+
+    world.campaign.levels[0].status = "finalized";
+    world.campaign.levels[1].status = "completed";
+    world.campaign.levels[2].status = "active";
+    act(() => setWorldSnapshot(buildWorldSnapshot(world)));
     expect(resources.querySelector('[aria-label="Circuits : 0"]')).toBeTruthy();
+    expect(resources.querySelector('[aria-label="Fer : 0"]')).toBeTruthy();
+    expect(resources.querySelector('[aria-label="Uranium : 0"]')).toBeNull();
+
+    world.campaign.levels.forEach(level => { level.status = "completed"; });
+    act(() => setWorldSnapshot(buildWorldSnapshot(world)));
+    expect(resources.children).toHaveLength(13);
+    expect(resources.querySelector('[aria-label="Cœurs : 0"]')).toBeTruthy();
     expect(resources.querySelector(".pulse")).toBeNull();
   });
 

@@ -22,6 +22,8 @@ export interface Conveyor extends BaseEntity {
   carrying: ResourceCarryingType[];
   speed: number;
   capacity: number;
+  transported?: number;
+  flow?: {tick: number; baseline: number; rate: number};
 }
 
 export function isConveyorType(entity: unknown): entity is Conveyor {

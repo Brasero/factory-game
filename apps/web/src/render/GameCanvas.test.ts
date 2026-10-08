@@ -48,6 +48,16 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.useRealTimers(); });
 
 describe("Canvas interactions (DOM)", () => {
+  it("keeps the animation loop alive through ticks and tool changes", () => {
+    const cancel = vi.spyOn(window, "cancelAnimationFrame");
+    act(() => setWorldSnapshot(world(1)));
+    act(() => store.dispatch(setSelectedItem("storage")));
+    expect(cancel).not.toHaveBeenCalled();
+    frame();
+    expect(vi.mocked(render).mock.lastCall?.[1].tick).toBe(1);
+    cancel.mockRestore();
+  });
+
   it("places and destroys at the selected cell without a simulation tick", () => {
     act(() => store.dispatch(setSelectedItem("storage")));
     mouse(canvas, "click", 80, 112);

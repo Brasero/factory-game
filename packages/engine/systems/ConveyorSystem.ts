@@ -69,9 +69,15 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
             entity.stored[item.type] = (entity.stored[item.type] ?? 0) + moved;
             if (target.kind === "tunnel" && world.tunnels[target.index].type === "output") {
               world.campaign.statistics.exported[item.type] += moved;
+              const level = world.campaign.levels.find(level => level.id === world.tunnels[target.index].levelId);
+              if (level) {
+                level.exports ??= {};
+                level.exports[item.type] = (level.exports[item.type] ?? 0) + moved;
+              }
             }
           }
           remaining -= moved;
+          next[index].transported = (next[index].transported ?? 0) + moved;
           if (moved > 0) {
             if (isSplitter) next[index].routingCursor = (port + 1) % outputs.length;
             break;

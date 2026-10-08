@@ -50,3 +50,11 @@ describe("Machine variant selector", () => {
     expect(host.textContent).toContain("Variante Écologique");
   });
 });
+
+it("uses concise machine names in construction tooltips", () => {
+  for (const button of host.querySelectorAll("#hud_commands_extractor button")) {
+    const title = button.getAttribute("title");
+    if (title) expect(title).not.toContain("—");
+  }
+  expect(host.querySelector('[data-tutorial="miner"]')?.getAttribute("title")).toBe("Mineur");
+});

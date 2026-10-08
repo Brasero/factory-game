@@ -30,8 +30,8 @@ describe("Machine recipe panel", () => {
       machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
     })));
 
-    expect(host.textContent).toContain("Lingot de fer1 Minerai de fer → 1 Lingot de fer20 ticks");
-    expect(host.textContent).toContain("Acier1 Lingot de fer + 1 Charbon → 1 Acier30 ticks");
+    expect(host.textContent).toContain("Lingot de fer1 Minerai de fer → 1 Lingot de fer2.0 s / cycle");
+    expect(host.textContent).toContain("Acier1 Lingot de fer + 1 Charbon → 1 Acier3.0 s / cycle");
     expect(host.textContent).toContain("Mettre en pause");
     const pause = [...host.querySelectorAll("button")].find(button => button.textContent?.includes("Mettre en pause"))!;
     act(() => pause.click());
@@ -51,8 +51,8 @@ describe("Machine recipe panel", () => {
       machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
     })));
 
-    expect(host.textContent).toContain("Fil de cuivre1 Cuivre → 2 Fil de cuivre18 ticks");
-    expect(host.textContent).toContain("Circuit1 Lingot de fer + 2 Fil de cuivre → 1 Circuit35 ticks");
+    expect(host.textContent).toContain("Fil de cuivre1 Cuivre → 2 Fil de cuivre1.8 s / cycle");
+    expect(host.textContent).toContain("Circuit1 Lingot de fer + 2 Fil de cuivre → 1 Circuit3.5 s / cycle");
     expect(host.textContent).not.toContain("Cœur d’automatisation");
   });
 
@@ -70,7 +70,7 @@ describe("Machine recipe panel", () => {
     })));
 
     expect(host.textContent).toContain(
-      "Cœur d’automatisation2 Cellule d’uranium + 2 Unité de calcul + 4 Acier + 5 Eau → 1 Cœur d’automatisation70 ticks"
+      "Cœur d’automatisation2 Cellule d’uranium + 2 Unité de calcul + 4 Acier + 5 Eau → 1 Cœur d’automatisation7.0 s / cycle"
     );
   });
 
@@ -87,7 +87,7 @@ describe("Machine recipe panel", () => {
       machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
     })));
 
-    expect(host.textContent).toContain("Dépollution à l’eau1 Eau → −4 pollution30 ticks");
+    expect(host.textContent).toContain("Dépollution à l’eau1 Eau → −5 pollution3.0 s / cycle");
   });
 
   it("explains that the recycler accepts any resource", () => {
@@ -103,6 +103,6 @@ describe("Machine recipe panel", () => {
       machine: snapshot.machines[0], left: 0, top: 0, onClose: vi.fn()
     })));
 
-    expect(host.textContent).toContain("Recyclage1 ressource au choix → 1 matériau de construction25 ticks");
+    expect(host.textContent).toContain("Recyclage1 ressource au choix → 1 matériau de construction2.5 s / cycle");
   });
 });

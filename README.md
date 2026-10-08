@@ -134,3 +134,5 @@ Projet personnel – libre d’expérimentation.
 `npm run check` exécute le lint, les tests et le build. `npm test` lance les tests une fois ; `npm run test:watch` les relance pendant le développement.
 
 Voir [le plan de stabilisation et de performances](docs/stabilisation.md) pour la couverture actuelle, ses limites et les prochaines étapes.
+
+Le [plan d’évolution du gameplay](docs/plan-gameplay.md) suit les lots de finition, de diversification des îles, de contrats et de nouvelles stratégies.

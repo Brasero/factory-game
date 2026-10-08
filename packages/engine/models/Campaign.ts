@@ -9,6 +9,9 @@ export type LevelObjective = {
   type: "export" | "produce" | "extract" | "store";
   resource: ResourcesType;
   amount: number;
+  requirements?: Partial<Record<ResourcesType, number>>;
+  rate?: {amount: number; window: number; duration: number};
+  emissionBudget?: number;
 };
 
 export type LevelProgress = {
@@ -17,7 +20,14 @@ export type LevelProgress = {
   completedAt?: number;
   finalizedAt?: number;
   pollution: number;
+  exports?: Partial<Resources>;
+  objectiveProgress?: ObjectiveProgress;
+  challenges?: Record<string, ObjectiveProgress>;
+  telemetry?: {lastExports: Partial<Resources>; samples: {tick: number; exports: Partial<Resources>}[]; rates: Partial<Resources>; record: number; firstExportAt?: number};
 };
+
+export type ObjectiveProgress = {value: number; sustained: number; baseline: Partial<Resources>; emissions: number; completedAt?: number; attempts: number};
+export type CampaignChallenge = {id: string; name: string; description: string; objective: LevelObjective; reward: number};
 
 export type CampaignStatistics = {
   extracted: Required<Resources>;
@@ -56,5 +66,7 @@ export type CampaignLevelDefinition = {
     variants: MachineVariant[];
     resources: ResourcesType[];
   };
+  challenges?: CampaignChallenge[];
+  character?: string;
   tunnels: TunnelDefinition[];
 };

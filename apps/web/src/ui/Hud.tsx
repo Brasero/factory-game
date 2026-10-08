@@ -25,7 +25,10 @@ export function Hud() {
   const currentTool = useAppSelector(selectCurentTool);
   const selectedVariant = useAppSelector(selectSelectedVariant);
   const campaignLevels = useWorldSelector(world => world.campaign.levels);
-  const unlockedDefinitions = CAMPAIGN_LEVELS.filter(level => campaignLevels.find(progress => progress.id === level.id)?.status !== "locked");
+  const unlockedDefinitions = CAMPAIGN_LEVELS.filter(level => {
+    const progress = campaignLevels.find(item => item.id === level.id);
+    return progress && progress.status !== "locked";
+  });
   const unlockedMachines = new Set(unlockedDefinitions.flatMap(level => level.unlocks.machines));
   const unlockedVariants = new Set(unlockedDefinitions.flatMap(level => level.unlocks.variants));
   const [buildMenuOpen, setBuildMenuOpen] = useState(false);
@@ -164,34 +167,34 @@ export function Hud() {
     </div>}
     <div id="hud_commands" className={buildMenuOpen ? "open" : ""} aria-hidden={!buildMenuOpen}>
       <div id="hud_commands_extractor">
-        <button data-tutorial="miner" aria-label="Mineur" title="Mineur — fer ou charbon" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
+        <button data-tutorial="miner" aria-label="Mineur" title="Mineur" className={buttonMachineStyle("miner")} onClick={() => handleClick("miner")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>
         </button>
         {unlockedMachines.has("water-pump") && <button data-tutorial="water-pump" aria-label="Pompe à eau" className={buttonMachineStyle("water-pump")} onClick={() => handleClick("water-pump")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.pump.water.idle").src} alt=""/>
         </button>}
-        <button data-tutorial="iron-smelter" aria-label="Fonderie" title="Fonderie — sélectionne sa recette après placement" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
+        <button data-tutorial="iron-smelter" aria-label="Fonderie" title="Fonderie" className={buttonMachineStyle("iron-smelter")} onClick={() => handleClick("iron-smelter")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.ironSmelter.idle").src} alt="" />
         </button>
         {unlockedMachines.has("assembler") && <button data-tutorial="assembler" aria-label="Machine de production"
-          title="Machine de production — sélectionne Fil de cuivre ou Circuit après placement"
+          title="Machine de production"
           className={buttonMachineStyle("assembler")} onClick={() => handleClick("assembler")}>
           <img className="hud-tool-icon"
             src={assetManager.getImage(`machine.automation.assembler.${selectedVariant}.idle`).src} alt="" />
           </button>}
         {unlockedMachines.has("advanced-assembler") && <button data-tutorial="advanced-assembler" aria-label="Assembleuse avancée"
-          title="Assembleuse avancée — machine de deux cases pour les recettes à quatre entrées"
+          title="Assembleuse avancée"
           className={buttonMachineStyle("advanced-assembler")} onClick={() => handleClick("advanced-assembler")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.advancedAssembler.idle").src} alt="" />
         </button>}
         {unlockedMachines.has("boiler") && <button data-tutorial="boiler" aria-label="Boiler dépolluant"
-          title="Boiler — consomme de l’eau pour réduire la pollution"
+          title="Boiler"
           className={buttonMachineStyle("boiler")} onClick={() => handleClick("boiler")}>
           <img className="hud-tool-icon"
             src={assetManager.getImage("machine.automation.boiler.idle").src} alt="" />
         </button>}
         {unlockedMachines.has("recycler") && <button data-tutorial="recycler" aria-label="Recycleur"
-          title="Recycleur — transforme toute ressource en matériaux de construction"
+          title="Recycleur"
           className={buttonMachineStyle("recycler")} onClick={() => handleClick("recycler")}>
           <img className="hud-tool-icon" src={assetManager.getImage("machine.automation.recycler.idle").src} alt="" />
         </button>}
@@ -199,12 +202,12 @@ export function Hud() {
       <div id="hud_commands_logistique">
         {(["merger", "splitter"] as const).map(type => <button key={type} data-tutorial={type}
           aria-label={type === "merger" ? "Merger" : "Splitter"}
-          title={type === "merger" ? "Merger — 3 entrées, 1 sortie" : "Splitter — 1 entrée, 3 sorties"}
+          title={type === "merger" ? "Merger" : "Splitter"}
           className={buttonMachineStyle(type)} onClick={() => handleClick(type)}>
           <span className={`hud-atlas-icon router-icon ${type}`} style={{backgroundImage: `url(${assetManager.getImage(`router.${type}`).src})`}} />
         </button>)}
         <button data-tutorial="smart-splitter" aria-label="Splitter intelligent"
-          title="Splitter intelligent — filtre les ressources par sortie"
+          title="Splitter intelligent"
           className={buttonMachineStyle("smart-splitter")} onClick={() => handleClick("smart-splitter")}>
           <span className="hud-atlas-icon router-icon smart-splitter"
             style={{backgroundImage: `url(${assetManager.getImage("router.splitter").src})`}} />
@@ -213,7 +216,7 @@ export function Hud() {
           <span className="hud-atlas-icon conveyor-icon"
             style={{backgroundImage: `url(${assetManager.getImage("conveyor.tier1").src})`}} />
         </button>
-        {unlockedMachines.has("water-pump") && <button data-tutorial="pipe" aria-label="Tuyau d’eau" title="Tuyau — transporte exclusivement l’eau" className={buttonMachineStyle("pipe")} onClick={() => handleClick("pipe")}>
+        {unlockedMachines.has("water-pump") && <button data-tutorial="pipe" aria-label="Tuyau d’eau" title="Tuyau" className={buttonMachineStyle("pipe")} onClick={() => handleClick("pipe")}>
           <span className="hud-atlas-icon pipe-icon" style={{backgroundImage: `url(${assetManager.getImage("pipe.metal").src})`}} />
         </button>}
         <button data-tutorial="storage" aria-label="Coffre" className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>

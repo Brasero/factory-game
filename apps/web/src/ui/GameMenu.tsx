@@ -8,6 +8,8 @@ type GameMenuProps = {
   mode: "main" | "pause";
   onPlay: () => void;
   onTutorial: () => void;
+  onSettings?: () => void;
+  tutorialsDisabled?: boolean;
   onMainMenu?: () => void;
   onNewCampaign?: () => void;
   hasSave?: boolean;
@@ -78,7 +80,7 @@ function SavePreview({world}: {world: WorldSnapshot}) {
   </aside>;
 }
 
-export function GameMenu({mode, onPlay, onTutorial, onMainMenu, onNewCampaign, hasSave, savePreview, backgroundWorld}: GameMenuProps) {
+export function GameMenu({mode, onPlay, onTutorial, onMainMenu, onNewCampaign, hasSave, savePreview, backgroundWorld, onSettings, tutorialsDisabled}: GameMenuProps) {
   const isMain = mode === "main";
   const [showPreview, setShowPreview] = useState(false);
   return <div className={`menu-screen ${isMain ? "main-menu" : "pause-menu"}`} role="dialog" aria-modal="true"
@@ -100,7 +102,9 @@ export function GameMenu({mode, onPlay, onTutorial, onMainMenu, onNewCampaign, h
           {isMain && hasSave && savePreview && showPreview && <SavePreview world={savePreview} />}
         </div>
         {isMain && hasSave && <button className="secondary-button" onClick={onNewCampaign}>Nouvelle campagne</button>}
-        <button className="secondary-button" onClick={onTutorial}>Tutoriel</button>
+        <button className="secondary-button" onClick={onTutorial} disabled={tutorialsDisabled}
+          title={tutorialsDisabled ? "Réactive les tutoriels dans les paramètres pour les consulter." : undefined}>Tutoriel</button>
+        {onSettings && <button className="secondary-button" onClick={onSettings}>Paramètres</button>}
         {!isMain && <button className="text-button" onClick={onMainMenu}>Retour au menu principal</button>}
       </div>
       {isMain && <div className="goal-preview">

@@ -5,6 +5,8 @@ import {selectMachineRecipe, setMachinePaused} from "@web/game/GameController";
 import {useWorldSelector} from "@web/game/worldStore";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 
+import {productionAdvice, machineLabels} from "./productionFeedback";
+
 const resourceNames: Record<ResourcesType, string> = {
   iron: "Minerai de fer", coal: "Charbon", water: "Eau", ironPlate: "Lingot de fer",
   steel: "Acier", copper: "Cuivre", copperWire: "Fil de cuivre", circuit: "Circuit",
@@ -22,12 +24,13 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
   const unlockedRecipes = new Set(CAMPAIGN_LEVELS.flatMap(level =>
     campaignLevels.find(progress => progress.id === level.id)?.status === "locked" ? [] : level.unlocks.recipes));
   const options = (MACHINE_RECIPE_OPTIONS[machine.type] ?? []).filter(recipe => unlockedRecipes.has(recipe));
+  const pollution = useWorldSelector(world => world.campaign.pollution);
   const selected = machine.recipeId;
   const buffer = Object.entries(machine.buffer).filter(([, amount]) => (amount ?? 0) > 0) as [ResourcesType, number][];
 
   return <section className="machine-recipe-panel" style={{left, top}} role="dialog" aria-label="Configuration de la machine">
     <header>
-      <div><span>Machine</span><strong>{machine.type}</strong></div>
+      <div><span>Machine</span><strong>{machineLabels[machine.type] ?? machine.type}</strong></div>
       <button onClick={onClose} aria-label="Fermer">×</button>
     </header>
 
@@ -36,6 +39,7 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
       {machine.paused ? "▶ Reprendre la production" : "⏸ Mettre en pause"}
     </button>
 
+    <p className="machine-advice" role="status">{productionAdvice(machine, pollution)}</p>
     <div className="machine-panel-section">
       <h3>Recette</h3>
       {options.length === 0 && <p>Cette machine ne possède pas de recette.</p>}
@@ -49,7 +53,7 @@ export function MachineRecipePanel({machine, left, top, onClose}: Props) {
           onClick={() => selectMachineRecipe(machine.id, recipeId as RecipeId)}>
           <strong>{recipe.name}</strong>
           <span>{inputLabel} → {outputLabel}</span>
-          <small>{recipe.duration} ticks</small>
+          <small>{(recipe.duration / machine.efficiency / 10).toFixed(1)} s / cycle · {Object.entries(recipe.outputs).map(([resource, amount]) => `${((amount ?? 0) * machine.production * machine.efficiency * 10 / recipe.duration).toFixed(2)} ${resourceNames[resource as ResourcesType]}/s`).join(" · ") || (recipe.pollutionReduction ? `−${recipe.pollutionReduction} pollution/cycle` : "Recyclage")}</small>
         </button>;
       })}
     </div>

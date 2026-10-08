@@ -38,6 +38,16 @@ export class GameEngine {
         this.#world = runProduction(this.#world);
         this.#world = runOutputMachine(this.#world, this.network);
         runConveyors(this.#world, this.network);
+        for (const belt of this.#world.conveyors) {
+            const count = belt.transported ?? 0;
+            const flow = belt.flow ??= {tick: this.#world.tick, baseline: count, rate: 0};
+            const elapsed = this.#world.tick - flow.tick;
+            if (elapsed >= 100) {
+                flow.rate = (count - flow.baseline) * 10 / elapsed;
+                flow.tick = this.#world.tick;
+                flow.baseline = count;
+            }
+        }
         this.#world = runPipes(this.#world);
         this.#world = runTunnels(this.#world);
         this.updateResourceTotals();

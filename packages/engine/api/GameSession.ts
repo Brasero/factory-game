@@ -7,7 +7,7 @@ import type {
 } from "@engine/api/types.ts";
 import type {MachineVariant} from "@engine/models/Machine";
 import type {GameSave} from "./saveGame";
-import {restoreWorld, serializeWorld} from "./saveGame";
+import {restoreWorld, serializeSnapshot} from "./saveGame";
 
 export class GameSession {
   private engine: GameEngine;
@@ -71,7 +71,7 @@ export class GameSession {
   }
 
   createSave(): GameSave {
-    return serializeWorld(this.engine.getWorld());
+    return serializeSnapshot(this.engine.getSnapshot());
   }
 }
 

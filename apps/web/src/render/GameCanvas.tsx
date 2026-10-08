@@ -3,7 +3,7 @@ import {useAppSelector, useAppDispatch} from "@web/store/hooks";
 import {render} from "./CanvasRenderer";
 import {drawPreviewConveyor} from "./utils/conveyor";
 import {drawPreviewPipes} from "./utils/pipe";
-import {useWorldSnapshot} from "@web/game/worldStore";
+import {getWorldSnapshot, subscribeWorld, useWorldSnapshot} from "@web/game/worldStore";
 import {destroyEntity, placeMiner, placeMachine, placeConveyor, placeCoalMine, placeConveyorLine, placeIronMine,
   placeStorage, canPlaceAt, placePipeLine, destroyEntities} from "@web/game/GameController";
 import {selectCurentTool, selectGamePaused, selectSelectedItem, selectSelectedVariant} from "@web/store/selectors";
@@ -17,6 +17,8 @@ import {createDestructionParticles, drawDestructionParticles, drawDestructionPre
 import {SmartSplitterPanel} from "@web/ui/SmartSplitterPanel";
 import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
 import type {MachineType} from "@engine/models/Machine";
+
+import {buildConveyorMotion, type ConveyorMotion} from "./utils/conveyorMotion";
 
 interface GameCanvasProps {width: number; height: number; cellSize: number}
 type Drag = {start: Position; last: Position; mode: "pan" | "network" | "destroy"; moved: boolean; lastCell?: Position;
@@ -37,20 +39,28 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const selectedVariant = useAppSelector(selectSelectedVariant);
   const paused = useAppSelector(selectGamePaused);
   const snapshotTime = useRef(performance.now());
+  const renderSnapshot = useRef(world);
+  const conveyorMotion = useRef<ConveyorMotion>(new Map());
   const destructionParticles = useRef<DestructionParticle[]>([]);
   const isDirectionalTool = selectedItem === "conveyor" || selectedItem === "pipe" || selectedItem === "splitter" || selectedItem === "smart-splitter" || selectedItem === "merger";
   const [beltDirection, setBeltDirection] = useState<DirectionType>("right");
   const [hover, setHover] = useState<Position | null>(null);
   const [preview, setPreview] = useState<ConveyorPlacement[]>([]);
-  const [cameraVersion, redrawCamera] = useState(0);
+  const [, redrawCamera] = useState(0);
   const [inspectedMachine, setInspectedMachine] = useState<{id: string; left: number; top: number} | null>(null);
   const [inspectedSplitter, setInspectedSplitter] = useState<{id: string; left: number; top: number} | null>(null);
   const machine = inspectedMachine ? world.machines.find(item => item.id === inspectedMachine.id) : undefined;
   const smartSplitter = inspectedSplitter ? world.conveyors.find(item => item.id === inspectedSplitter.id && item.type === "smart-splitter") : undefined;
 
   useEffect(() => {
-    snapshotTime.current = performance.now();
-  }, [world.tick]);
+    const unsubscribe = subscribeWorld(() => {
+      const next = getWorldSnapshot();
+      if (next.tick !== renderSnapshot.current.tick) snapshotTime.current = performance.now();
+      conveyorMotion.current = buildConveyorMotion(renderSnapshot.current, next, conveyorMotion.current);
+      renderSnapshot.current = next;
+    });
+    return () => { unsubscribe(); };
+  }, []);
 
   useEffect(() => {
     if (!world.grid) return;
@@ -85,39 +95,43 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const destroyAt = (cell: Position) => {
     if (destroyEntity(cell.x, cell.y)) addDestructionParticles(cell);
   };
-  useEffect(() => {
+  const drawFrame = useEffectEvent((now: number) => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
+    const snapshot = renderSnapshot.current;
+    const storage = hover ? world.storages.find(s => s.x === hover.x && s.y === hover.y) : undefined;
+    const highlight = hover && (selectedItem || currentTool === "destroy")
+      ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant),
+        footprint: selectedItem === "boiler" || selectedItem === "advanced-assembler"
+          ? machineFootprintCells({...hover, type: selectedItem as MachineType}) : undefined} : undefined;
+    const tickInterpolation = paused ? 1 : Math.min(1, Math.max(0, (now - snapshotTime.current) / 100));
+    render(ctx, snapshot, camera.current, highlight, storage, undefined, tickInterpolation, now, conveyorMotion.current);
+    const destruction = drag.current;
+    if (destruction?.mode === "destroy" && destruction.startCell && destruction.lastCell) {
+      drawDestructionPreview(ctx, destruction.startCell, destruction.lastCell, cellSize);
+    }
+    destructionParticles.current = destructionParticles.current.filter(particle => now - particle.bornAt < particle.lifetime);
+    if (destructionParticles.current.length) drawDestructionParticles(ctx, destructionParticles.current, now);
+    if (isDirectionalTool && selectedItem !== "pipe" && currentTool === "build") {
+      const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)
+        ? [{...hover, direction: beltDirection, type: selectedItem as Conveyor["type"]}] : [];
+      if (placement.length) drawPreviewConveyor(ctx, placement, world);
+    }
+    if (selectedItem === "pipe" && currentTool === "build") {
+      const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, "pipe", selectedVariant)
+        ? [{...hover, direction: beltDirection}] : [];
+      if (placement.length) drawPreviewPipes(ctx, placement, world, cellSize);
+    }
+  });
+  useEffect(() => {
     let frame = 0;
-    const drawFrame = (now: number) => {
-      const storage = hover ? world.storages.find(s => s.x === hover.x && s.y === hover.y) : undefined;
-      const highlight = hover && (selectedItem || currentTool === "destroy")
-        ? {...hover, canPlace: canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant),
-          footprint: selectedItem === "boiler" || selectedItem === "advanced-assembler"
-            ? machineFootprintCells({...hover, type: selectedItem as MachineType}) : undefined} : undefined;
-      const tickInterpolation = paused ? 0 : Math.min(1, (now - snapshotTime.current) / 100);
-      render(ctx, world, camera.current, highlight, storage, undefined, tickInterpolation, now);
-      const destruction = drag.current;
-      if (destruction?.mode === "destroy" && destruction.startCell && destruction.lastCell) {
-        drawDestructionPreview(ctx, destruction.startCell, destruction.lastCell, cellSize);
-      }
-      destructionParticles.current = destructionParticles.current.filter(particle => now - particle.bornAt < particle.lifetime);
-      if (destructionParticles.current.length) drawDestructionParticles(ctx, destructionParticles.current, now);
-      if (isDirectionalTool && selectedItem !== "pipe" && currentTool === "build") {
-        const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, selectedItem, selectedVariant)
-          ? [{...hover, direction: beltDirection, type: selectedItem as Conveyor["type"]}] : [];
-        if (placement.length) drawPreviewConveyor(ctx, placement, world);
-      }
-      if (selectedItem === "pipe" && currentTool === "build") {
-        const placement = preview.length ? preview : hover && canPlaceAt(hover.x, hover.y, "pipe", selectedVariant)
-          ? [{...hover, direction: beltDirection}] : [];
-        if (placement.length) drawPreviewPipes(ctx, placement, world, cellSize);
-      }
-      frame = requestAnimationFrame(drawFrame);
+    const animate = (now: number) => {
+      drawFrame(now);
+      frame = requestAnimationFrame(animate);
     };
-    frame = requestAnimationFrame(drawFrame);
+    frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [world, hover, preview, selectedItem, selectedVariant, currentTool, cameraVersion, width, height, cellSize, beltDirection, isDirectionalTool, paused]);
+  }, []);
 
   // Stable subscriptions; effect events read the latest tool and camera state.
   const finishDrag = useEffectEvent((event: MouseEvent) => {
@@ -205,6 +219,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     };
   }, []);
 
+  const hoveredBelt = hover && !selectedItem && currentTool === "build" ? world.conveyors.find(belt => belt.x === hover.x && belt.y === hover.y) : undefined;
   return <div style={{position: "relative", width, height}}>
     {isDirectionalTool && currentTool === "build" && <div className="conveyor-help" role="status">
       <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "pipe" ? "Tuyau" : selectedItem === "merger" ? "Merger" : selectedItem === "smart-splitter" ? "Splitter intelligent" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
@@ -216,6 +231,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       top={inspectedMachine.top} onClose={() => setInspectedMachine(null)} />}
     {smartSplitter && inspectedSplitter && <SmartSplitterPanel splitter={smartSplitter} left={inspectedSplitter.left}
       top={inspectedSplitter.top} onClose={() => setInspectedSplitter(null)} />}
+    {hoveredBelt && <div className="belt-flow-tooltip" role="status">Débit du tapis : {(hoveredBelt.flow?.rate ?? 0).toFixed(2)} unités/s <small>Dernier intervalle de 10 secondes · Sorties réussies</small></div>}
     <canvas ref={canvasRef} width={width} height={height} aria-label="Carte de l’usine"
     onMouseDown={event => {
       if (event.button !== 0 && event.button !== 1 && event.button !== 2) return;

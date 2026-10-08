@@ -5,7 +5,7 @@ import {Provider} from "react-redux";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import store from "@web/store/store.ts";
 import App from "./App.tsx";
-import {pauseGame, startGame} from "@web/game/GameController.ts";
+import {hasSavedGame, pauseGame, startGame, startNewCampaign} from "@web/game/GameController.ts";
 import {getWorldSnapshot, setWorldSnapshot} from "@web/game/worldStore.ts";
 import {emptyResources} from "@engine/models/Resources";
 import {createTestCampaign} from "@engine/test/createTestWorld";
@@ -26,6 +26,8 @@ const button = (label: string) => [...host.querySelectorAll("button")].find(item
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(hasSavedGame).mockReturnValue(false);
+  localStorage.removeItem("factstories-tutorials-disabled");
   store.dispatch(setPaused(false));
   const campaign = createTestCampaign();
   for (const level of campaign.levels.slice(1)) level.status = "locked";
@@ -42,6 +44,7 @@ beforeEach(async () => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  localStorage.removeItem("factstories-tutorials-disabled");
 });
 
 describe("application menu", () => {
@@ -73,11 +76,11 @@ describe("application menu", () => {
     const next = structuredClone(getWorldSnapshot());
     next.campaign.levels[1].status = "active";
     await act(async () => { setWorldSnapshot(next); await Promise.resolve(); });
-    expect(host.textContent).toContain("Le réseau d’eau");
+    expect(host.textContent).toContain("Un débit régulier");
     expect(pauseGame).toHaveBeenCalled();
     act(() => button("Quitter").click());
     await act(async () => { setWorldSnapshot({...next, tick: 1}); await Promise.resolve(); });
-    expect(host.textContent).not.toContain("Le réseau d’eau");
+    expect(host.textContent).not.toContain("Un débit régulier");
   });
 
   it("pauses when a level becomes completed", async () => {
@@ -89,4 +92,73 @@ describe("application menu", () => {
     expect(pauseGame).toHaveBeenCalledOnce();
     expect(store.getState().control.paused).toBe(true);
   });
+
+  it("disables manual tutorials and all unlock tutorials from the main settings", async () => {
+    act(() => button("Paramètres").click());
+    expect(host.textContent).toContain("Désactiver les tutoriels");
+    act(() => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    expect(localStorage.getItem("factstories-tutorials-disabled")).toBe("true");
+    act(() => button("Retour").click());
+    expect(button("Tutoriel").disabled).toBe(true);
+    act(() => button("Tutoriel").click());
+    expect(host.textContent).not.toContain("Construis ta première usine");
+    act(() => button("Jouer").click());
+    vi.mocked(pauseGame).mockClear();
+    for (let index = 1; index < 6; index++) {
+      const next = structuredClone(getWorldSnapshot());
+      next.campaign.levels[index].status = "active";
+      await act(async () => {setWorldSnapshot(next); await Promise.resolve();});
+      expect(host.querySelector('.tutorial-screen')).toBeNull();
+      expect(host.textContent).not.toContain("Quitter");
+    }
+    expect(pauseGame).not.toHaveBeenCalled();
+  });
+
+  it("remembers the choice across remounts and skips the new campaign tutorial", async () => {
+    act(() => button("Paramètres").click());
+    act(() => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    act(() => root.unmount());
+    vi.mocked(hasSavedGame).mockReturnValue(true);
+    vi.clearAllMocks();
+    root = createRoot(host);
+    await act(async () => {root.render(createElement(Provider, {store, children: createElement(App)})); await Promise.resolve();});
+    expect(button("Tutoriel").disabled).toBe(true);
+    act(() => button("Nouvelle campagne").click());
+    expect(startNewCampaign).toHaveBeenCalledOnce();
+    expect(startGame).toHaveBeenCalledOnce();
+    expect(pauseGame).not.toHaveBeenCalled();
+    expect(store.getState().control.paused).toBe(false);
+    expect(host.textContent).not.toContain("Construis ta première usine");
+  });
+
+  it("returns from pause settings without resuming the simulation", () => {
+    act(() => button("Jouer").click());
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
+    act(() => button("Paramètres").click());
+    act(() => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    vi.mocked(startGame).mockClear();
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
+    expect(host.textContent).toContain("Jeu en pause");
+    expect(button("Tutoriel").disabled).toBe(true);
+    expect(store.getState().control.paused).toBe(true);
+    expect(startGame).not.toHaveBeenCalled();
+    act(() => button("Reprendre").click());
+    expect(startGame).toHaveBeenCalledOnce();
+  });
+
+  it("allows re-enabling tutorials and returning to the main menu with Escape", () => {
+    act(() => button("Paramètres").click());
+    act(() => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"})));
+    expect(host.textContent).toContain("Version de développement");
+    act(() => button("Paramètres").click());
+    expect(host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+    act(() => host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    act(() => button("Retour").click());
+    expect(button("Tutoriel").disabled).toBe(false);
+    expect(localStorage.getItem("factstories-tutorials-disabled")).toBe("false");
+    act(() => button("Tutoriel").click());
+    expect(host.textContent).toContain("Construis ta première usine");
+  });
+
 });

@@ -15,6 +15,8 @@ import type {Pipe} from "@engine/models/Pipe";
 import {isPipe} from "@engine/models/Pipe";
 import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
 
+import {defaultRecipe} from "@engine/config/recipeConfig";
+
 class EntityManager implements EntityManagerType {
   placeMachine(x: number, y: number, type: MachineType, world: World, variant: MachineVariant = "standard"): World | false {
     const {grid, machines} = world;
@@ -34,6 +36,7 @@ class EntityManager implements EntityManagerType {
       const newMachine: Machine = {
         id: crypto.randomUUID(),
         buffer: {} as Record<ResourcesType, number>,
+        recipeId: type === "boiler" || type === "recycler" ? defaultRecipe(type) : undefined,
         type,
         x,
         y,

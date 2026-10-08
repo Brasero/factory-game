@@ -1,3 +1,8 @@
+import {buildWorldSnapshot} from "./worldSnapshot";
+import type {WorldSnapshot} from "./types";
+import {packTerrain, unpackTerrain, type SavedTerrain} from "./terrainSave";
+import {Grid} from "@engine/world/Grid";
+import {TileMap} from "@engine/world/TileMap";
 import type {World} from "@engine/models/World";
 import type {Machine} from "@engine/models/Machine";
 import type {Conveyor} from "@engine/models/Conveyor";
@@ -15,6 +20,7 @@ import {machineFootprintCells} from "@engine/config/machineFootprint";
 
 export type GameSave = {
   version: 1;
+  terrain?: SavedTerrain;
   tick: number;
   machines: Machine[];
   conveyors: Conveyor[];
@@ -28,15 +34,23 @@ export type GameSave = {
 };
 
 export function serializeWorld(world: World): GameSave {
-  return structuredClone({version: 1, tick: world.tick, machines: world.machines, conveyors: world.conveyors, pipes: world.pipes,
+  return {...serializeSnapshot(buildWorldSnapshot(world)), removedDecorations: world.grid?.getRemovedDecorations() ?? []};
+}
+
+export function serializeSnapshot(world: WorldSnapshot): GameSave {
+  const terrain = world.grid ? packTerrain(world.grid) : undefined;
+  return structuredClone({version: 1, terrain, tick: world.tick, machines: world.machines, conveyors: world.conveyors, pipes: world.pipes,
     storages: world.storages, tunnels: world.tunnels, resources: world.resources, campaign: world.campaign,
-    removedDecorations: world.grid?.getRemovedDecorations() ?? [],
-    decorations: world.grid?.getDecorations() ?? []});
+    decorations: terrain?.decorations ?? []});
 }
 
 export function restoreWorld(save: GameSave): World {
   if (save.version !== 1) throw new Error("Version de sauvegarde incompatible.");
-  const world = createWorld();
+  const world = createWorld(!save.terrain);
+  if (save.terrain) {
+    world.grid = new Grid(save.terrain.width, save.terrain.height, new TileMap(save.terrain.width, save.terrain.height, unpackTerrain(save.terrain)));
+    for (const node of save.terrain.resources) world.grid.setResource(node.x, node.y, node.resource!);
+  }
   world.tick = save.tick;
   world.machines = structuredClone(save.machines).map(machine => {
     if (machine.type === "steel-smelter") {
@@ -44,6 +58,9 @@ export function restoreWorld(save: GameSave): World {
     }
     if (machine.type === "wire-mill") {
       return {...machine, type: "assembler" as const, recipeId: "copper-wire" as const, spriteName: "assembler"};
+    }
+    if (!machine.recipeId && (machine.type === "boiler" || machine.type === "recycler")) {
+      return {...machine, recipeId: machine.type === "boiler" ? "water-purification" as const : "recycling" as const};
     }
     return machine;
   });
@@ -78,6 +95,12 @@ export function restoreWorld(save: GameSave): World {
   if (savedCampaign.status === "finished" && CAMPAIGN_LEVELS.some(level => !savedLevelIds.has(level.id))) {
     savedCampaign.status = "playing";
     savedCampaign.activeLevelId = savedCampaign.levels.find(level => level.status === "active")?.id ?? savedCampaign.activeLevelId;
+  }
+  for (const level of savedCampaign.levels) {
+    const definition = CAMPAIGN_LEVELS.find(item => item.id === level.id)!;
+    level.exports ??= {[definition.objective.resource]: savedCampaign.statistics.exported[definition.objective.resource]};
+    level.telemetry ??= {lastExports: {...level.exports}, samples: [], rates: {}, record: 0};
+    level.challenges ??= Object.fromEntries((definition.challenges ?? []).map(challenge => [challenge.id, {value: 0, sustained: 0, baseline: {...level.exports}, emissions: level.pollution, attempts: 0}]));
   }
   world.campaign = savedCampaign;
   world.campaign.constructionMaterials ??= INITIAL_CONSTRUCTION_MATERIALS;

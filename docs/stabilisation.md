@@ -214,3 +214,30 @@ Six défauts reproduits ont été corrigés, chacun protégé par un test qui é
 Le test de topologie qui envoyait de l'eau dans une mine utilise maintenant du fer vers une fonderie, sans changer ce qu'il vérifie.
 
 Validation : `npm run check` et ordre aléatoire (seed 42) réussis, **103 tests**. Vérification manuelle dans le navigateur sur `npm run preview` : chargement du jeu, puis deux tapis face à face sans erreur ni disparition des décors.
+
+## Finition du rendu et du HUD — 8 octobre 2026
+
+Le HUD des stocks filtre désormais les ressources selon les déblocages des îles, y compris lorsque leurs quantités sont nulles. Les ressources des îles terminées ou finalisées restent visibles. Un niveau absent de l’état de campagne ne débloque rien.
+
+Les quatre variantes du PNG de pollution reçoivent un masque radial dont l’alpha est nul avant les bords de chaque frame. Ces textures de 256 × 256 et le dégradé de fond sont préparés une seule fois dans des OffscreenCanvas, puis réutilisés avec le lissage activé. La taille des particules reste stable lorsque la pollution varie ; leur apparition/disparition en périphérie est progressive, et l’intensité rejoint la valeur simulée avec un court fondu de 180 ms. Les PNG source ne sont pas modifiés. Sans OffscreenCanvas, le rendu conserve son chemin de repli original.
+
+La boucle requestAnimationFrame reste active entre les mises à jour React. Une subscription au store horodate immédiatement les ticks ; un effect event lit les interactions actuelles. Le réseau graphique (prédécesseurs, entrées et sorties connectées) est mis en cache par snapshot dans une WeakMap ; un nouvel instantané après édition invalide naturellement ce cache. Les caches ne dépendent pas de la caméra.
+
+L’animation des objets interpole les déplacements observés entre deux ticks. Le temps réservé par la simulation à une arrivée est réparti sur le parcours visuel, afin d’éviter l’arrêt périodique aux frontières de cases. Les files restent espacées et immobiles en saturation ; un changement sans tick conserve l’interpolation en cours. Les sauts de ticks et changements de monde réinitialisent ce suivi. Les objets restent masqués à l’intérieur des boîtiers de routage. Aucun changement de cadence, de capacité, de conservation ou de priorité n’est introduit dans le moteur ou les sauvegardes.
+
+Contrôle navigateur : bords des quatre textures vérifiés par lecture d’alpha (tous transparents), fumée inspectée sur une scène fixe et aux zooms 1 et 1,5. Comparaison indicative avec le renderer précédent dans la même session, Canvas 960 × 600, 5 000 tapis, pollution 700/900, moyennes mobiles sur 120 images : environ 3,9 ms avant et 1,3 ms après au zoom 1. Mesure CPU locale sans instrumentation GPU, ni budget CI ; ne pas comparer directement aux anciens protocoles ci-dessus.
+
+Validation automatisée sous Node 22.23.3 : `npm run check` et `npm test -- --sequence.shuffle --sequence.seed=42` réussis, 220 tests passés ; les deux benchmarks opt-in restent exclus. Tests dédiés au déblocage progressif du HUD, aux masques/caches, au maintien de la boucle d’animation, aux files bloquées, aux transferts et aux virages. Le plan des prochains ajouts est suivi dans [plan-gameplay.md](plan-gameplay.md).
+
+
+## Lot gameplay 1 — 8 octobre 2026
+
+Le suivi des exports est désormais attribué au tunnel de sortie de chaque île, en plus des statistiques historiques. Chaque île garde une fenêtre bornée à 100 observations de simulation ; les défis avancent au plus une fois par tick et leurs récompenses ne sont distribuées qu’une fois. Les émissions brutes servent aux budgets ; la dépollution globale ne les efface pas. Les interruptions suspendent l’effort de débit, tandis qu’un dépassement écologique réinitialise uniquement l’essai concerné.
+
+Les tapis gardent un compteur cumulatif de transferts et une mesure par tranche de 100 ticks, sans historique par objet. Les quantités, capacités, réservations et priorités ne changent pas. Les diagnostics et le bilan sont rendus sur les snapshots de simulation ; aucune statistique ne dépend des images Canvas.
+
+Le générateur utilise proportions, rotation, lobes et étranglement configurés par île. Il protège les accès aux gisements et aux tunnels. Les sauvegardes conservent le terrain exact dans une palette de tuiles/sous-tuiles avec répétitions par ligne, mise en cache par snapshot de grille. Une campagne vide mesurée dans le navigateur occupait environ 664 Ko en JSON ; ce chiffre est indicatif et augmente avec les entités. Sans terrain sauvegardé, le chargement emploie la géométrie historique. La migration initialise les défis sur les exports historiques pour empêcher les récompenses rétroactives.
+
+Ajustements demandés avant ce lot : boiler à 5 points de dépollution par cycle au lieu de 4, libellés de construction simplifiés, recette automatique uniquement pour boiler et recycleur. Tutoriels et documentation de campagne mis à jour.
+
+Validation sous Node 22.23.3 : `npm run check` et `npm test -- --sequence.shuffle --sequence.seed=42` réussis, **233 tests**, deux benchmarks opt-in exclus. Contrôles dédiés : commande composée, budget/reprise, débit/interruption, récompense unique, migration, recettes par défaut, taille/accès des îles et conservation du terrain compact. Inspection navigateur du bilan et des six silhouettes. L’équilibrage joueur du lot 1 reste à recueillir.

@@ -22,6 +22,9 @@ import {machineIdleReason, type MachineIdleReason} from "@engine/systems/Machine
 import {drawPipeAt} from "@web/render/utils/pipe";
 import {machineFootprint, machineFootprintCells, machineOutputPosition, machineOutputSource} from "@engine/config/machineFootprint";
 
+import {getSmokeTextures, getCornerSmokeTexture} from "./utils/smokeTexture";
+import {conveyorVisualProgress, type ConveyorMotion} from "./utils/conveyorMotion";
+
 const CELL_SIZE = config.CELL_SIZE;
 export function render(
     ctx: CanvasRenderingContext2D,
@@ -31,7 +34,8 @@ export function render(
     hoveredStorage?: Storage,
     measure?: (layer: string, milliseconds: number) => void,
     tickInterpolation = 0,
-    visualTimeMs = 0
+    visualTimeMs = 0,
+    conveyorMotion?: ConveyorMotion
 ) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -52,7 +56,7 @@ export function render(
     };
     drawLayer("terrain", () => drawTileMap(ctx, world.grid!, bounds));
     drawLayer("resources", () => drawResourceNodes(ctx, world.grid!, bounds));
-    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds, tickInterpolation));
+    drawLayer("entities", () => drawDynamicEntities(ctx, world, bounds, tickInterpolation, conveyorMotion));
     drawLayer("decorations", () => drawDecorationTiles(ctx, world.grid!, bounds));
     drawLayer("fog", () => drawCampaignFog(ctx, world));
     drawLayer("pollution", () => drawPollutionSmoke(ctx, world, visualTimeMs));
@@ -81,7 +85,13 @@ function drawCornerSmokeGradient(ctx: CanvasRenderingContext2D, radius: number, 
     {x: width, y: height},
     {x: 0, y: height}
   ];
+  const texture = getCornerSmokeTexture();
   for (const corner of corners) {
+    if (texture) {
+      ctx.globalAlpha = opacity;
+      ctx.drawImage(texture, corner.x - radius, corner.y - radius, radius * 2, radius * 2);
+      continue;
+    }
     const gradient = ctx.createRadialGradient(corner.x, corner.y, 0, corner.x, corner.y, radius);
     gradient.addColorStop(0, `rgba(40, 38, 36, ${opacity})`);
     gradient.addColorStop(0.58, `rgba(67, 62, 57, ${opacity * 0.48})`);
@@ -99,7 +109,9 @@ function drawSmokePatch(ctx: CanvasRenderingContext2D, texture: HTMLImageElement
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
-  ctx.drawImage(texture, frame % 2 * frameWidth, Math.floor(frame / 2) * frameHeight, frameWidth, frameHeight,
+  const softened = getSmokeTextures(texture)?.[frame];
+  if (softened) ctx.drawImage(softened, -size / 2, -size / 2, size, size);
+  else ctx.drawImage(texture, frame % 2 * frameWidth, Math.floor(frame / 2) * frameHeight, frameWidth, frameHeight,
     -size / 2, -size / 2, size, size);
   ctx.restore();
 }
@@ -113,8 +125,16 @@ export function pollutionSmokeMotion(visualTimeMs: number, layer: number, spacin
   return {offset: travel % spacing, tileShift: Math.floor(travel / spacing)};
 }
 
+const smokeStateCache = new WeakMap<CanvasRenderingContext2D, {pollution: number; time: number}>();
+
 function drawPollutionSmoke(ctx: CanvasRenderingContext2D, world: WorldSnapshot, visualTimeMs: number) {
-  const state = pollutionSmokeState(world.campaign.pollution, world.campaign.pollutionLimit);
+  const previous = smokeStateCache.get(ctx);
+  const elapsed = previous ? Math.max(0, visualTimeMs - previous.time) : 0;
+  const pollution = previous && elapsed < 1000 && elapsed > 0
+    ? previous.pollution + (world.campaign.pollution - previous.pollution) * (1 - Math.exp(-elapsed / 180))
+    : world.campaign.pollution;
+  smokeStateCache.set(ctx, {pollution, time: visualTimeMs});
+  const state = pollutionSmokeState(pollution, world.campaign.pollutionLimit);
   if (state.intensity === 0) return;
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -123,7 +143,7 @@ function drawPollutionSmoke(ctx: CanvasRenderingContext2D, world: WorldSnapshot,
   drawCornerSmokeGradient(ctx, reachRadius, state.opacity * 0.72);
 
   const texture = assetManager.getImage("effect.pollutionSmoke");
-  const size = Math.max(112, Math.min(260, Math.min(width, height) * (0.18 + state.intensity * 0.12)));
+  const size = Math.max(112, Math.min(260, Math.min(width, height) * 0.26));
   const spacing = size * 0.68;
   const layers = 3;
   const corners = [
@@ -132,7 +152,7 @@ function drawPollutionSmoke(ctx: CanvasRenderingContext2D, world: WorldSnapshot,
     {x: width, y: height, startAngle: Math.PI},
     {x: 0, y: height, startAngle: Math.PI * 1.5}
   ];
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
 
   for (let layer = 0; layer < layers; layer += 1) {
     const visibility = pollutionSmokeLayerVisibility(state.intensity, layer);
@@ -140,12 +160,16 @@ function drawPollutionSmoke(ctx: CanvasRenderingContext2D, world: WorldSnapshot,
     const radius = reachRadius * (layer + 0.55) / layers;
     const angleStep = spacing / Math.max(radius, spacing);
     const {offset, tileShift} = pollutionSmokeMotion(visualTimeMs, layer, spacing);
-    ctx.globalAlpha = state.opacity * (0.82 - layer / layers * 0.3) * visibility;
+    const opacity = state.opacity * (0.82 - layer / layers * 0.3) * visibility;
     for (let cornerIndex = 0; cornerIndex < corners.length; cornerIndex += 1) {
       const corner = corners[cornerIndex];
       let index = layer + cornerIndex - tileShift;
       for (let angle = corner.startAngle - angleStep + offset / Math.max(radius, 1);
         angle <= corner.startAngle + Math.PI / 2 + angleStep; angle += angleStep) {
+        // Les particules entrent et sortent en fondu, sans apparition au bouclage.
+        const edge = Math.min((angle - corner.startAngle + angleStep) / angleStep,
+          (corner.startAngle + Math.PI / 2 + angleStep - angle) / angleStep, 1);
+        ctx.globalAlpha = opacity * Math.max(0, edge);
         drawSmokePatch(ctx, texture, index++, corner.x + Math.cos(angle) * radius,
           corner.y + Math.sin(angle) * radius, size, angle + Math.PI / 2);
       }
@@ -172,13 +196,9 @@ type DrawCall = {
   draw: () => void;
 };
 
-function drawDynamicEntities(
-  ctx: CanvasRenderingContext2D,
-  world: WorldSnapshot,
-  bounds: ViewportBounds,
-  tickInterpolation: number
-) {
-  const drawCalls: DrawCall[] = [];
+const renderNetworkCache = new WeakMap<WorldSnapshot, ReturnType<typeof buildRenderNetwork>>();
+
+function buildRenderNetwork(world: WorldSnapshot) {
   const previousByPos = new Map<string, Conveyor>();
   const incomingByPos = new Map<string, DirectionType>();
   const conveyorsByPos = new Map(world.conveyors.map(conveyor => [positionKey(conveyor), conveyor]));
@@ -198,11 +218,6 @@ function drawDynamicEntities(
         incomingByPos.set(key, getIncomingDirection(conveyor, receiver));
       }
     }
-  });
-
-  (world.pipes ?? []).forEach(pipe => {
-    if (!isVisible(pipe, bounds)) return;
-    drawCalls.push({x: pipe.x, y: pipe.y, layer: 0, draw: () => drawPipeAt(ctx, world, pipe, CELL_SIZE)});
   });
 
   const registerEntityOutput = (source: Position, direction: DirectionType) => {
@@ -233,6 +248,28 @@ function drawDynamicEntities(
     }
   });
 
+  return {previousByPos, incomingByPos, connectedOutputs, connected};
+}
+
+function drawDynamicEntities(
+  ctx: CanvasRenderingContext2D,
+  world: WorldSnapshot,
+  bounds: ViewportBounds,
+  tickInterpolation: number,
+  conveyorMotion?: ConveyorMotion
+) {
+  const drawCalls: DrawCall[] = [];
+  let network = renderNetworkCache.get(world);
+  if (!network) {
+    network = buildRenderNetwork(world);
+    renderNetworkCache.set(world, network);
+  }
+  const {previousByPos, incomingByPos, connectedOutputs, connected} = network;
+  (world.pipes ?? []).forEach(pipe => {
+    if (!isVisible(pipe, bounds)) return;
+    drawCalls.push({x: pipe.x, y: pipe.y, layer: 0, draw: () => drawPipeAt(ctx, world, pipe, CELL_SIZE)});
+  });
+
   world.conveyors.forEach(conveyor => {
     if (!isVisible(conveyor, bounds)) return;
     const prev = previousByPos.get(`${conveyor.x},${conveyor.y}`) ?? null;
@@ -250,7 +287,7 @@ function drawDynamicEntities(
         x: conveyor.x,
         y: conveyor.y,
         layer: 1,
-      draw: () => drawResourcesForConveyor(ctx, conveyor, path, tickInterpolation)
+        draw: () => drawResourcesForConveyor(ctx, conveyor, path, tickInterpolation, conveyorMotion)
       });
     }
   });
@@ -567,31 +604,21 @@ function drawResourcesForConveyor(
   ctx: CanvasRenderingContext2D,
   conveyor: Conveyor,
   path: ConveyorPath,
-  tickInterpolation: number
+  tickInterpolation: number,
+  motion?: ConveyorMotion
 ) {
     if (!conveyor.carrying.length) return;
-    let aheadProgress: number | undefined;
-    conveyor.carrying.forEach(r => {
-        const { type, progress = 0 } = r;
+    conveyor.carrying.forEach((r, index) => {
+        const {type} = r;
         
         // Position de base au centre de la case
-        const visualProgress = interpolatedConveyorProgress(progress, conveyor.speed, tickInterpolation, aheadProgress);
-        aheadProgress = visualProgress;
+        const visualProgress = conveyorVisualProgress(conveyor, index, tickInterpolation, motion);
         const pos = interpolateOnConveyor(path, visualProgress)
         
         drawResourceIcon(ctx, type, pos.x - 10, pos.y - 15, CELL_SIZE - 10);
     })
 }
 
-export function interpolatedConveyorProgress(
-  progress: number,
-  speed: number,
-  tickInterpolation: number,
-  aheadProgress?: number
-): number {
-  const destination = aheadProgress === undefined ? 1 : Math.max(0, aheadProgress - 0.35);
-  return Math.min(destination, Math.max(0, progress + speed * Math.min(1, Math.max(0, tickInterpolation))));
-}
 export function directionToVector(dir: DirectionType): Position {
     switch (dir) {
         case "right": return { x: 1, y: 0 };

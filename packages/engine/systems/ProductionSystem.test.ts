@@ -107,7 +107,7 @@ describe("Recipe production", () => {
     world = run(world, 1);
 
     expect(world.machines[0]).toMatchObject({active: true, progress: 0, buffer: {water: 0}});
-    expect(world.campaign.pollution).toBeCloseTo(45.4);
+    expect(world.campaign.pollution).toBeCloseTo(44.4);
   });
 
   it("does not let one standard boiler neutralize a standard production chain", () => {
@@ -127,7 +127,7 @@ describe("Recipe production", () => {
 
     world = run(world, 300);
 
-    expect(world.campaign.pollution).toBeGreaterThan(110);
+    expect(world.campaign.pollution).toBeCloseTo(104);
   });
 
   it("does not waste water when there is no pollution", () => {

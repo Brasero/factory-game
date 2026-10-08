@@ -11,7 +11,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "Premiers lingots",
     description: "Extraire le fer et mettre en place une première chaîne automatisée.",
     center: {x: 45, y: 55},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "ironPlate", amount: 50},
     unlocks: {
       machines: ["iron-mine", "iron-smelter"],
@@ -26,7 +26,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "L’acier",
     description: "Combiner les productions de plusieurs îles et arbitrer entre vitesse et pollution.",
     center: {x: 120, y: 55},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "steel", amount: 40},
     unlocks: {
       machines: ["coal-mine", "water-pump", "boiler", "recycler"],
@@ -44,7 +44,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "Circuit propre",
     description: "Produire des circuits tout en maîtrisant l’empreinte de l’archipel.",
     center: {x: 195, y: 55},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "circuit", amount: 30},
     unlocks: {
       machines: ["copper-mine", "assembler"],
@@ -62,7 +62,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "Énergie instable",
     description: "Conditionner l’uranium dans une enveloppe d’acier sans perdre le contrôle de la pollution.",
     center: {x: 45, y: 135},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "uraniumCell", amount: 25},
     unlocks: {
       machines: ["uranium-mine"],
@@ -80,7 +80,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "Calcul industriel",
     description: "Rassembler trois chaînes de production pour fabriquer des unités de calcul avancées.",
     center: {x: 120, y: 135},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "processingUnit", amount: 18},
     unlocks: {
       machines: [],
@@ -98,7 +98,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     name: "Cœur de l’archipel",
     description: "Synchroniser les productions de toutes les îles pour assembler le composant final.",
     center: {x: 195, y: 135},
-    radius: 24,
+    radius: 32,
     objective: {type: "export", resource: "automationCore", amount: 10},
     unlocks: {
       machines: ["advanced-assembler"],
@@ -112,6 +112,23 @@ export const CAMPAIGN_LEVELS: CampaignLevelDefinition[] = [
     ]
   }
 ];
+
+// Les fenêtres utilisent les ticks simulés (100 ticks = 10 secondes).
+const characters = ["Une première usine accueillante", "Équilibrer fer et charbon", "Relier deux plateaux", "Limiter les émissions de l’uranium", "Partager les ingrédients", "Synchroniser l’archipel"];
+CAMPAIGN_LEVELS.forEach((level, index) => {
+  level.character = characters[index];
+  const resource = level.objective.resource;
+  level.challenges = [
+    {id: "cadence", name: "Cadence régulière", description: "Maintenir le débit pendant 10 secondes. Les interruptions suspendent le défi.",
+      objective: {type: "export", resource, amount: 5, rate: {amount: index < 3 ? 2 : 1, window: 100, duration: 100}}, reward: 15},
+    {id: "propre", name: "Livraison propre", description: "Livrer sous un budget d’émissions brutes. Un dépassement démarre un nouvel essai.",
+      objective: {type: "export", resource, amount: index < 3 ? 10 : 3, emissionBudget: index < 3 ? 80 : 150}, reward: 15}
+  ];
+});
+CAMPAIGN_LEVELS[1].objective.rate = {amount: 2, window: 100, duration: 100};
+CAMPAIGN_LEVELS[3].objective.emissionBudget = 250;
+CAMPAIGN_LEVELS[4].objective.requirements = {processingUnit: 18, circuit: 6, steel: 6};
+CAMPAIGN_LEVELS[5].objective.rate = {amount: 1, window: 100, duration: 100};
 
 export function campaignLevelAt(x: number, y: number): CampaignLevelDefinition | undefined {
   return CAMPAIGN_LEVELS.find(level => Math.hypot(x - level.center.x, y - level.center.y) <= level.radius);

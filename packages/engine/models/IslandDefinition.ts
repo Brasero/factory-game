@@ -10,6 +10,12 @@ export type IslandDefinition = {
   shape: {
     type: "organique" | "smoothSquare";
     size: number;
+    stretchX?: number;
+    stretchY?: number;
+    rotation?: number;
+    lobes?: number;
+    roughness?: number;
+    waist?: number;
   }
   
   clearings: ClearingDefinition[];

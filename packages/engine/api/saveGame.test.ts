@@ -75,7 +75,7 @@ describe("Campaign saves", () => {
 
   it("preserves removed scenery", () => {
     const generated = restoreWorld(serializeWorld(new GameEngine(createTestWorld()).getWorld()));
-    const decoration = {x: 12, y: 14};
+    const decoration = {x: 2, y: 4};
     generated.grid!.replaceDecorations([{...decoration, type: "tree", variant: 1}]);
     generated.grid!.removeDecoration(decoration);
     const restored = restoreWorld(serializeWorld(generated));
@@ -85,14 +85,14 @@ describe("Campaign saves", () => {
   it("restores the complete saved decoration layout", () => {
     const generated = restoreWorld(serializeWorld(new GameEngine(createTestWorld()).getWorld()));
     generated.grid!.replaceDecorations([
-      {x: 12, y: 14, type: "tree", variant: 2},
-      {x: 20, y: 22, type: "rock", variant: 3}
+      {x: 2, y: 4, type: "tree", variant: 2},
+      {x: 7, y: 8, type: "rock", variant: 3}
     ]);
     const save = serializeWorld(generated);
     const restored = restoreWorld(save);
     expect(restored.grid!.getDecorations()).toEqual([
-      {x: 12, y: 14, type: "tree", variant: 2},
-      {x: 20, y: 22, type: "rock", variant: 3}
+      {x: 2, y: 4, type: "tree", variant: 2},
+      {x: 7, y: 8, type: "rock", variant: 3}
     ]);
   });
 });

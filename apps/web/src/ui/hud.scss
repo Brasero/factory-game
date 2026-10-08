@@ -408,3 +408,20 @@ button.destroyBtn {
   width: 16px;
   height: 16px;
 }
+
+.campaign-overview {
+  position: absolute; right: 14px; top: 180px; z-index: 15; max-width: min(620px, calc(100vw - 28px));
+  color: #e6eef5;
+  button { cursor: pointer; border: 1px solid #526777; background: #233542; color: inherit; padding: 8px 12px; border-radius: 6px; }
+  section { background: rgba(20, 32, 42, .96); padding: 16px; border-radius: 10px; max-height: 50vh; overflow: auto; }
+  table { width: 100%; font-size: 12px; border-collapse: collapse; td, th { padding: 6px; border-bottom: 1px solid #526777; text-align: left; } }
+  label { display: block; margin-top: 10px; }
+  .island-challenge { padding: 10px 0; border-bottom: 1px solid #526777; p { margin: 5px 0; font-size: 12px; } }
+  .production-notice { background: #264c42; padding: 8px; margin-top: 8px; animation: notice-entry .2s ease-out; }
+  &.reduced-motion .production-notice { animation: none; }
+}
+.objective-detail { display: block; font-size: 11px; padding: 4px 10px; }
+.machine-advice { font-size: 12px; padding: 8px; background: #21383d; border-radius: 5px; }
+@keyframes notice-entry { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .production-notice { animation: none !important; } }
+.belt-flow-tooltip { position: absolute; bottom: 24px; right: 24px; z-index: 5; background: #182d3a; color: white; padding: 10px; border-radius: 6px; pointer-events: none; small { display: block; font-size: 11px; } }

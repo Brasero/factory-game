@@ -1,9 +1,11 @@
 import {useState} from "react";
-import {useWorldSelector} from "@web/game/worldStore";
+import {useWorldSnapshot, useWorldSelector} from "@web/game/worldStore";
 import {CAMPAIGN_LEVELS, objectiveValue} from "@engine/config/campaignConfig";
 import {activateLevel, finalizeLevel} from "@web/game/GameController";
 import {assetManager} from "@web/render/manager/AssetManager";
 import type {ResourcesType} from "@engine/models/Resources";
+
+import {CampaignOverview} from "./CampaignOverview";
 
 const resourceNames: Record<string, string> = {
   iron: "minerai de fer", coal: "charbon", water: "eau", ironPlate: "lingots de fer",
@@ -33,16 +35,23 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
   onMainMenu: () => void;
 }) {
   const campaign = useWorldSelector(world => world.campaign);
+  const unlockedResources = new Set(CAMPAIGN_LEVELS.filter(level => {
+    const progress = campaign.levels.find(item => item.id === level.id);
+    return progress && progress.status !== "locked";
+  }).flatMap(level => level.unlocks.resources));
   const stored = useWorldSelector(world => world.resources);
   const [dismissedLevel, setDismissedLevel] = useState<string | null>(null);
   const definition = CAMPAIGN_LEVELS.find(level => level.id === campaign.activeLevelId) ?? CAMPAIGN_LEVELS[0];
   const progress = campaign.levels.find(level => level.id === definition.id)!;
-  const value = objectiveValue(campaign.statistics, stored, definition);
+  const world = useWorldSnapshot();
+  const advanced = !!(definition.objective.rate || definition.objective.requirements || definition.objective.emissionBudget !== undefined);
+  const value = advanced ? progress.objectiveProgress?.value ?? 0 : objectiveValue(campaign.statistics, stored, definition);
   const next = CAMPAIGN_LEVELS[CAMPAIGN_LEVELS.indexOf(definition) + 1];
   const pollutionRatio = Math.min(1, campaign.pollution / campaign.pollutionLimit);
   const showResult = campaign.status === "playing" && progress.status === "completed" && dismissedLevel !== definition.id;
 
   return <>
+    <CampaignOverview world={world}/>
     <section className="campaign-hud" aria-label="Progression de la campagne">
       <nav className="level-tabs" aria-label="Îles">
         {CAMPAIGN_LEVELS.map((level, index) => {
@@ -63,6 +72,9 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
         <strong>{Math.min(value, definition.objective.amount)} / {definition.objective.amount}</strong>
         <div><i style={{width: `${Math.min(100, value / definition.objective.amount * 100)}%`}} /></div>
       </div>
+      {definition.objective.requirements && <small className="objective-detail">Livraison composée : {Object.entries(definition.objective.requirements).map(([resource, amount]) => `${amount} ${resourceNames[resource]}`).join(" + ")}</small>}
+      {definition.objective.rate && <small className="objective-detail">Débit requis : {definition.objective.rate.amount} / 10 s · Maintien : {((progress.objectiveProgress?.sustained ?? 0) / 10).toFixed(1)} / 10 s</small>}
+      {definition.objective.emissionBudget !== undefined && <small className="objective-detail">Émissions de l’essai : {Math.floor(progress.pollution - (progress.objectiveProgress?.emissions ?? progress.pollution))} / {definition.objective.emissionBudget}. Dépassement : nouvel essai automatique.</small>}
       <div className={`pollution-meter ${pollutionRatio > 0.75 ? "danger" : ""}`} data-tutorial="campaign-pollution">
         <span>Pollution globale</span>
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
@@ -76,7 +88,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
           <span className="construction-material-icon" aria-hidden="true">🧱</span>
           <span className="campaign-resource-value"><small>Construction</small><strong>{campaign.constructionMaterials}</strong></span>
         </div>
-        {resourceDisplay.map(resource => {
+        {resourceDisplay.filter(resource => unlockedResources.has(resource.type)).map(resource => {
           const amount = stored[resource.type] ?? 0;
           return <div key={resource.type} className={`campaign-resource ${resource.type}`}
             aria-label={`${resource.label} : ${amount}`} title={resource.label}>

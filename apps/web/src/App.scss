@@ -693,3 +693,53 @@ button.text-button {
   span, small { font-size: 11px; }
   &.selected { border-color: c.$state-accent; box-shadow: inset 4px 0 c.$state-accent, inset -2px -2px #0b121b; }
 }
+
+.settings-panel {
+  width: min(1040px, 100%);
+  height: min(720px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 28px;
+  box-sizing: border-box;
+}
+.settings-header {
+  h1 { font-size: clamp(32px, 5vw, 54px); }
+  p { margin: 16px 0 0; color: c.$text-secondary; line-height: 1.6; }
+}
+.settings-sections { overflow-y: auto; min-height: 0; padding-right: 8px; }
+.settings-section {
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid #405568;
+  background: #152330;
+  h2 { margin: 0 0 20px; color: c.$text-primary; font-size: 20px; }
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+  p { max-width: 680px; margin: 10px 0 0; color: c.$text-secondary; line-height: 1.6; font-size: 14px; }
+  input { width: 24px; height: 24px; margin: 0; accent-color: #7562d9; cursor: pointer; }
+}
+.settings-option { color: #f5e6c8; font-weight: bold; cursor: pointer; }
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid #405568;
+  small { color: c.$text-muted; }
+  button { min-width: 160px; }
+}
+@media (max-width: 700px) {
+  .settings-panel { padding: 24px; gap: 20px; }
+  .settings-section { padding: 16px; }
+  .settings-row { gap: 12px; }
+  .settings-footer { flex-wrap: wrap; button { width: 100%; } }
+}
+
+.menu-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.menu-screen { place-items: safe center; overflow-y: auto; }

@@ -1,31 +1,42 @@
 # Campagne, objectifs et pollution
 
-La campagne forme un archipel persistant. Les trois îles sont générées dans le même monde et continuent à être simulées après leur déblocage. Une île verrouillée reste visible sous la brume, mais le moteur refuse toute construction ou destruction dans sa zone.
+L’archipel comporte six îles persistantes. Les productions des îles ouvertes continuent à alimenter les suivantes. Leurs tailles, proportions, rotations et découpes sont configurées dans `LevelConfig.ts` ; le générateur conserve des zones constructibles autour des gisements et un corridor reliant les tunnels. La première île reste accueillante, la troisième comporte deux plateaux reliés par un passage étroit.
+
+## Objectifs et défis
+
+| Île | Objectif principal |
+| --- | --- |
+| 1 — Premiers lingots | Exporter 50 lingots de fer |
+| 2 — L’acier | Exporter 40 aciers ; atteindre 2 aciers par fenêtre de 10 s pendant 10 s cumulées |
+| 3 — Circuit propre | Exporter 30 circuits |
+| 4 — Énergie instable | Exporter 25 cellules d’uranium sous un budget de 250 émissions brutes sur cette île |
+| 5 — Calcul industriel | Exporter 18 unités de calcul, 6 circuits et 6 aciers |
+| 6 — Cœur de l’archipel | Exporter 10 cœurs ; atteindre 1 cœur par fenêtre de 10 s pendant 10 s cumulées |
+
+Chaque île propose deux défis facultatifs : cadence régulière et livraison propre. Chacun rapporte 15 matériaux de construction, une seule fois. Seul l’objectif principal débloque la suite et rapporte 50 matériaux. Le panneau **Bilan et défis** indique les critères, la progression, les émissions et les débits des îles ouvertes.
+
+Les fenêtres couvrent 100 ticks, soit 10 secondes simulées. Elles doivent être complètes avant de compter l’effort de débit. Une interruption suspend l’effort acquis ; une pause générale ne consomme aucun temps. Une commande composée exige toutes ses ressources. Les livraisons sont cumulatives et ne retirent aucun produit des tunnels : les contrats avec réservation ou consommation appartiennent au lot 2.
+
+Le budget écologique mesure les émissions brutes locales depuis le début de l’essai. Un dépassement remet sa progression à zéro et démarre un nouvel essai ; aucune construction ni ressource n’est détruite. Le cumul des exports et des émissions historiques reste visible dans le bilan. La dépollution globale ne réduit pas ce budget brut.
 
 ## Cycle d’un niveau
 
-Un niveau passe par les états suivants :
+- `locked` : construction et destruction refusées dans sa zone ;
+- `active` : objectif principal en cours ;
+- `completed` : île suivante débloquée, configuration encore modifiable ;
+- `finalized` : configuration verrouillée, production et exports maintenus.
 
-- `locked` : île inaccessible ;
-- `active` : objectif en cours ;
-- `completed` : objectif atteint, île suivante débloquée ;
-- `finalized` : configuration verrouillée, production et export maintenus.
+La finalisation est facultative. Les défis restent suivis après réussite, même sur une île finalisée, mais celle-ci ne permet plus de modifier les réseaux ou recettes ; les pauses individuelles restent disponibles. Les défis ne sont jamais obligatoires pour finaliser. Après la victoire de la sixième île, le bouton de continuation relance le monde et permet de poursuivre les défis en jeu libre.
 
-La finalisation est facultative. Le joueur peut ouvrir l’île suivante tout en continuant à optimiser une île réussie. La campagne se termine lorsque l’objectif de la troisième île est atteint.
+Les objectifs simples historiques restent fondés sur les statistiques cumulatives globales. Les nouveaux objectifs de débit, de budget et de commande composée utilisent les exports du tunnel de sortie de leur île.
 
-Les objectifs utilisent des statistiques cumulatives (`extracted`, `produced`, `exported`) plutôt que le contenu courant des coffres. Déplacer ou consommer une ressource déjà produite ne fait donc pas régresser un objectif.
+## Pollution et recettes
 
-## Pollution
+Une machine ne pollue que lorsqu’elle termine un cycle réel. Une machine inactive, saturée ou privée d’ingrédients ne pollue pas. La nature absorbe 0,02 point par tick. À 900 points de pollution globale, la partie se termine. La pollution attribuée à chaque île mesure les émissions brutes ; seule la jauge globale bénéficie de l’absorption et de la dépollution.
 
-La pollution est ajoutée uniquement lorsqu’une machine termine un cycle réel. Une machine inactive, saturée ou privée d’ingrédients ne pollue pas. Chaque cycle augmente la pollution de l’île et la pollution globale. La nature absorbe `0,02` point par tick tant que la simulation tourne. Le joueur peut donc ralentir ou saturer une chaîne, ou employer des variantes écologiques, pour faire redescendre la pollution. À 900 points, la campagne se termine immédiatement.
+Le boiler, débloqué à l’île 2, reçoit l’eau par tuyau. Sa recette est sélectionnée à la pose : une unité d’eau par cycle de 30 unités de progression retire désormais **5 points** de pollution globale, contre 4 auparavant. Il s’arrête à pollution nulle. Le recycleur reçoit également sa recette automatiquement. La fonderie et les assembleuses demandent toujours un choix explicite.
 
-La pollution d’une île reste une mesure brute des émissions produites pour le score. Seule la jauge globale courante bénéficie de l’absorption naturelle et des machines de dépollution. Une brume apparaît après 10 % du seuil et s’épaissit progressivement jusqu’au Game Over.
-
-Le boiler est débloqué au niveau 2. Alimenté par un tapis ou un coffre, il consomme une unité d’eau toutes les 20 unités de progression et retire immédiatement 12 points de pollution globale. Il ne produit aucune ressource, n’émet pas de pollution et s’arrête automatiquement lorsque la jauge atteint zéro. La pollution brute attribuée aux îles reste inchangée afin de conserver un score représentatif des émissions.
-
-Chaque machine peut être mise en pause depuis son menu contextuel. La pause arrête la production et les émissions sans vider les buffers ; les produits déjà fabriqués peuvent encore sortir. Cette commande reste disponible après la finalisation de l’île afin que le joueur conserve le contrôle de la pollution globale.
-
-Les variantes suivent un compromis commun :
+Le panneau de machine indique les ingrédients, les sorties, la durée effective du cycle, la production théorique et une action suggérée en cas d’arrêt. Le survol d’un tapis affiche le débit de ses transferts sur la dernière tranche complète de 10 secondes simulées.
 
 | Variante | Vitesse | Production | Pollution par cycle |
 | --- | ---: | ---: | ---: |
@@ -33,12 +44,16 @@ Les variantes suivent un compromis commun :
 | Standard | 1× | 1× | 1× |
 | Industrielle | 1,8× | 2× | 2,6× |
 
-Les valeurs de base sont définies dans `machineConfig.ts`. Les recettes à plusieurs ingrédients sont déclaratives dans `recipeConfig.ts`.
+Les recettes et variantes restent définies dans `recipeConfig.ts` et `machineConfig.ts`. Les retours brefs signalent les premières exportations, réussites et records. Les sons sont désactivés par défaut ; leur activation et la réduction des animations sont mémorisées localement.
 
-## Tunnels
+## Tunnels et sauvegardes
 
-Un tunnel de sortie accepte les ressources d’un tapis sans aucune limite de stockage et les transfère vers le tunnel d’entrée lié. Une ressource est comptée comme exportée dès son entrée dans le tunnel de sortie. Si le tunnel d’entrée est saturé, les ressources restent en attente dans le tunnel de sortie sans bloquer la production de l’île précédente et sans être comptées une seconde fois. Le transfert conserve les quantités et respecte la capacité du tunnel d’entrée. Un tunnel d’entrée distribue ensuite une unité par tick au tapis placé devant lui.
+Une ressource compte comme exportée à son entrée dans le tunnel de sortie, une seule fois. Le tunnel d’entrée lié reçoit les ressources selon sa capacité ; les excédents restent en attente en sortie sans bloquer la production ni compter deux fois. Les jonctions des tapis restent explicites, avec transferts en deux phases et priorités spatiales stables.
 
-## Ajouter un niveau
+Les sauvegardes stockent désormais la géométrie exacte, les ressources et les décors avec une palette compacte. Recharger ne régénère donc pas une autre île sous l’usine. Les anciennes sauvegardes sans terrain utilisent le générateur historique. Les îles déjà réussies restent réussies ; les nouveaux défis prennent les exports historiques comme référence et ne distribuent aucune récompense rétroactive. Les fenêtres de débit et les essais en cours sont sauvegardés.
 
-Ajouter sa définition dans `campaignConfig.ts`, son île et ses ressources dans `LevelConfig.ts`, puis déclarer les nouvelles machines, recettes et assets. Chaque nouvelle mécanique doit tester au minimum le déblocage, la conservation des ressources, le calcul de pollution et la reprise après sauvegarde.
+Les valeurs de cette première version demandent encore des essais joueurs : vérifier particulièrement le budget d’uranium et le partage des ingrédients sur l’île 5 avant de passer aux contrats.
+
+## Paramètres et tutoriels
+
+La vue **Paramètres** est accessible depuis le menu principal et le menu de pause. « Désactiver les tutoriels » supprime toutes les ouvertures, au début d’une campagne comme aux nouveaux déblocages. Le bouton Tutoriel reste désactivé tant que l’option est cochée. Décoche-la pour rendre les tutoriels disponibles à nouveau. La préférence est mémorisée localement et reste valable lors d’une nouvelle campagne. Retour ou Échap revient au menu d’origine ; une partie en pause reste arrêtée.
