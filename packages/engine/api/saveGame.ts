@@ -102,6 +102,7 @@ export function restoreWorld(save: GameSave): World {
     level.telemetry ??= {lastExports: {...level.exports}, samples: [], rates: {}, record: 0};
     level.challenges ??= Object.fromEntries((definition.challenges ?? []).map(challenge => [challenge.id, {value: 0, sustained: 0, baseline: {...level.exports}, emissions: level.pollution, attempts: 0}]));
   }
+  savedCampaign.contracts ??= {};
   world.campaign = savedCampaign;
   world.campaign.constructionMaterials ??= INITIAL_CONSTRUCTION_MATERIALS;
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;

@@ -1,3 +1,4 @@
+import type {ContractProgress} from "./Contract";
 import type {Resources, ResourcesType} from "./Resources";
 import type {Position} from "./Position";
 import type {MachineType, MachineVariant} from "./Machine";
@@ -36,6 +37,7 @@ export type CampaignStatistics = {
 };
 
 export type CampaignState = {
+  contracts?: Record<string, ContractProgress>;
   activeLevelId: string;
   constructionMaterials: number;
   pollution: number;

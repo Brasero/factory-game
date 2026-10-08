@@ -111,7 +111,7 @@ export function Hud() {
       miner: "Mineur", "water-pump": "Pompe à eau", "iron-smelter": "Fonderie",
       assembler: "Machine de production", "advanced-assembler": "Assembleuse avancée", boiler: "Boiler", conveyor: "Tapis roulant",
       recycler: "Recycleur",
-      pipe: "Tuyau", merger: "Merger", splitter: "Splitter", "smart-splitter": "Splitter intelligent", storage: "Coffre"
+      pipe: "Tuyau", merger: "Merger", splitter: "Splitter", "smart-splitter": "Splitter intelligent", storage: "Coffre", "shipping-depot": "Point d’expédition"
     };
     let icon;
     if (selectedItem === "conveyor") icon = <span className="hud-atlas-icon conveyor-icon"
@@ -123,7 +123,7 @@ export function Hud() {
       icon = <span className={`hud-atlas-icon router-icon ${selectedItem}`}
         style={{backgroundImage: `url(${assetManager.getImage(`router.${assetType}`).src})`}} />;
     }
-    else if (selectedItem === "storage") icon = <img className="hud-tool-icon storage-icon"
+    else if ((selectedItem === "storage" || selectedItem === "shipping-depot")) icon = <img className="hud-tool-icon storage-icon"
       src={assetManager.getImage("storage.crate").src} alt=""/>;
     else if (selectedItem === "miner") icon = <img className="hud-tool-icon"
       src={assetManager.getImage("machine.miner.miner2.idle").src} alt=""/>;
@@ -221,6 +221,9 @@ export function Hud() {
         </button>}
         <button data-tutorial="storage" aria-label="Coffre" className={buttonMachineStyle("storage")} onClick={() => handleClick("storage")}>
           <img className="hud-tool-icon storage-icon" src={assetManager.getImage("storage.crate").src} alt=""/>
+        </button>
+        <button data-tutorial="shipping-depot" aria-label="Point d’expédition" title="Point d’expédition" className={buttonMachineStyle("shipping-depot")} onClick={() => handleClick("shipping-depot")}>
+          <span className="shipping-icon" aria-hidden="true">⇧</span>
         </button>
       </div>
       {machineSelected && machineVariantSelector()}

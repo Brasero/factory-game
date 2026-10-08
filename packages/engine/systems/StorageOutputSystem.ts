@@ -1,3 +1,4 @@
+import {depotDemand} from "./ContractSystem";
 import {machineInputSpace, recipeAcceptsResource} from "@engine/config/recipeConfig";
 import type {ResourcesType} from "@engine/models/Resources";
 import type {Storage} from "@engine/models/Storage";
@@ -8,8 +9,11 @@ import {machineFootprintCells, machineOutputPosition} from "@engine/config/machi
 
 type StoredEntity = Storage | Tunnel;
 
-function firstStoredResource(entity: StoredEntity): ResourcesType | undefined {
-  return (Object.keys(entity.stored) as ResourcesType[]).find(resource => resource !== "water" && (entity.stored[resource] ?? 0) > 0);
+const available = (world: World, entity: StoredEntity, resource: ResourcesType) =>
+  (entity.stored[resource] ?? 0) - ("kind" in entity && entity.kind === "shipping-depot" ? depotDemand(world, entity as Storage, resource) : 0);
+
+function firstStoredResource(world: World, entity: StoredEntity): ResourcesType | undefined {
+  return (Object.keys(entity.stored) as ResourcesType[]).find(resource => resource !== "water" && available(world, entity, resource) > 0);
 }
 
 export function runStorageOutputs(world: World): World {
@@ -29,7 +33,7 @@ export function runStorageOutputs(world: World): World {
         const machine = machines[machineIndex];
         if (positionKey(storage) === positionKey(machineOutputPosition(machine))) continue;
         const input = (Object.keys(storage.stored) as ResourcesType[]).find(resource =>
-          (storage.stored[resource] ?? 0) > 0 && recipeAcceptsResource(machine, resource) && machineInputSpace(machine, resource) > 0);
+          available(world, storage, resource) > 0 && recipeAcceptsResource(machine, resource) && machineInputSpace(machine, resource) > 0);
         if (!input) continue;
         storage.stored[input] = (storage.stored[input] ?? 0) - 1;
         machine.buffer[input] = (machine.buffer[input] ?? 0) + 1;
@@ -42,7 +46,7 @@ export function runStorageOutputs(world: World): World {
       // acceptsInput exclut aussi les tapis qui pointent vers le coffre.
       if (!acceptsInput(conveyor, storage)) continue;
       if (conveyor.carrying.length >= conveyor.capacity) continue;
-      const resource = firstStoredResource(storage);
+      const resource = firstStoredResource(world, storage);
       if (!resource) continue;
       storage.stored[resource] = (storage.stored[resource] ?? 0) - 1;
       conveyor.carrying.push({type: resource, amount: 1, progress: 0});

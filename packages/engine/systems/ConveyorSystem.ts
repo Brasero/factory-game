@@ -1,3 +1,4 @@
+import {depotDemand} from "./ContractSystem";
 import type {World} from "@engine/models/World";
 import type {Machine} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
@@ -65,6 +66,8 @@ export function runConveyors(world: World, network: NetworkTopology = buildNetwo
             } else {
               const used = Object.values(entity.stored).reduce((sum, amount) => sum + amount, 0);
               moved = Math.min(remaining, Math.max(0, entity.capacity - used));
+              const storage = world.storages[target.index];
+              if (storage.kind === "shipping-depot") moved = Math.min(moved, Math.max(0, depotDemand(world, storage, item.type) - (storage.stored[item.type] ?? 0)));
             }
             entity.stored[item.type] = (entity.stored[item.type] ?? 0) + moved;
             if (target.kind === "tunnel" && world.tunnels[target.index].type === "output") {

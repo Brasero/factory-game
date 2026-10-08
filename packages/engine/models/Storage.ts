@@ -4,6 +4,8 @@ import type {BaseEntity} from "@engine/models/BaseEntity.ts";
 export interface Storage extends BaseEntity {
   id: string;
   entityType: 'storage';
+  kind?: "shipping-depot";
+  contractId?: string;
   capacity: number;
   stored: Partial<Record<ResourcesType, number>>;
 }

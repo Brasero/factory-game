@@ -40,7 +40,7 @@ export class GameSession {
       case "place-pipe":
         return this.engine.placePipe(command.x, command.y, command.direction);
       case "place-storage":
-        return this.engine.placeStorage(command.x, command.y);
+        return this.engine.placeStorage(command.x, command.y, command.kind);
       case "destroy-entity":
         return this.engine.destroyEntityAt(command.x, command.y);
       case "destroy-entities":
@@ -55,6 +55,9 @@ export class GameSession {
         return this.engine.setMachinePaused(command.machineId, command.paused);
       case "set-smart-splitter-filter":
         return this.engine.setSmartSplitterFilter(command.splitterId, command.port, command.filter);
+      case "accept-contract": return this.engine.acceptContract(command.contractId);
+      case "cancel-contract": return this.engine.cancelContract(command.contractId);
+      case "assign-contract": return this.engine.assignContract(command.depotId, command.contractId);
       case "continue-campaign":
         return this.engine.continueCampaign();
       default:

@@ -1,3 +1,5 @@
+import {contractDefinition} from "@engine/config/contractConfig";
+import {refreshContractReservations, releaseContract, runContracts} from "@engine/systems/ContractSystem";
 import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
 import type {SelectedItem} from "@engine/api/types";
 import {buildNetworkTopology, type NetworkTopology} from "@engine/systems/NetworkTopology";
@@ -52,6 +54,7 @@ export class GameEngine {
         this.#world = runTunnels(this.#world);
         this.updateResourceTotals();
         this.#world = runCampaign(this.#world);
+        if (runContracts(this.#world)) this.updateResourceTotals();
         this.#world.tick += 1;
     }
     
@@ -92,12 +95,12 @@ export class GameEngine {
         if (world.campaign.constructionMaterials < this.placementCost(x, y, machineType, variant)) return false;
         const unlockedLevels = CAMPAIGN_LEVELS.filter(definition => world.campaign.levels.find(item => item.id === definition.id)?.status !== "locked");
         const actualType = machineType === "miner" ? undefined : machineType;
-        if (actualType && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType) &&
+        if (actualType && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage", "shipping-depot"].includes(actualType) &&
             !unlockedLevels.some(definition => definition.unlocks.machines.includes(actualType as MachineType))) return false;
         const usesVariant = machineType === "miner" ||
-            (actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType));
+            (actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage", "shipping-depot"].includes(actualType));
         if (usesVariant && !unlockedLevels.some(definition => definition.unlocks.variants.includes(variant))) return false;
-        const isMachine = actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage"].includes(actualType);
+        const isMachine = actualType !== undefined && !["conveyor", "splitter", "smart-splitter", "merger", "pipe", "storage", "shipping-depot"].includes(actualType);
         if (isMachine) {
             const footprint = machineFootprintCells({x, y, type: actualType as MachineType});
             if (footprint.some((cell, index) => {
@@ -189,15 +192,16 @@ export class GameEngine {
         return true;
     }
     
-    placeStorage(x: number, y: number) {
+    placeStorage(x: number, y: number, kind?: "shipping-depot") {
         const {grid} = this.#world;
         if (!grid) throw new Error("Le monde n'a pas de grille définie.");
         
         try {
-            if (!this.canPlaceMachine(x, y, "storage")) return false;
-            const cost = this.placementCost(x, y, "storage");
+            if (!this.canPlaceMachine(x, y, kind ?? "storage")) return false;
+            const cost = this.placementCost(x, y, kind ?? "storage");
             const updatedWorld = this.entityManager.placeStorage(x, y, this.#world);
             if (!updatedWorld) return false;
+            if (kind) updatedWorld.storages[updatedWorld.storages.length - 1].kind = kind;
             this.network = undefined;
             this.#world = {
                 ...updatedWorld,
@@ -231,12 +235,13 @@ export class GameEngine {
         let refund = 0;
         for (const entity of [...this.#world.machines, ...this.#world.conveyors, ...this.#world.pipes, ...this.#world.storages]) {
             const cells = entity.entityType === "machine" ? machineFootprintCells(entity) : [{x: entity.x, y: entity.y}];
+            if (entity.entityType === "storage" && entity.kind === "shipping-depot" && Object.values(entity.stored).some(amount => amount! > 0)) continue;
             if (!cells.some(cell => editable.has(`${cell.x},${cell.y}`))) continue;
             entityIds.add(entity.id);
             cells.forEach(cell => entityCells.add(`${cell.x},${cell.y}`));
             const item = entity.entityType === "machine" ? entity.type
                 : entity.entityType === "conveyor" ? entity.type
-                : entity.entityType === "pipe" ? "pipe" : "storage";
+                : entity.entityType === "pipe" ? "pipe" : entity.kind ?? "storage";
             const variant = entity.entityType === "machine" ? entity.variant ?? "standard" : "standard";
             refund += Math.floor(constructionCost(item, variant) * CONSTRUCTION_REFUND_RATIO);
         }
@@ -262,8 +267,41 @@ export class GameEngine {
                 if (!entityCells.has(key) && this.#world.grid?.removeDecoration(position)) decorationsRemoved++;
             }
         }
+        refreshContractReservations(this.#world);
         this.updateResourceTotals();
         return entityIds.size > 0 || decorationsRemoved > 0;
+    }
+
+    acceptContract(id: string): boolean {
+        const definition = contractDefinition(id), world = this.#world;
+        const existing = world.campaign.contracts?.[id];
+        if (world.campaign.status !== "playing" || !definition || existing?.status === "active" || existing?.status === "completed" ||
+            !world.campaign.levels.some(level => level.id === definition.levelId && level.status !== "locked")) return false;
+        world.campaign.contracts ??= {};
+        world.campaign.contracts[id] = {id, status: "active", acceptedAt: world.tick, reserved: {}, sustained: 0,
+            deadlineAt: definition.timeLimit === undefined ? undefined : world.tick + definition.timeLimit, attempts: (existing?.attempts ?? 0) + 1};
+        return true;
+    }
+
+    cancelContract(id: string): boolean {
+        const progress = this.#world.campaign.contracts?.[id];
+        if (this.#world.campaign.status !== "playing" || progress?.status !== "active") return false;
+        progress.status = "cancelled"; progress.endedAt = this.#world.tick; progress.reserved = {};
+        releaseContract(this.#world, id);
+        return true;
+    }
+
+    assignContract(depotId: string, contractId?: string): boolean {
+        const world = this.#world, depot = world.storages.find(storage => storage.id === depotId && storage.kind === "shipping-depot");
+        if (world.campaign.status !== "playing" || !depot) return false;
+        const level = campaignLevelAt(depot.x, depot.y) ?? CAMPAIGN_LEVELS.find(level => level.id === world.campaign.activeLevelId);
+        const status = world.campaign.levels.find(progress => progress.id === level?.id)?.status;
+        if (!status || status === "locked" || status === "finalized") return false;
+        if (contractId && (world.campaign.contracts?.[contractId]?.status !== "active" ||
+            world.storages.some(storage => storage.id !== depotId && storage.contractId === contractId))) return false;
+        depot.contractId = contractId;
+        refreshContractReservations(world);
+        return true;
     }
 
     activateLevel(levelId: string): boolean {

@@ -20,6 +20,7 @@ const BASE_COSTS: Partial<Record<SelectedItem, number>> = {
   boiler: 25,
   recycler: 25,
   storage: 10,
+  "shipping-depot": 20,
   conveyor: 1,
   pipe: 1,
   splitter: 5,

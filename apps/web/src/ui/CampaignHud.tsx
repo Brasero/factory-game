@@ -1,4 +1,5 @@
-import {useState} from "react";
+import {ContractsPanel} from "./ContractsPanel";
+import {useLayoutEffect, useRef, useState, type CSSProperties} from "react";
 import {useWorldSnapshot, useWorldSelector} from "@web/game/worldStore";
 import {CAMPAIGN_LEVELS, objectiveValue} from "@engine/config/campaignConfig";
 import {activateLevel, finalizeLevel} from "@web/game/GameController";
@@ -34,6 +35,21 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
   onContinue: () => void;
   onMainMenu: () => void;
 }) {
+  const hudRef = useRef<HTMLElement>(null);
+  const [actionsTop, setActionsTop] = useState(180);
+  useLayoutEffect(() => {
+    const hud = hudRef.current;
+    if (!hud) return;
+    const update = () => {
+      const bottom = hud.getBoundingClientRect().bottom;
+      if (bottom > 0) setActionsTop(bottom + 16);
+    };
+    update();
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(update);
+    observer?.observe(hud);
+    window.addEventListener("resize", update);
+    return () => {observer?.disconnect(); window.removeEventListener("resize", update);};
+  }, []);
   const campaign = useWorldSelector(world => world.campaign);
   const unlockedResources = new Set(CAMPAIGN_LEVELS.filter(level => {
     const progress = campaign.levels.find(item => item.id === level.id);
@@ -50,9 +66,10 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
   const pollutionRatio = Math.min(1, campaign.pollution / campaign.pollutionLimit);
   const showResult = campaign.status === "playing" && progress.status === "completed" && dismissedLevel !== definition.id;
 
-  return <>
+  return <div className="campaign-interface" style={{"--campaign-actions-top": `${actionsTop}px`} as CSSProperties}>
     <CampaignOverview world={world}/>
-    <section className="campaign-hud" aria-label="Progression de la campagne">
+    <ContractsPanel/>
+    <section ref={hudRef} className="campaign-hud" aria-label="Progression de la campagne">
       <nav className="level-tabs" aria-label="Îles">
         {CAMPAIGN_LEVELS.map((level, index) => {
           const state = campaign.levels.find(item => item.id === level.id)!;
@@ -151,5 +168,5 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
         </div>
       </section>
     </div>}
-  </>;
+  </div>;
 }

@@ -43,6 +43,20 @@ describe("GameController", () => {
     expect(getWorldSnapshot().machines.map(machine => machine.type)).toEqual(["iron-mine", "coal-mine", "uranium-mine"]);
   });
 
+  it("places, assigns and cancels a shipping depot through public commands", async () => {
+    const controller = await import("./GameController");
+    const {getWorldSnapshot} = await import("./worldStore");
+    expect(controller.placeStorage(0, 0, "shipping-depot")).toBe(true);
+    expect(controller.acceptContract("school")).toBe(true);
+    const depot = getWorldSnapshot().storages[0];
+    expect(depot.kind).toBe("shipping-depot");
+    expect(controller.assignContract(depot.id, "school")).toBe(true);
+    expect(getWorldSnapshot().storages[0].contractId).toBe("school");
+    expect(controller.cancelContract("school")).toBe(true);
+    expect(getWorldSnapshot().storages[0].contractId).toBeUndefined();
+    expect(getWorldSnapshot().campaign.contracts?.school.status).toBe("cancelled");
+  });
+
   it("runs one timer, allows editing while paused and resumes", async () => {
     vi.useFakeTimers();
     const controller = await import("./GameController");

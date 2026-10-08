@@ -48,6 +48,7 @@ export function createWorld(legacyTerrain = false): World {
         } satisfies Tunnel))),
         campaign: {
             activeLevelId: "level-1",
+            contracts: {},
             constructionMaterials: INITIAL_CONSTRUCTION_MATERIALS,
             pollution: 0,
             pollutionLimit: CAMPAIGN_POLLUTION_LIMIT,

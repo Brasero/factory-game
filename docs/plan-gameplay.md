@@ -4,9 +4,9 @@
 
 Conserver le cœur du jeu : construire, automatiser, observer les flux et optimiser un archipel persistant. Diversifier les problèmes à résoudre avant de multiplier les machines. Les anciennes îles continuent à alimenter les suivantes. Les nouvelles mécaniques doivent rester lisibles et accepter plusieurs solutions.
 
-Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé et vérifié. Chaque lot doit mentionner sa validation et les observations des essais joueurs. Les lots 0 et 1 sont actifs ; leurs chiffres restent à équilibrer avec les essais joueurs. Les lots suivants sont des propositions.
+Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé et vérifié. Chaque lot doit mentionner sa validation et les observations des essais joueurs. Les lots 0, 1 et 2 sont actifs ; leurs chiffres restent à équilibrer avec les essais joueurs. Les lots suivants sont des propositions.
 
-## Lot 0 — Peaufiner l’existant (priorité actuelle)
+## Lot 0 — Peaufiner l’existant
 
 - [x] Afficher uniquement les ressources débloquées dans le HUD ; conserver les ressources des îles déjà ouvertes.
 - [x] Rendre les bords des textures de pollution diffus et les mouvements continus.
@@ -58,16 +58,18 @@ Essais joueurs du lot 1 : [ ] vérifier la difficulté des cadences, du budget d
 
 ## Lot 2 — Contrats et rythme de session
 
-- [ ] Proposer quelques commandes facultatives issues des communautés de l’archipel.
-- [ ] Permettre de choisir et accepter une commande lorsque l’usine est prête.
-- [ ] Ajouter un point d’expédition raccordé au réseau ; affecter une commande sans livraison manuelle.
-- [ ] Définir réservation, consommation, annulation et réaffectation des produits pour éviter tout double comptage.
-- [ ] Réserver les délais aux commandes explicitement signalées ; les mesurer en temps de simulation.
-- [ ] Récompenser par matériaux et distinctions, sans bloquer la campagne principale.
-- [ ] Exemples : réparer le port (fer + acier), équiper un atelier (circuits en maintenant l’acier).
-- [ ] Sauvegarder les contrats et leur progression.
+- [x] Proposer quelques commandes facultatives issues des communautés de l’archipel.
+- [x] Permettre de choisir et accepter une commande lorsque l’usine est prête.
+- [x] Ajouter un point d’expédition raccordé au réseau ; affecter une commande sans livraison manuelle.
+- [x] Définir réservation, consommation, annulation et réaffectation des produits pour éviter tout double comptage.
+- [x] Réserver les délais aux commandes explicitement signalées ; les mesurer en temps de simulation.
+- [x] Récompenser par matériaux et distinctions, sans bloquer la campagne principale.
+- [x] Exemples : réparer le port (fer + acier), équiper un atelier (circuits en maintenant l’acier).
+- [x] Sauvegarder les contrats et leur progression.
 
 Dépendances : lot 1.2 et indicateurs de débit. Critères : conservation, commandes simultanées, priorité entre campagne et contrats, pause/reprise, équilibre des récompenses. Essais joueurs : les contrats offrent un choix utile sans interrompre constamment le niveau principal.
+
+Essais joueurs du lot 2 : [ ] vérifier l’intérêt des commandes, leurs récompenses et le délai de la marée. Un seul point est affecté par commande ; plusieurs commandes peuvent avancer simultanément. Les commandes consomment leurs produits à la réussite et ne comptent pas comme exports de campagne. Annulation et échec libèrent le stock sans déplacement gratuit ; un tapis sortant le restitue.
 
 ## Lot 3 — Approfondir les stratégies
 
@@ -105,7 +107,7 @@ Critères : bilan global cohérent, absorption sans double comptage, budgets ind
 | --- | --- | --- |
 | 0 — Finition | Validé, retour joueur positif sur la fluidité | Node 22 : lint, 220 tests (dont ordre mélangé, graine 42) et build réussis ; contrôle visuel des masques/zooms et comparaison locale du rendu |
 | 1 — Campagne | Implémenté et vérifié ; équilibrage joueur à recueillir | Node 22 : check et ordre mélangé (graine 42), 233 tests réussis ; contrôle visuel du bilan et des six îles ; voir campagne.md |
-| 2 — Contrats | À faire | Après validation des objectifs variés |
+| 2 — Contrats | Implémenté et vérifié ; équilibrage joueur à recueillir | Quatre commandes, points d’expédition, réservations et restitution, délai simulé et distinctions ; Node 22 : check + graine 42, 253 tests ; inspection du panneau et des affectations |
 | 3 — Stratégies | À faire | Après essais des contrats |
 
 Pour chaque livraison : préciser fichiers modifiés, validation automatisée, inspection visuelle, retours joueurs et décisions d’équilibrage. Ne cocher une mécanique que lorsqu’elle est implémentée et vérifiée ; conserver les essais joueurs comme étape distincte.

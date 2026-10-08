@@ -61,6 +61,7 @@ export type PlaceConveyorCommand = {
 
 export type PlaceStorageCommand = {
   type: "place-storage";
+  kind?: "shipping-depot";
   x: number;
   y: number;
 };
@@ -93,4 +94,6 @@ export type EngineCommand =
   | SelectMachineRecipeCommand
   | SetMachinePausedCommand
   | SetSmartSplitterFilterCommand
-  | ContinueCampaignCommand;
+  | ContinueCampaignCommand
+  | {type: "accept-contract" | "cancel-contract"; contractId: string}
+  | {type: "assign-contract"; depotId: string; contractId?: string};

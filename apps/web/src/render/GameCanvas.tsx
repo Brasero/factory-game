@@ -327,6 +327,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         case "boiler": placeMachine(x, y, "boiler", selectedVariant); break;
         case "recycler": placeMachine(x, y, "recycler", selectedVariant); break;
         case "storage": placeStorage(x, y); break;
+        case "shipping-depot": placeStorage(x, y, "shipping-depot"); break;
       }
     }} />
   </div>;

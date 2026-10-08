@@ -15,7 +15,7 @@ L’archipel comporte six îles persistantes. Les productions des îles ouvertes
 
 Chaque île propose deux défis facultatifs : cadence régulière et livraison propre. Chacun rapporte 15 matériaux de construction, une seule fois. Seul l’objectif principal débloque la suite et rapporte 50 matériaux. Le panneau **Bilan et défis** indique les critères, la progression, les émissions et les débits des îles ouvertes.
 
-Les fenêtres couvrent 100 ticks, soit 10 secondes simulées. Elles doivent être complètes avant de compter l’effort de débit. Une interruption suspend l’effort acquis ; une pause générale ne consomme aucun temps. Une commande composée exige toutes ses ressources. Les livraisons sont cumulatives et ne retirent aucun produit des tunnels : les contrats avec réservation ou consommation appartiennent au lot 2.
+Les fenêtres couvrent 100 ticks, soit 10 secondes simulées. Elles doivent être complètes avant de compter l’effort de débit. Une interruption suspend l’effort acquis ; une pause générale ne consomme aucun temps. Une commande composée exige toutes ses ressources. Les livraisons sont cumulatives et ne retirent aucun produit des tunnels : les contrats du lot 2 utilisent leurs propres réservations et consomment les livraisons.
 
 Le budget écologique mesure les émissions brutes locales depuis le début de l’essai. Un dépassement remet sa progression à zéro et démarre un nouvel essai ; aucune construction ni ressource n’est détruite. Le cumul des exports et des émissions historiques reste visible dans le bilan. La dépollution globale ne réduit pas ce budget brut.
 
@@ -57,3 +57,27 @@ Les valeurs de cette première version demandent encore des essais joueurs : vé
 ## Paramètres et tutoriels
 
 La vue **Paramètres** est accessible depuis le menu principal et le menu de pause. « Désactiver les tutoriels » supprime toutes les ouvertures, au début d’une campagne comme aux nouveaux déblocages. Le bouton Tutoriel reste désactivé tant que l’option est cochée. Décoche-la pour rendre les tutoriels disponibles à nouveau. La préférence est mémorisée localement et reste valable lors d’une nouvelle campagne. Retour ou Échap revient au menu d’origine ; une partie en pause reste arrêtée.
+
+
+## Contrats des communautés — lot 2
+
+Le panneau **Contrats** propose les commandes disponibles selon les îles débloquées. Elles sont facultatives et ne débloquent aucun niveau. Le joueur les accepte lorsque ses chaînes sont prêtes ; les commandes en cours apparaissent en premier.
+
+| Commande | Déblocage | Livraison | Condition | Récompense |
+| --- | --- | --- | --- | --- |
+| Atelier des apprentis | Île 1 | 15 lingots | Sans délai | 20 matériaux et Premier mécène |
+| Réparer le port | Île 2 | 20 lingots + 10 aciers | Sans délai | 35 matériaux et Bâtisseur du port |
+| Le pont avant la marée | Île 2 | 12 aciers | 180 secondes simulées après acceptation | 40 matériaux et Livraison ponctuelle |
+| Équiper un atelier | Île 3 | 8 circuits | Île 2 : 2 aciers exportés par fenêtre de 10 s pendant 10 s cumulées | 45 matériaux et Industrie solidaire |
+
+Le **point d’expédition** se construit dès la première île pour 20 matériaux, occupe une case et contient jusqu’à 200 produits au total. Il réutilise le coffre existant avec un marquage cyan ; la bordure devient verte lorsqu’une commande lui est affectée. Dans Contrats, sélectionner la commande du point puis raccorder les tapis. Une commande possède au plus un point ; plusieurs commandes peuvent utiliser des points distincts simultanément.
+
+Les réservations désignent des produits physiquement présents dans ce point. Aucun stock distant n’est prélevé, et les anciennes statistiques d’exportation ne servent pas de livraison. Le point ne reçoit que les ressources encore nécessaires, dans la limite de sa capacité. Les produits réservés ne sortent pas vers les tapis ou machines voisins. Toutes les quantités demandées sont consommées ensemble, une fois les conditions remplies ; la récompense et la distinction sont attribuées une seule fois. Les surplus ne sont jamais consommés.
+
+Un produit envoyé au contrat ne compte pas pour les objectifs ou défis d’exportation de campagne. Les tunnels conservent leur rôle et leurs règles. Le joueur règle la répartition avec les splitters et filtres existants ; aucun contrat ne détourne automatiquement un flux de campagne.
+
+Une annulation ou un dépassement de délai détache le point et conserve le stock sur place. Un tapis orienté vers l’extérieur ou une machine voisine peut le récupérer. Réaffecter le point conserve également ses produits : les ingrédients utiles sont réservés pour la nouvelle commande, les autres peuvent sortir. Un point non vide refuse la démolition. Un nouvel essai est possible après annulation ou échec, avec délai et effort réinitialisés ; une commande réussie ne peut pas être répétée pour obtenir une nouvelle récompense.
+
+Les délais utilisent les ticks de simulation, jamais le temps réel. Un tick à l’échéance est déjà trop tard. Une pause, le menu ou la sauvegarde n’entament pas le délai. Le contrat de l’atelier conserve les secondes de débit acquises lors des interruptions ; l’effort ne progresse que si un point est affecté. La configuration d’un point finalisé reste verrouillée ; l’annulation globale reste possible pour libérer les produits. Après victoire, continuer la campagne permet de poursuivre les contrats.
+
+Progression, échéances, distinctions et affectations sont sauvegardées. Les anciennes parties démarrent sans contrat accepté et gardent leurs coffres ordinaires. Trois étapes du tutoriel présentent l’acceptation, les expéditions et la récupération ; l’option de désactivation des tutoriels continue à s’appliquer.

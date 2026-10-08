@@ -84,4 +84,15 @@ export function drawStorageAt(ctx: CanvasRenderingContext2D, storage: Storage) {
     x, y,
     CELL_SIZE, CELL_SIZE
   )
+  if (storage.kind === "shipping-depot") {
+    ctx.strokeStyle = storage.contractId ? "#79e8c2" : "#65dfff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    ctx.fillStyle = "#0c2733";
+    ctx.fillRect(x + CELL_SIZE / 2, y, CELL_SIZE / 2, CELL_SIZE / 2);
+    ctx.fillStyle = "#65dfff";
+    ctx.font = "bold 14px monospace";
+    ctx.fillText("↑", x + CELL_SIZE / 2, y + 13);
+  }
+
 }

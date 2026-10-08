@@ -1,3 +1,4 @@
+import {contractDefinition} from "@engine/config/contractConfig";
 import {useEffect, useRef, useState} from "react";
 import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
 import type {WorldSnapshot} from "@engine/api/types";
@@ -21,6 +22,10 @@ export function CampaignOverview({world}: {world: WorldSnapshot}) {
       for (const [id, challenge] of Object.entries(level.challenges ?? {})) if (challenge.completedAt !== undefined) events.add(`${level.id} : défi ${id} réussi`);
       if ((level.telemetry?.record ?? 0) > 0) events.add(`${level.id} : record ${level.telemetry!.record} / 10 s`);
     }
+    for (const contract of Object.values(world.campaign.contracts ?? {})) {
+      if (contract.status === "completed") events.add(`Contrat livré : ${contractDefinition(contract.id)?.name}`);
+      if (contract.status === "failed") events.add(`Délai dépassé : ${contractDefinition(contract.id)?.name} · stock libéré`);
+    }
     const added = [...events].filter(event => !known.current?.has(event));
     if (known.current && added.length) {
       setNotice(added.at(-1)!);
@@ -33,7 +38,7 @@ export function CampaignOverview({world}: {world: WorldSnapshot}) {
       }
     }
     known.current = events;
-  }, [world.campaign.levels, sound]);
+  }, [world.campaign.levels, world.campaign.contracts, sound]);
   useEffect(() => () => { void audio.current?.close(); }, []);
   useEffect(() => {
     if (!notice) return;

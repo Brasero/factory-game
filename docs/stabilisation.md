@@ -241,3 +241,14 @@ Le générateur utilise proportions, rotation, lobes et étranglement configuré
 Ajustements demandés avant ce lot : boiler à 5 points de dépollution par cycle au lieu de 4, libellés de construction simplifiés, recette automatique uniquement pour boiler et recycleur. Tutoriels et documentation de campagne mis à jour.
 
 Validation sous Node 22.23.3 : `npm run check` et `npm test -- --sequence.shuffle --sequence.seed=42` réussis, **233 tests**, deux benchmarks opt-in exclus. Contrôles dédiés : commande composée, budget/reprise, débit/interruption, récompense unique, migration, recettes par défaut, taille/accès des îles et conservation du terrain compact. Inspection navigateur du bilan et des six silhouettes. L’équilibrage joueur du lot 1 reste à recueillir.
+
+
+## Contrats et points d’expédition — 8 octobre 2026
+
+Les contrats sont déclarés dans `contractConfig.ts` et suivis dans l’état de campagne. Le point d’expédition est un stockage spécialisé : la topologie et les réservations de capacité restent celles des coffres. Le convoyeur limite les arrivées à la demande encore ouverte ; les sorties protègent les quantités réservées. Annulation, échec et réaffectation ne dupliquent ni ne téléportent les produits. La consommation est atomique à la réussite et la récompense est irrépétable. Les exports historiques restent indépendants.
+
+Les commandes passent par l’API du moteur et du contrôleur. Affecter un point ne change pas la topologie ; sa capacité et son inventaire restent lus depuis le monde courant. La démolition refuse les points chargés. Le suivi est borné aux quatre commandes ; une seconde mise à jour des totaux n’est nécessaire que lorsqu’un contrat consomme effectivement des produits. Les fenêtres de débit existantes sont réutilisées.
+
+Les panneaux de contrats et de défis se positionnent sous la hauteur réelle du HUD, observée avec ResizeObserver, afin de conserver les stocks visibles lorsque les objectifs ajoutent des lignes. Le panneau de contrats défile et affiche les commandes actives en premier.
+
+Validation sous Node 22 : `npm run check`, puis tests mélangés (graine 42), 253 tests réussis ; deux benchmarks opt-in exclus. Nouveaux scénarios : déblocage, commandes simultanées, capacité commune, transferts partiels, refus des produits inutiles, consommation composée, récompense unique, restitution, réaffectation, délai exact, effort interrompu, finalisation et sauvegarde. Contrôles visuels sur l’île 1 et sur une scène isolée de l’île 2 avec deux points affectés.

@@ -148,9 +148,10 @@ export function setMachinePaused(machineId: string, paused: boolean) {
     return success;
 }
 
-export function placeStorage(x: number, y: number) {
+export function placeStorage(x: number, y: number, kind?: "shipping-depot") {
     const success = session.dispatch({
         type: "place-storage",
+        kind,
         x,
         y
     });
@@ -159,6 +160,22 @@ export function placeStorage(x: number, y: number) {
         updateWorld();
     }
     return success
+}
+
+export function acceptContract(contractId: string) {
+    const success = session.dispatch({type: "accept-contract", contractId});
+    if (success) updateWorld();
+    return success;
+}
+export function cancelContract(contractId: string) {
+    const success = session.dispatch({type: "cancel-contract", contractId});
+    if (success) updateWorld();
+    return success;
+}
+export function assignContract(depotId: string, contractId?: string) {
+    const success = session.dispatch({type: "assign-contract", depotId, contractId});
+    if (success) updateWorld();
+    return success;
 }
 
 export function destroyEntity(x: number, y: number) {
