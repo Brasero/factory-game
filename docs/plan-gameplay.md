@@ -54,7 +54,7 @@ Critères : tests de cumul, fenêtres de débit, pause, reprise, contrats multir
 
 Critères : mesures calculées par la simulation ou un suivi dédié, jamais à partir des images rendues ; HUD sans coût proportionnel à toute la carte à chaque image.
 
-Essais joueurs du lot 1 : [ ] vérifier la difficulté des cadences, du budget d’uranium et de la commande composée. Les tailles et découpes sont configurées dans le générateur ; les anciennes sauvegardes conservent leur terrain.
+Essais joueurs du lot 1 : [x] premier parcours complet reçu le 9 octobre 2026 ; six niveaux terminés en environ deux heures, plaisir confirmé et pollution jugée équilibrée malgré un game over. D’autres essais permettront d’affiner les cadences, le budget d’uranium et la commande composée. Les tailles et découpes sont configurées dans le générateur ; les anciennes sauvegardes conservent leur terrain.
 
 ## Lot 2 — Contrats et rythme de session
 
@@ -69,7 +69,7 @@ Essais joueurs du lot 1 : [ ] vérifier la difficulté des cadences, du budget d
 
 Dépendances : lot 1.2 et indicateurs de débit. Critères : conservation, commandes simultanées, priorité entre campagne et contrats, pause/reprise, équilibre des récompenses. Essais joueurs : les contrats offrent un choix utile sans interrompre constamment le niveau principal.
 
-Essais joueurs du lot 2 : [ ] vérifier l’intérêt des commandes, leurs récompenses et le délai de la marée. Un seul point est affecté par commande ; plusieurs commandes peuvent avancer simultanément. Les commandes consomment leurs produits à la réussite et ne comptent pas comme exports de campagne. Annulation et échec libèrent le stock sans déplacement gratuit ; un tapis sortant le restitue.
+Essais joueurs du lot 2 : [x] intérêt des contrats et défis confirmé le 9 octobre 2026, avec envie d’optimiser chaque île. Le délai et les récompenses restent à comparer sur d’autres parcours. Plusieurs points peuvent être affectés à une commande ; plusieurs commandes peuvent avancer simultanément. Les commandes consomment leurs produits à la réussite et ne comptent pas comme exports de campagne. Annulation et échec libèrent le stock sans déplacement gratuit ; un tapis sortant le restitue.
 
 ## Lot 3 — Approfondir les stratégies
 
@@ -106,8 +106,8 @@ Critères : bilan global cohérent, absorption sans double comptage, budgets ind
 | Lot | État | Preuves / observations |
 | --- | --- | --- |
 | 0 — Finition | Validé, retour joueur positif sur la fluidité | Node 22 : lint, 220 tests (dont ordre mélangé, graine 42) et build réussis ; contrôle visuel des masques/zooms et comparaison locale du rendu |
-| 1 — Campagne | Implémenté et vérifié ; équilibrage joueur à recueillir | Node 22 : check et ordre mélangé (graine 42), 233 tests réussis ; contrôle visuel du bilan et des six îles ; voir campagne.md |
-| 2 — Contrats | Implémenté et vérifié ; équilibrage joueur à recueillir | Quatre commandes, points d’expédition, réservations et restitution, délai simulé et distinctions ; Node 22 : check + graine 42, 253 tests ; inspection du panneau et des affectations |
+| 1 — Campagne | Implémenté et vérifié ; premier parcours joueur positif | Node 22 : check et ordre mélangé (graine 42), 233 tests réussis ; contrôle visuel du bilan et des six îles ; voir campagne.md |
+| 2 — Contrats | Implémenté et vérifié ; premier parcours joueur positif | Quatre commandes, points d’expédition, réservations et restitution, délai simulé et distinctions ; Node 22 : check + graine 42, 253 tests ; inspection du panneau et des affectations |
 | 3 — Stratégies | À faire | Après essais des contrats |
 
 Pour chaque livraison : préciser fichiers modifiés, validation automatisée, inspection visuelle, retours joueurs et décisions d’équilibrage. Ne cocher une mécanique que lorsqu’elle est implémentée et vérifiée ; conserver les essais joueurs comme étape distincte.
@@ -130,3 +130,40 @@ Pour chaque livraison : préciser fichiers modifiés, validation automatisée, i
 Validation : Node 22, `npm run check` et tests mélangés (graine 42), 237 tests réussis ; contrôle visuel du menu et de la vue Paramètres.
 
 - [x] Paramètres : vue élargie avec sections défilantes et retour toujours accessible pour accueillir les futurs réglages.
+
+
+### Corrections du compte rendu joueur — 9 octobre 2026
+
+- [x] 1. Filtres indépendants sur les quatre côtés du tunnel d’entrée, comme le splitter intelligent, avec sauvegarde et migration du précédent filtre global.
+- [x] 2. Noms explicites : lingots de fer et lingots d’acier dans le HUD, les recettes et panneaux.
+- [x] 3. Numéros permanents des points d’expédition, affichés dans le panneau et le badge de la carte.
+- [x] 4. Plusieurs points par contrat, affectation possible sur les îles finalisées ; réservation globale, conservation et consommation exacte.
+- [x] 5. Panneaux plus espacés, rubriques Commandes / Points d’expédition, bilan repliable et un seul panneau ouvert à la fois.
+- [x] 6. Contrats terminés regroupés dans un historique fermé par défaut.
+- [x] 7. Notifications de réussite visibles pendant huit secondes avec récompense, distinction et gain cumulé près du compteur de matériaux.
+- [x] 8. Habillage industriel des contrats et défis, cohérent avec le HUD.
+- [x] 9. Conversion unique des coordonnées de souris, zoom ancré sous le pointeur et survol immédiatement actualisé.
+- [x] 10. Recentrage sur la bonne île à tout zoom, y compris l’île déjà sélectionnée et une nouvelle campagne.
+- [x] 11. Synchronisation du HUD avec l’île au centre de la vue lors des déplacements, sans recentrage automatique.
+- [x] 12. Clic molette maintenu expliqué dans le tutoriel et le menu de pause.
+
+Décision : conserver les cadences et l’équilibre pollution/dépollution validés par ce premier essai. Le lot 3 reste à faire ; ces corrections passent avant son démarrage.
+
+Validation : Node 22, `npm run check` (lint, **273 tests**, build) et tests mélangés avec graine 42 ; deux benchmarks opt-in exclus. Inspection visuelle des rubriques, des points numérotés, du tunnel filtré, des défis et du gain de matériaux sur une scène isolée ; sauvegarde de campagne préservée.
+
+### Ajustement des tunnels — 9 octobre 2026
+
+- [x] Un filtre par sortie (haut, droite, bas, gauche), pour servir plusieurs productions simultanément.
+- [x] Options : ressource précise, toutes les ressources, ressources non filtrées ailleurs et sortie fermée.
+- [x] Application aux tapis et machines voisins, stocks conservés, eau inchangée, sauvegardes migrées.
+
+Validation : `npm run check` et tests mélangés avec graine 42, **277 tests réussis** ; deux benchmarks opt-in exclus. Inspection visuelle des quatre commandes de sortie sur une scène isolée.
+
+### Mise en service des îles — 9 octobre 2026
+
+- [x] Prime unique de 30 matériaux lors de la finalisation.
+- [x] Réduction permanente de 10 % des émissions futures sur l’île finalisée ; production et dépollution inchangées.
+- [x] Avantages affichés avant verrouillage, notification avec gain de matériaux, rappel permanent dans le HUD et explication au tutoriel.
+- [x] Sauvegarde du versement, sans prime rétroactive pour les anciennes îles finalisées.
+
+Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **283 tests réussis** ; deux benchmarks opt-in exclus. Contrôle visuel du dialogue sur une scène isolée.

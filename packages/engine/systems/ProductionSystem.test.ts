@@ -5,6 +5,7 @@ import type {Machine} from "@engine/models/Machine";
 import type {World} from "@engine/models/World";
 import {runProduction} from "./ProductionSystem";
 import {RESOURCE_TYPES, type ResourcesType} from "@engine/models/Resources";
+import {MACHINE_BASE_POLLUTION} from "@engine/config/machineConfig";
 
 function smelterWorld(buffer: Partial<Machine["buffer"]>): World {
   const engine = new GameEngine(createTestWorld());
@@ -14,6 +15,37 @@ function smelterWorld(buffer: Partial<Machine["buffer"]>): World {
   world.machines[0].buffer = {...buffer} as Machine["buffer"];
   return world;
 }
+
+it.each(["eco", "standard", "industrial"] as const)("reduces only finalized island emissions for %s without changing production", variant => {
+  const active = smelterWorld({iron: 10});
+  active.machines[0].variant = variant;
+  active.machines[0].progress = 19;
+  active.machines.push({...active.machines[0], id: "other-island", x: 120, y: 55, buffer: {iron: 10}});
+  active.campaign.pollution = 100;
+  const finalized = structuredClone({...active, grid: undefined});
+  finalized.campaign.levels[0].status = "finalized";
+  const normal = runProduction(active), optimized = runProduction(finalized);
+  expect(optimized.machines).toEqual(normal.machines);
+  expect(optimized.campaign.statistics).toEqual(normal.campaign.statistics);
+  expect(optimized.campaign.levels[0].pollution).toBeCloseTo(normal.campaign.levels[0].pollution * 0.9);
+  expect(normal.campaign.pollution - optimized.campaign.pollution).toBeCloseTo(normal.campaign.levels[0].pollution * 0.1);
+  expect(optimized.campaign.levels[1].pollution).toBeGreaterThan(0);
+  expect(optimized.campaign.levels[1].pollution).toBe(normal.campaign.levels[1].pollution);
+});
+
+it("preserves boiler depollution on finalized islands", () => {
+  const engine = new GameEngine(createTestWorld());
+  engine.placeMachine(0, 0, "boiler");
+  const active = engine.getWorld();
+  active.machines[0].buffer = {water: 1};
+  active.machines[0].progress = 29;
+  active.campaign.pollution = 50;
+  const finalized = {...active, campaign: structuredClone(active.campaign)};
+  finalized.campaign.levels[0].status = "finalized";
+  const normal = runProduction(active), optimized = runProduction(finalized);
+  expect(optimized.machines).toEqual(normal.machines);
+  expect(normal.campaign.pollution - optimized.campaign.pollution).toBeCloseTo(MACHINE_BASE_POLLUTION.boiler * 0.1);
+});
 function run(world: World, ticks: number): World {
   for (let i = 0; i < ticks; i++) world = runProduction(world);
   return world;

@@ -98,7 +98,9 @@ describe("Campaign game over", () => {
     act(() => root.render(createElement(CampaignHud, {onRestart: vi.fn(), onContinue: vi.fn(), onMainMenu: vi.fn()})));
 
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("VERROUILLAGE DÉFINITIF");
-    expect(host.textContent).toContain("empêchera définitivement toute construction, destruction ou modification");
+    expect(host.textContent).toContain("+30 matériaux de construction immédiatement");
+    expect(host.textContent).toContain("−10 % d’émissions sur cette île, de façon permanente");
+    expect(host.textContent).toContain("empêchera définitivement la construction, la destruction et les changements de recette");
 
     const button = [...host.querySelectorAll("button")]
       .find(item => item.textContent?.includes("Finaliser et verrouiller définitivement"))!;

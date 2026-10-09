@@ -1,8 +1,28 @@
 import {beforeEach, describe, it, expect} from "vitest";
 import {GameEngine} from "./GameEngine";
 import {createTestWorld} from "@engine/test/createTestWorld";
+import {restoreWorld, serializeWorld} from "@engine/api/saveGame";
 
 describe("GameEngine", () => {
+  it("grants finalization materials once and preserves the reward through a save", () => {
+    const world = createTestWorld();
+    const game = new GameEngine(world);
+    expect(game.finalizeLevel("level-1")).toBe(false);
+    expect(game.finalizeLevel("missing")).toBe(false);
+    world.campaign.levels[0].status = "completed";
+    const completed = new GameEngine(world);
+    expect(completed.finalizeLevel("level-1")).toBe(true);
+    expect(completed.getSnapshot().campaign.constructionMaterials).toBe(180);
+    expect(completed.finalizeLevel("level-1")).toBe(false);
+    const loaded = new GameEngine(restoreWorld(serializeWorld(completed.getWorld())));
+    expect(loaded.getSnapshot().campaign.levels[0]).toMatchObject({status: "finalized", finalizedAt: 0, finalizationReward: 30});
+    expect(loaded.finalizeLevel("level-1")).toBe(false);
+    expect(loaded.getSnapshot().campaign.constructionMaterials).toBe(180);
+    const legacy = serializeWorld(completed.getWorld());
+    delete legacy.campaign.levels[0].finalizationReward;
+    expect(restoreWorld(legacy).campaign.constructionMaterials).toBe(180);
+    expect(restoreWorld(legacy).campaign.levels[0].finalizationReward).toBeUndefined();
+  });
   let engine: GameEngine;
   beforeEach(() => { engine = new GameEngine(createTestWorld()); });
 

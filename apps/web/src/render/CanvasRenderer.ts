@@ -324,8 +324,8 @@ function drawDynamicEntities(
 }
 
 const RESOURCE_SHORT_NAMES: Record<ResourcesType, string> = {
-  iron: "FER", coal: "CHARBON", water: "EAU", ironPlate: "LINGOT",
-  steel: "ACIER", copper: "CUIVRE", copperWire: "FIL", circuit: "CIRCUIT",
+  iron: "FER", coal: "CHARBON", water: "EAU", ironPlate: "LINGOT FER",
+  steel: "LINGOT ACIER", copper: "CUIVRE", copperWire: "FIL", circuit: "CIRCUIT",
   uranium: "URANIUM", uraniumCell: "CELLULE", processingUnit: "CALCUL", automationCore: "CŒUR"
 };
 

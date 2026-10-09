@@ -7,8 +7,9 @@ import {campaignLevelAt} from "@engine/config/campaignConfig";
 
 import {resourceLabels} from "./productionFeedback";
 
-export function CampaignOverview({world}: {world: WorldSnapshot}) {
-  const [open, setOpen] = useState(false);
+export function CampaignOverview({world, expanded, onToggle}: {world: WorldSnapshot; expanded?: boolean; onToggle?: () => void}) {
+  const [localOpen, setOpen] = useState(false);
+  const open = expanded ?? localOpen;
   const [sound, setSound] = useState(() => localStorage.getItem("factstories-sound") === "true");
   const [reduced, setReduced] = useState(() => localStorage.getItem("factstories-reduced-motion") === "true" || matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [notice, setNotice] = useState("");
@@ -28,7 +29,8 @@ export function CampaignOverview({world}: {world: WorldSnapshot}) {
     }
     const added = [...events].filter(event => !known.current?.has(event));
     if (known.current && added.length) {
-      setNotice(added.at(-1)!);
+      const passive = added.filter(event => !event.includes("objectif accompli") && !event.includes("défi ") && !event.startsWith("Contrat livré"));
+      if (passive.length) setNotice(passive.at(-1)!);
       const ctx = audio.current;
       if (sound && ctx?.state === "running") {
         const oscillator = ctx.createOscillator(), gain = ctx.createGain();
@@ -48,19 +50,21 @@ export function CampaignOverview({world}: {world: WorldSnapshot}) {
   const active = world.campaign.levels.find(level => level.id === world.campaign.activeLevelId)!;
   const definition = CAMPAIGN_LEVELS.find(level => level.id === active.id)!;
   return <aside className={`campaign-overview ${reduced ? "reduced-motion" : ""}`}>
-    <button data-tutorial="campaign-challenges" onClick={() => setOpen(value => !value)} aria-expanded={open}>Bilan et défis</button>
+    <button data-tutorial="campaign-challenges" onClick={() => onToggle ? onToggle() : setOpen(value => !value)} aria-expanded={open}>Bilan et défis</button>
     {notice && <div role="status" className="production-notice">{notice.replace(/level-(\d+)/, "Île $1")}<button aria-label="Masquer la notification" onClick={() => setNotice("")}>×</button></div>}
     {open && <section aria-label="Bilan de l’archipel">
-      <h3>{definition.character}</h3>
+      <header className="factory-panel-heading"><span className="menu-kicker">CARNET DE PRODUCTION · {definition.name}</span><h3>{definition.character}</h3></header>
+      <h4>Défis de l’île</h4>
       <p>Défis facultatifs : +15 matériaux chacun. La suite dépend uniquement de l’objectif principal.</p>
       {(definition.challenges ?? []).map(challenge => {
         const state = active.challenges?.[challenge.id];
-        return <div key={challenge.id} className="island-challenge"><strong>{challenge.name} {state?.completedAt !== undefined ? "✓" : ""}</strong>
+        return <div key={challenge.id} className="island-challenge"><strong>{challenge.name} {state?.completedAt !== undefined ? "✓" : ""}</strong><span className="challenge-reward">{state?.completedAt !== undefined ? "Récompense reçue" : "+15 matériaux"}</span>
           <p>{challenge.description}</p><small>{Math.floor(state?.value ?? 0)} / {challenge.objective.amount} {resourceLabels[challenge.objective.resource]}
             {challenge.objective.rate && ` · Débit : ${challenge.objective.rate.amount} / 10 s · Effort : ${((state?.sustained ?? 0) / 10).toFixed(1)} / 10 s`}
             {challenge.objective.emissionBudget !== undefined && ` · Émissions : ${Math.floor(active.pollution - (state?.emissions ?? active.pollution))} / ${challenge.objective.emissionBudget} · Essai ${(state?.attempts ?? 0) + 1}`}</small></div>;
       })}
-      <table><caption>Mesures sur les 10 dernières secondes simulées</caption><thead><tr><th>Île</th><th>Exportations</th><th>Débit</th><th>Émissions</th><th>Arrêts</th></tr></thead><tbody>
+      <details className="production-summary"><summary>Bilan de l’archipel</summary>
+      <div className="production-table"><table><caption>Mesures sur les 10 dernières secondes simulées</caption><thead><tr><th>Île</th><th>Exportations</th><th>Débit</th><th>Émissions</th><th>Arrêts</th></tr></thead><tbody>
         {world.campaign.levels.filter(level => level.status !== "locked").map(level => <tr key={level.id}>
           <td>{CAMPAIGN_LEVELS.find(item => item.id === level.id)?.name}</td>
           <td>{Object.values(level.exports ?? {}).reduce((sum, value) => sum + (value ?? 0), 0)}</td>
@@ -68,7 +72,8 @@ export function CampaignOverview({world}: {world: WorldSnapshot}) {
           <td>{level.pollution.toFixed(1)}</td>
           <td>{world.machines.filter(machine => campaignLevelAt(machine.x, machine.y)?.id === level.id && machineIdleReason(machine, world.campaign.pollution)).length}</td>
         </tr>)}
-      </tbody></table>
+      </tbody></table></div></details>
+      <h4>Retours de production</h4>
       <label><input type="checkbox" checked={sound} onChange={event => {const enabled = event.target.checked; setSound(enabled); localStorage.setItem("factstories-sound", String(enabled)); if (enabled) {audio.current ??= new AudioContext(); void audio.current.resume();}}}/> Sons des réussites</label>
       <label><input type="checkbox" checked={reduced} onChange={event => {setReduced(event.target.checked); localStorage.setItem("factstories-reduced-motion", String(event.target.checked));}}/> Réduire les animations de notification</label>
     </section>}

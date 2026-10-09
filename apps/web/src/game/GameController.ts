@@ -2,6 +2,8 @@ import {createSession, isGameSave, TickLoop} from "@engine/api/index.ts";
 import type {GameSave} from "@engine/api/index.ts";
 import type {DirectionType, WorldSnapshot, SelectedItem, Conveyor, SmartSplitterFilter, SmartSplitterPort} from "@engine/api/types.ts";
 import type {MachineType, MachineVariant} from "@engine/models/Machine";
+import {requestCameraFocus} from "./cameraNavigation";
+import type {TunnelOutputFilter} from "@engine/models/Tunnel";
 import {setWorldSnapshot} from "@web/game/worldStore.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
 
@@ -39,7 +41,9 @@ export function startNewCampaign() {
     session = createSession();
     storedSave = undefined;
     if (typeof localStorage !== "undefined") localStorage.removeItem(SAVE_KEY);
-    return updateWorld(false);
+    const snapshot = updateWorld(false);
+    requestCameraFocus();
+    return snapshot;
 }
 
 export function placeMiner(x: number, y: number, variant: MachineVariant = "standard") {
@@ -118,8 +122,17 @@ export function canPlaceAt(x: number, y: number, item: SelectedItem | "", varian
     return session.canPlaceMachine(x, y, item, variant);
 }
 
-export function activateLevel(levelId: string) {
+export function activateLevel(levelId: string, focusCamera = true) {
     const success = session.dispatch({type: "activate-level", levelId});
+    if (success) {
+        updateWorld();
+        if (focusCamera) requestCameraFocus();
+    }
+    return success;
+}
+
+export function setTunnelFilter(tunnelId: string, side: DirectionType, filter: TunnelOutputFilter) {
+    const success = session.dispatch({type: "set-tunnel-filter", tunnelId, side, filter});
     if (success) updateWorld();
     return success;
 }

@@ -112,6 +112,7 @@ export function GameMenu({mode, onPlay, onTutorial, onMainMenu, onNewCampaign, h
         <strong>Six îles à industrialiser</strong>
         <p>Produis vite, maîtrise la pollution et relie tes usines par les tunnels.</p>
       </div>}
+      {!isMain && <p className="camera-shortcuts">Caméra : clic molette maintenu pour déplacer la vue · Molette pour zoomer · Boutons des îles pour recentrer.</p>}
       <small>{isMain ? "Version de développement" : "Échap pour reprendre"}</small>
     </div>
   </div>;

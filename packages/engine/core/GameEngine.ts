@@ -1,3 +1,7 @@
+import {migrateTunnelFilters} from "@engine/systems/TunnelFilters";
+import {directions} from "@engine/systems/NetworkTopology";
+import type {TunnelOutputFilter} from "@engine/models/Tunnel";
+import {numberDepots} from "@engine/systems/DepotNumbering";
 import {contractDefinition} from "@engine/config/contractConfig";
 import {refreshContractReservations, releaseContract, runContracts} from "@engine/systems/ContractSystem";
 import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
@@ -20,7 +24,7 @@ import {entityManager} from "@engine/core/manager/EntityManager.ts";
 import {MACHINE_RECIPE_OPTIONS, RECIPES, recipeInputs, type RecipeId} from "@engine/config/recipeConfig";
 import {runPipes} from "@engine/systems/PipeSystem";
 import type {Position} from "@engine/models/Position";
-import {CONSTRUCTION_REFUND_RATIO, constructionCost} from "@engine/config/constructionConfig";
+import {CONSTRUCTION_REFUND_RATIO, ISLAND_FINALIZATION_REWARD, constructionCost} from "@engine/config/constructionConfig";
 import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
 
 export class GameEngine {
@@ -29,6 +33,7 @@ export class GameEngine {
     private entityManager: EntityManagerType;
     constructor(world: World) {
         this.#world = copyWorld(world);
+        numberDepots(this.#world);
         this.entityManager = entityManager;
         this.updateResourceTotals();
     }
@@ -201,7 +206,10 @@ export class GameEngine {
             const cost = this.placementCost(x, y, kind ?? "storage");
             const updatedWorld = this.entityManager.placeStorage(x, y, this.#world);
             if (!updatedWorld) return false;
-            if (kind) updatedWorld.storages[updatedWorld.storages.length - 1].kind = kind;
+            if (kind) {
+                updatedWorld.storages[updatedWorld.storages.length - 1].kind = kind;
+                numberDepots(updatedWorld);
+            }
             this.network = undefined;
             this.#world = {
                 ...updatedWorld,
@@ -296,11 +304,22 @@ export class GameEngine {
         if (world.campaign.status !== "playing" || !depot) return false;
         const level = campaignLevelAt(depot.x, depot.y) ?? CAMPAIGN_LEVELS.find(level => level.id === world.campaign.activeLevelId);
         const status = world.campaign.levels.find(progress => progress.id === level?.id)?.status;
-        if (!status || status === "locked" || status === "finalized") return false;
-        if (contractId && (world.campaign.contracts?.[contractId]?.status !== "active" ||
-            world.storages.some(storage => storage.id !== depotId && storage.contractId === contractId))) return false;
+        if (!status || status === "locked") return false;
+        if (contractId && world.campaign.contracts?.[contractId]?.status !== "active") return false;
         depot.contractId = contractId;
         refreshContractReservations(world);
+        return true;
+    }
+
+    setTunnelFilter(tunnelId: string, side: DirectionType, filter: TunnelOutputFilter): boolean {
+        const tunnel = this.#world.tunnels.find(item => item.id === tunnelId && item.type === "input");
+        const level = this.#world.campaign.levels.find(item => item.id === tunnel?.levelId);
+        if (!tunnel || !level || level.status === "locked" || this.#world.campaign.status !== "playing" ||
+            !directions.includes(side) ||
+            (!["any", "unfiltered", "none"].includes(filter) && (!RESOURCE_TYPES.includes(filter as typeof RESOURCE_TYPES[number]) || filter === "water"))) return false;
+        const migrated = migrateTunnelFilters(tunnel);
+        tunnel.outputFilters = {...migrated.outputFilters, [side]: filter};
+        delete tunnel.outputResource;
         return true;
     }
 
@@ -316,6 +335,8 @@ export class GameEngine {
         if (!level || level.status !== "completed") return false;
         level.status = "finalized";
         level.finalizedAt = this.#world.tick;
+        level.finalizationReward = ISLAND_FINALIZATION_REWARD;
+        this.#world.campaign.constructionMaterials += ISLAND_FINALIZATION_REWARD;
         if (this.#world.campaign.levels.every(item => item.status === "finalized")) this.#world.campaign.status = "finished";
         return true;
     }

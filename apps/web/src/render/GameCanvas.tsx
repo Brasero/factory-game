@@ -1,3 +1,7 @@
+import {useCameraFocusRevision} from "@web/game/cameraNavigation";
+import {canvasPoint, worldPoint, centerCamera, zoomCamera} from "./utils/camera";
+import {TunnelPanel} from "@web/ui/TunnelPanel";
+import {activateLevel} from "@web/game/GameController";
 import {useEffect, useEffectEvent, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks";
 import {render} from "./CanvasRenderer";
@@ -32,7 +36,9 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const suppressContextMenu = useRef(false);
   const camera = useRef<Camera>({scale: 1, minScale: 0.5, maxScale: 2.5, x: 0, y: 0});
   const world = useWorldSnapshot();
-  const lastActiveLevel = useRef<string>("");
+  const focusRevision = useCameraFocusRevision();
+  const lastFocus = useRef(-1);
+  const lastSize = useRef({width, height});
   const dispatch = useAppDispatch();
   const selectedItem = useAppSelector(selectSelectedItem);
   const currentTool = useAppSelector(selectCurentTool);
@@ -49,6 +55,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const [, redrawCamera] = useState(0);
   const [inspectedMachine, setInspectedMachine] = useState<{id: string; left: number; top: number} | null>(null);
   const [inspectedSplitter, setInspectedSplitter] = useState<{id: string; left: number; top: number} | null>(null);
+  const [inspectedTunnel, setInspectedTunnel] = useState<{id: string; left: number; top: number} | null>(null);
+  const tunnel = inspectedTunnel ? world.tunnels.find(item => item.id === inspectedTunnel.id) : undefined;
   const machine = inspectedMachine ? world.machines.find(item => item.id === inspectedMachine.id) : undefined;
   const smartSplitter = inspectedSplitter ? world.conveyors.find(item => item.id === inspectedSplitter.id && item.type === "smart-splitter") : undefined;
 
@@ -64,24 +72,38 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
 
   useEffect(() => {
     if (!world.grid) return;
-    if (lastActiveLevel.current === world.campaign.activeLevelId) return;
-    const level = CAMPAIGN_LEVELS.find(item => item.id === world.campaign.activeLevelId);
-    if (!level) return;
-    camera.current.x = width / 2 - level.center.x * cellSize;
-    camera.current.y = height / 2 - level.center.y * cellSize;
-    lastActiveLevel.current = level.id;
+    if (lastFocus.current !== focusRevision) {
+      const level = CAMPAIGN_LEVELS.find(item => item.id === world.campaign.activeLevelId);
+      if (!level) return;
+      centerCamera(camera.current, level.center, width, height, cellSize);
+      lastFocus.current = focusRevision;
+      drag.current = null;
+      setPreview([]);
+      setHover(null);
+      setInspectedMachine(null); setInspectedSplitter(null); setInspectedTunnel(null);
+    } else {
+      camera.current.x += (width - lastSize.current.width) / 2;
+      camera.current.y += (height - lastSize.current.height) / 2;
+    }
+    lastSize.current = {width, height};
     redrawCamera(version => version + 1);
-  }, [cellSize, height, width, world.campaign.activeLevelId, world.grid]);
+  }, [cellSize, height, width, focusRevision, world.campaign.activeLevelId, world.grid]);
 
   const cellAt = (clientX: number, clientY: number): Position => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return {
-      x: Math.floor((clientX - rect.left - camera.current.x) / camera.current.scale / cellSize),
-      y: Math.floor((clientY - rect.top - camera.current.y) / camera.current.scale / cellSize)
-    };
+    const canvas = canvasRef.current!;
+    const point = worldPoint(canvasPoint(clientX, clientY, canvas.getBoundingClientRect(), canvas.width, canvas.height), camera.current, cellSize);
+    return {x: Math.floor(point.x), y: Math.floor(point.y)};
+  };
+  const syncViewedIsland = () => {
+    if (!world.grid) return;
+    const center = worldPoint({x: width / 2, y: height / 2}, camera.current, cellSize);
+    const level = campaignLevelAt(center.x, center.y);
+    if (level && level.id !== world.campaign.activeLevelId && world.campaign.levels.some(item => item.id === level.id && item.status !== "locked")) {
+      activateLevel(level.id, false);
+    }
   };
   const pathTo = (end: Position) => buildConveyorPlacements(getBestPath(
-    cellAt(drag.current!.start.x, drag.current!.start.y), end,
+    drag.current!.startCell!, end,
     pos => canPlaceAt(pos.x, pos.y, selectedItem === "pipe" ? "pipe" : "conveyor"),
     horizontalFirst.current
   ), beltDirection);
@@ -192,13 +214,10 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     event.preventDefault();
     if (currentTool === "destroy") return;
     const canvas = canvasRef.current!;
-    const c = camera.current;
-    const scale = Math.min(c.maxScale, Math.max(c.minScale, c.scale * (event.deltaY > 0 ? 1 / 1.1 : 1.1)));
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left, y = event.clientY - rect.top;
-    c.x = x - (x - c.x) * scale / c.scale;
-    c.y = y - (y - c.y) * scale / c.scale;
-    c.scale = scale;
+    if (drag.current) return;
+    zoomCamera(camera.current, canvasPoint(event.clientX, event.clientY, canvas.getBoundingClientRect(), canvas.width, canvas.height), event.deltaY);
+    setHover(cellAt(event.clientX, event.clientY));
+    syncViewedIsland();
     redrawCamera(v => v + 1);
   });
   useEffect(() => {
@@ -225,8 +244,10 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       <strong>{selectedItem === "conveyor" ? "Tapis roulant" : selectedItem === "pipe" ? "Tuyau" : selectedItem === "merger" ? "Merger" : selectedItem === "smart-splitter" ? "Splitter intelligent" : "Splitter"} · {{right: "→", down: "↓", left: "←", up: "↑"}[beltDirection]}</strong>
       {selectedItem !== "conveyor" && selectedItem !== "pipe" && <span><span style={{color: "#65dfff"}}>Bleu : entrées</span> · <span style={{color: "#ffd166"}}>Jaune : sorties</span></span>}
       <span><kbd>R</kbd> horaire / virage · <kbd>Maj+R</kbd> antihoraire</span>
-      <span>Glisser droit ou molette : déplacer la caméra</span>
+      <span>Clic droit ou clic molette maintenu : déplacer la caméra</span>
     </div>}
+    {tunnel && inspectedTunnel && <TunnelPanel tunnel={tunnel} left={inspectedTunnel.left}
+      top={inspectedTunnel.top} onClose={() => setInspectedTunnel(null)} />}
     {machine && inspectedMachine && <MachineRecipePanel machine={machine} left={inspectedMachine.left}
       top={inspectedMachine.top} onClose={() => setInspectedMachine(null)} />}
     {smartSplitter && inspectedSplitter && <SmartSplitterPanel splitter={smartSplitter} left={inspectedSplitter.left}
@@ -251,7 +272,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       } else if (selectedItem === "conveyor" || selectedItem === "pipe" || (!selectedItem && currentTool === "build")) {
         const pos = {x: event.clientX, y: event.clientY};
         horizontalFirst.current = true;
-        drag.current = {start: pos, last: pos, moved: false,
+        drag.current = {start: pos, last: pos, startCell: cellAt(event.clientX, event.clientY), moved: false,
           mode: selectedItem === "conveyor" || selectedItem === "pipe" ? "network" : "pan", button: 0};
       }
     }}
@@ -261,8 +282,11 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       if (active && (event.buttons & activeButtonMask) !== 0) {
         active.moved ||= Math.hypot(event.clientX - active.start.x, event.clientY - active.start.y) > 3;
         if (active.mode === "pan") {
-          camera.current.x += event.clientX - active.last.x;
-          camera.current.y += event.clientY - active.last.y;
+          const canvas = canvasRef.current!;
+          const rect = canvas.getBoundingClientRect();
+          camera.current.x += (event.clientX - active.last.x) * (rect.width ? canvas.width / rect.width : 1);
+          camera.current.y += (event.clientY - active.last.y) * (rect.height ? canvas.height / rect.height : 1);
+          syncViewedIsland();
           active.last = {x: event.clientX, y: event.clientY};
           redrawCamera(v => v + 1);
         } else if (active.mode === "network") {
@@ -290,17 +314,27 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       dispatch(setToolMode("build"));
       setInspectedMachine(null);
       setInspectedSplitter(null);
+      setInspectedTunnel(null);
     }}
     onClick={event => {
       if (suppressClick.current) { suppressClick.current = false; return; }
       const {x, y} = cellAt(event.clientX, event.clientY);
       if (currentTool === "destroy") { destroyAt({x, y}); setInspectedMachine(null); return; }
+      const clickedTunnel = world.tunnels.find(item => item.x === x && item.y === y && item.type === "input");
+      setInspectedTunnel(null);
+      if (clickedTunnel) {
+        const point = canvasPoint(event.clientX, event.clientY, canvasRef.current!.getBoundingClientRect(), width, height);
+        setInspectedTunnel({id: clickedTunnel.id, left: Math.max(12, Math.min(width - 332, point.x + 12)),
+          top: Math.max(12, Math.min(height - 540, point.y + 12))});
+        setInspectedMachine(null); setInspectedSplitter(null);
+        return;
+      }
       const clickedMachine = world.machines.find(item => machineOccupies(item, {x, y}));
       if (clickedMachine) {
         const rect = canvasRef.current!.getBoundingClientRect();
         setInspectedMachine({id: clickedMachine.id,
-          left: Math.max(12, Math.min(width - 332, event.clientX - rect.left + 12)),
-          top: Math.max(12, Math.min(height - 380, event.clientY - rect.top + 12))});
+          left: Math.max(12, Math.min(width - 332, canvasPoint(event.clientX, event.clientY, rect, width, height).x + 12)),
+          top: Math.max(12, Math.min(height - 380, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
         return;
       }
       setInspectedMachine(null);
@@ -308,8 +342,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       if (clickedSplitter) {
         const rect = canvasRef.current!.getBoundingClientRect();
         setInspectedSplitter({id: clickedSplitter.id,
-          left: Math.max(12, Math.min(width - 332, event.clientX - rect.left + 12)),
-          top: Math.max(12, Math.min(height - 380, event.clientY - rect.top + 12))});
+          left: Math.max(12, Math.min(width - 332, canvasPoint(event.clientX, event.clientY, rect, width, height).x + 12)),
+          top: Math.max(12, Math.min(height - 380, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
         return;
       }
       setInspectedSplitter(null);

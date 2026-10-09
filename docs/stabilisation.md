@@ -252,3 +252,28 @@ Les commandes passent par l’API du moteur et du contrôleur. Affecter un point
 Les panneaux de contrats et de défis se positionnent sous la hauteur réelle du HUD, observée avec ResizeObserver, afin de conserver les stocks visibles lorsque les objectifs ajoutent des lignes. Le panneau de contrats défile et affiche les commandes actives en premier.
 
 Validation sous Node 22 : `npm run check`, puis tests mélangés (graine 42), 253 tests réussis ; deux benchmarks opt-in exclus. Nouveaux scénarios : déblocage, commandes simultanées, capacité commune, transferts partiels, refus des produits inutiles, consommation composée, récompense unique, restitution, réaffectation, délai exact, effort interrompu, finalisation et sauvegarde. Contrôles visuels sur l’île 1 et sur une scène isolée de l’île 2 avec deux points affectés.
+
+
+## Corrections après essai joueur complet — 9 octobre 2026
+
+La réservation d’un contrat additionne désormais les points affectés. Les entrées sont limitées au manque global ; la réserve locale et la consommation suivent une priorité spatiale stable pour ne jamais dupliquer les produits. Les surplus, annulations et délais dépassés conservent leur restitution par le réseau. L’affectation reste disponible après finalisation d’une île. Un compteur monotone sauvegardé numérote les points ; les anciennes sauvegardes reçoivent leurs numéros au chargement.
+
+Les tunnels d’entrée possèdent un filtre de sortie solide facultatif, appliqué aux tapis et machines sans modifier la circulation de l’eau. Le filtre est conservé au chargement, avec mode automatique pour les anciennes parties. Les coordonnées Canvas sont centralisées pour corriger clics et zoom ; une demande de recentrage distincte de l’île active permet de synchroniser le HUD pendant le déplacement sans déplacer la caméra.
+
+Contrats et défis adoptent le style industriel du HUD. Rubriques dédiées, historique livré fermé et bilan repliable réduisent la densité. Les réussites montrent leur récompense pendant huit secondes et le compteur de construction affiche le cumul ; aucune réussite ancienne n’est rejouée au chargement. Le suivi est réinitialisé lors d’une nouvelle campagne.
+
+Validation Node 22 : `npm run check`, **273 tests réussis**, build et lint ; ordre mélangé avec graine 42. Deux benchmarks opt-in exclus. Scénarios ajoutés : livraison répartie, plafond global, surplus et ordre des tableaux, île finalisée, numérotation et sauvegarde, filtres de tunnel, coordonnées CSS/zoom, recentrage et synchronisation, historique et gains simultanés. Contrôle visuel sur une scène séparée de la sauvegarde du joueur.
+
+### Filtres par côté des tunnels
+
+Le filtre global est remplacé par quatre filtres indépendants, dans les directions absolues de la carte. Chaque côté accepte une ressource précise, toutes les ressources, les ressources non filtrées explicitement ailleurs ou aucune ressource solide. Les réservations de transfert restent communes au stock du tunnel : deux sorties ne peuvent pas consommer le même produit. Une sortie saturée ou en attente de sa ressource laisse les autres fonctionner. Les anciennes sélections globales sont migrées sur les quatre côtés pour conserver leur comportement.
+
+Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **277 tests réussis** ; deux benchmarks opt-in exclus. Les nouveaux scénarios couvrent les sorties simultanées, la conservation, la saturation, les filtres complémentaires et la migration des sauvegardes. Les quatre commandes ont également été vérifiées visuellement.
+
+## Mise en service des îles — 9 octobre 2026
+
+La finalisation verse une prime unique de 30 matériaux, enregistrée dans `finalizationReward`. Le changement de statut protège le versement contre les commandes répétées et le rechargement. Les anciennes îles finalisées restent sans versement rétroactif. Le statut `finalized` applique un facteur de 0,9 aux émissions de chaque cycle de machine, après le facteur de variante, dans les compteurs globaux et ceux de l’île. La dépollution et l’absorption naturelle ne sont pas multipliées. La cadence, les ressources et les réseaux restent inchangés.
+
+Le dialogue présente le gain et les conséquences avant validation. Une notification de mise en service affiche le gain pendant huit secondes ; le HUD conserve le rappel du bonus et le tutoriel explique le choix. Le dialogue peut défiler lorsque sa hauteur dépasse l’écran.
+
+Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **283 tests réussis** ; deux benchmarks opt-in exclus. Scénarios : prime unique et sauvegarde, anciennes finalisations, émissions des trois variantes, autre île inchangée, production identique, dépollution préservée et notification unique. Contrôle visuel du dialogue de confirmation.

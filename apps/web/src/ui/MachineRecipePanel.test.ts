@@ -31,7 +31,7 @@ describe("Machine recipe panel", () => {
     })));
 
     expect(host.textContent).toContain("Lingot de fer1 Minerai de fer → 1 Lingot de fer2.0 s / cycle");
-    expect(host.textContent).toContain("Acier1 Lingot de fer + 1 Charbon → 1 Acier3.0 s / cycle");
+    expect(host.textContent).toContain("Lingot d’acier1 Lingot de fer + 1 Charbon → 1 Lingot d’acier3.0 s / cycle");
     expect(host.textContent).toContain("Mettre en pause");
     const pause = [...host.querySelectorAll("button")].find(button => button.textContent?.includes("Mettre en pause"))!;
     act(() => pause.click());
@@ -70,7 +70,7 @@ describe("Machine recipe panel", () => {
     })));
 
     expect(host.textContent).toContain(
-      "Cœur d’automatisation2 Cellule d’uranium + 2 Unité de calcul + 4 Acier + 5 Eau → 1 Cœur d’automatisation7.0 s / cycle"
+      "Cœur d’automatisation2 Cellule d’uranium + 2 Unité de calcul + 4 Lingot d’acier + 5 Eau → 1 Cœur d’automatisation7.0 s / cycle"
     );
   });
 

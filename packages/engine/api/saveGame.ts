@@ -1,3 +1,5 @@
+import {migrateTunnelFilters} from "@engine/systems/TunnelFilters";
+import {numberDepots} from "@engine/systems/DepotNumbering";
 import {buildWorldSnapshot} from "./worldSnapshot";
 import type {WorldSnapshot} from "./types";
 import {packTerrain, unpackTerrain, type SavedTerrain} from "./terrainSave";
@@ -70,7 +72,7 @@ export function restoreWorld(save: GameSave): World {
   world.storages = structuredClone(save.storages);
   world.tunnels = world.tunnels.map(tunnel => {
     const saved = save.tunnels.find(item => item.id === tunnel.id);
-    return saved ? {...tunnel, stored: structuredClone(saved.stored)} : tunnel;
+    return saved ? migrateTunnelFilters({...tunnel, stored: structuredClone(saved.stored), outputFilters: structuredClone(saved.outputFilters), outputResource: saved.outputResource}) : tunnel;
   });
   world.resources = {...emptyResources(), ...structuredClone(save.resources)};
   const savedCampaign = structuredClone(save.campaign);
@@ -104,6 +106,7 @@ export function restoreWorld(save: GameSave): World {
   }
   savedCampaign.contracts ??= {};
   world.campaign = savedCampaign;
+  numberDepots(world);
   world.campaign.constructionMaterials ??= INITIAL_CONSTRUCTION_MATERIALS;
   world.campaign.pollutionLimit = CAMPAIGN_POLLUTION_LIMIT;
   if (save.decorations) {

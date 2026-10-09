@@ -85,14 +85,18 @@ export function drawStorageAt(ctx: CanvasRenderingContext2D, storage: Storage) {
     CELL_SIZE, CELL_SIZE
   )
   if (storage.kind === "shipping-depot") {
+    ctx.save();
     ctx.strokeStyle = storage.contractId ? "#79e8c2" : "#65dfff";
     ctx.lineWidth = 2;
     ctx.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     ctx.fillStyle = "#0c2733";
     ctx.fillRect(x + CELL_SIZE / 2, y, CELL_SIZE / 2, CELL_SIZE / 2);
     ctx.fillStyle = "#65dfff";
-    ctx.font = "bold 14px monospace";
-    ctx.fillText("↑", x + CELL_SIZE / 2, y + 13);
+    ctx.font = "bold 10px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(storage.depotNumber ?? "?"), x + CELL_SIZE * .75, y + CELL_SIZE / 4, CELL_SIZE / 2 - 2);
+    ctx.restore();
   }
 
 }

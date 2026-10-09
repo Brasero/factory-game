@@ -8,6 +8,7 @@ import type {ResourcesType} from "@engine/models/Resources.ts";
 import type {ConveyorPlacement} from "@engine/models/ConveyorPlacement.ts";
 import type {TileData} from "@engine/models/Tile.ts";
 import type {RecipeId} from "@engine/config/recipeConfig";
+import type {TunnelOutputFilter} from "@engine/models/Tunnel";
 import type {Pipe} from "@engine/models/Pipe";
 
 export interface ResourceNodeSnapshot extends TileData {
@@ -95,5 +96,6 @@ export type EngineCommand =
   | SetMachinePausedCommand
   | SetSmartSplitterFilterCommand
   | ContinueCampaignCommand
+  | {type: "set-tunnel-filter"; tunnelId: string; side: DirectionType; filter: TunnelOutputFilter}
   | {type: "accept-contract" | "cancel-contract"; contractId: string}
   | {type: "assign-contract"; depotId: string; contractId?: string};

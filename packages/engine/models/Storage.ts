@@ -6,6 +6,7 @@ export interface Storage extends BaseEntity {
   entityType: 'storage';
   kind?: "shipping-depot";
   contractId?: string;
+  depotNumber?: number;
   capacity: number;
   stored: Partial<Record<ResourcesType, number>>;
 }

@@ -35,9 +35,35 @@ it("shows simulated deadlines and dispatches assignment and cancellation", () =>
   act(() => host.querySelector("button")!.click());
   expect(host.textContent).toContain("150 s simulées");
   expect(host.textContent).toContain("5 / 12");
+  act(() => [...host.querySelectorAll("button")].find(button => button.textContent?.startsWith("Points d’expédition"))!.click());
   act(() => {const select = host.querySelector("select")!; select.value = "bridge"; select.dispatchEvent(new Event("change", {bubbles: true}));});
   expect(assignContract).toHaveBeenCalledWith("depot", "bridge");
+  act(() => [...host.querySelectorAll("button")].find(button => button.textContent === "Commandes")!.click());
   act(() => [...host.querySelectorAll("button")].find(button => button.textContent === "Annuler et libérer le stock")!.click());
   expect(cancelContract).toHaveBeenCalledWith("bridge");
+  act(() => root.unmount()); host.remove(); vi.clearAllMocks();
+});
+
+
+it("archives completed contracts by default and permits shared assignments on finalized islands", () => {
+  const world = createTestWorld(); world.campaign.levels[0].status = "finalized";
+  world.campaign.contracts = {
+    school: {id: "school", status: "completed", acceptedAt: 0, endedAt: 10, reserved: {}, sustained: 0, attempts: 1},
+    port: {id: "port", status: "active", acceptedAt: 0, reserved: {}, sustained: 0, attempts: 1}
+  };
+  world.storages = [1, 2].map(number => ({id: `depot${number}`, depotNumber: number, kind: "shipping-depot", entityType: "storage", x: number, y: 0, stored: {}, capacity: 200, contractId: number === 1 ? "port" : undefined}));
+  setWorldSnapshot(buildWorldSnapshot(world));
+  const host = document.createElement("div"), root = createRoot(host); document.body.append(host);
+  act(() => root.render(createElement(ContractsPanel))); act(() => host.querySelector("button")!.click());
+  expect(host.querySelector<HTMLDetailsElement>(".contract-history")!.open).toBe(false);
+  expect(host.querySelector(".contract-history summary")!.textContent).toContain("Contrats terminés (1)");
+  expect(host.querySelectorAll(".contract-card").length).toBe(4);
+  act(() => [...host.querySelectorAll("button")].find(button => button.textContent?.startsWith("Points d’expédition"))!.click());
+  expect(host.textContent).toContain("Point n°1"); expect(host.textContent).toContain("Point n°2");
+  const select = host.querySelectorAll("select")[1];
+  expect(select.disabled).toBe(false);
+  expect(select.querySelector<HTMLOptionElement>('option[value="port"]')!.disabled).toBe(false);
+  act(() => {select.value = "port"; select.dispatchEvent(new Event("change", {bubbles: true}));});
+  expect(assignContract).toHaveBeenCalledWith("depot2", "port");
   act(() => root.unmount()); host.remove(); vi.clearAllMocks();
 });

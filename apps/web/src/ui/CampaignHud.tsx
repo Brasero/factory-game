@@ -1,3 +1,4 @@
+import {useRewardNotifications} from "./rewardNotifications";
 import {ContractsPanel} from "./ContractsPanel";
 import {useLayoutEffect, useRef, useState, type CSSProperties} from "react";
 import {useWorldSnapshot, useWorldSelector} from "@web/game/worldStore";
@@ -7,10 +8,11 @@ import {assetManager} from "@web/render/manager/AssetManager";
 import type {ResourcesType} from "@engine/models/Resources";
 
 import {CampaignOverview} from "./CampaignOverview";
+import {ISLAND_FINALIZATION_REWARD} from "@engine/config/constructionConfig";
 
 const resourceNames: Record<string, string> = {
   iron: "minerai de fer", coal: "charbon", water: "eau", ironPlate: "lingots de fer",
-  steel: "acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits",
+  steel: "lingots d’acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits",
   uranium: "uranium", uraniumCell: "cellules d’uranium", processingUnit: "unités de calcul",
   automationCore: "cœurs d’automatisation"
 };
@@ -19,8 +21,8 @@ const resourceDisplay: {type: ResourcesType; label: string; icon: string}[] = [
   {type: "iron", label: "Fer", icon: "ore.ironOre"},
   {type: "coal", label: "Charbon", icon: "ore.coalOre"},
   {type: "water", label: "Eau", icon: "ore.waterOre"},
-  {type: "ironPlate", label: "Lingots", icon: "ore.ironPlate"},
-  {type: "steel", label: "Acier", icon: "ore.steel"},
+  {type: "ironPlate", label: "Lingots de fer", icon: "ore.ironPlate"},
+  {type: "steel", label: "Lingots d’acier", icon: "ore.steel"},
   {type: "copper", label: "Cuivre", icon: "ore.copperOre"},
   {type: "copperWire", label: "Fils", icon: "ore.copperWire"},
   {type: "circuit", label: "Circuits", icon: "ore.circuit"},
@@ -51,6 +53,8 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
     return () => {observer?.disconnect(); window.removeEventListener("resize", update);};
   }, []);
   const campaign = useWorldSelector(world => world.campaign);
+  const {notices, gain, dismiss} = useRewardNotifications(campaign);
+  const [panel, setPanel] = useState<"contracts" | "challenges" | null>(null);
   const unlockedResources = new Set(CAMPAIGN_LEVELS.filter(level => {
     const progress = campaign.levels.find(item => item.id === level.id);
     return progress && progress.status !== "locked";
@@ -67,8 +71,15 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
   const showResult = campaign.status === "playing" && progress.status === "completed" && dismissedLevel !== definition.id;
 
   return <div className="campaign-interface" style={{"--campaign-actions-top": `${actionsTop}px`} as CSSProperties}>
-    <CampaignOverview world={world}/>
-    <ContractsPanel/>
+    <CampaignOverview world={world} expanded={panel === "challenges"} onToggle={() => setPanel(value => value === "challenges" ? null : "challenges")}/>
+    <ContractsPanel expanded={panel === "contracts"} onToggle={() => setPanel(value => value === "contracts" ? null : "contracts")}/>
+    <div className="reward-notifications" aria-live="polite" aria-atomic="false">
+      {notices.map(notice => <article key={notice.id} className="reward-notice">
+        <span className="menu-kicker">{notice.kind}</span><strong>{notice.title}</strong>
+        <span>{notice.detail}</span><b>+{notice.reward} matériaux de construction</b>
+        <button aria-label={`Masquer : ${notice.title}`} onClick={() => dismiss(notice.id)}>×</button>
+      </article>)}
+    </div>
     <section ref={hudRef} className="campaign-hud" aria-label="Progression de la campagne">
       <nav className="level-tabs" aria-label="Îles">
         {CAMPAIGN_LEVELS.map((level, index) => {
@@ -82,8 +93,10 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
       <div className="level-heading">
         <span>NIVEAU {CAMPAIGN_LEVELS.indexOf(definition) + 1}</span>
         <strong>{definition.name}</strong>
+        {progress.status === "finalized" && <small className="finalization-bonus">Usine stabilisée · émissions −10 %</small>}
         {progress.status === "completed" && <button onClick={() => setDismissedLevel(null)}>Finaliser…</button>}
       </div>
+      <div className="objective-group">
       <div className="objective-progress" data-tutorial="campaign-objective">
         <span>Exporter {definition.objective.amount} {resourceNames[definition.objective.resource]}</span>
         <strong>{Math.min(value, definition.objective.amount)} / {definition.objective.amount}</strong>
@@ -92,6 +105,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
       {definition.objective.requirements && <small className="objective-detail">Livraison composée : {Object.entries(definition.objective.requirements).map(([resource, amount]) => `${amount} ${resourceNames[resource]}`).join(" + ")}</small>}
       {definition.objective.rate && <small className="objective-detail">Débit requis : {definition.objective.rate.amount} / 10 s · Maintien : {((progress.objectiveProgress?.sustained ?? 0) / 10).toFixed(1)} / 10 s</small>}
       {definition.objective.emissionBudget !== undefined && <small className="objective-detail">Émissions de l’essai : {Math.floor(progress.pollution - (progress.objectiveProgress?.emissions ?? progress.pollution))} / {definition.objective.emissionBudget}. Dépassement : nouvel essai automatique.</small>}
+      </div>
       <div className={`pollution-meter ${pollutionRatio > 0.75 ? "danger" : ""}`} data-tutorial="campaign-pollution">
         <span>Pollution globale</span>
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
@@ -102,6 +116,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
         <div className="campaign-resource construction-material" data-tutorial="construction-materials"
           aria-label={`Matériaux de construction : ${campaign.constructionMaterials}`}
           title="Matériaux de construction">
+          {gain > 0 && <span className="material-gain" role="status">+{gain} matériaux</span>}
           <span className="construction-material-icon" aria-hidden="true">🧱</span>
           <span className="campaign-resource-value"><small>Construction</small><strong>{campaign.constructionMaterials}</strong></span>
         </div>
@@ -118,7 +133,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
     </section>
 
     {showResult && <div className="level-result-backdrop">
-      <section className="level-result" role="dialog" aria-modal="true" aria-labelledby="level-result-title">
+      <section className="level-result finalization-result" role="dialog" aria-modal="true" aria-labelledby="level-result-title">
         <span className="menu-kicker">OBJECTIF ACCOMPLI</span>
         <h2 id="level-result-title">{definition.name}</h2>
         <div className="level-score">
@@ -126,9 +141,15 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
           <div><span>Pollution de l’île</span><strong>{Math.floor(progress.pollution)}</strong></div>
         </div>
         <p>Tu peux encore améliorer cette usine avant de passer à la suite.</p>
+        <div className="finalization-benefits">
+          <strong>MISE EN SERVICE DE L’USINE</strong>
+          <span>+{ISLAND_FINALIZATION_REWARD} matériaux de construction immédiatement</span>
+          <span>−10 % d’émissions sur cette île, de façon permanente</span>
+          <small>Production et dépollution conservent leur cadence. Les défis restent réalisables avec l’installation existante.</small>
+        </div>
         <div className="finalization-warning" role="alert">
           <strong>⚠ VERROUILLAGE DÉFINITIF</strong>
-          <span>Finaliser cette île empêchera définitivement toute construction, destruction ou modification dessus.</span>
+          <span>Finaliser cette île empêchera définitivement la construction, la destruction et les changements de recette. Les points d’expédition, les filtres des tunnels et la pause des machines restent utilisables.</span>
         </div>
         <div className="level-result-actions">
           <button className="text-button" onClick={() => setDismissedLevel(definition.id)}>Continuer à optimiser</button>

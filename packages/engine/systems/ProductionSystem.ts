@@ -5,6 +5,7 @@ import {RESOURCE_TYPES} from "@engine/models/Resources";
 import {MACHINE_BASE_POLLUTION, MACHINE_VARIANTS} from "@engine/config/machineConfig";
 import {recipeFor, recipeInputs, recipeOutputs} from "@engine/config/recipeConfig";
 import {campaignLevelAt, NATURAL_POLLUTION_RECOVERY} from "@engine/config/campaignConfig";
+import {FINALIZED_ISLAND_EMISSION_RATIO} from "@engine/config/constructionConfig";
 
 const extractorResource = (machine: Machine): ResourcesType | undefined =>
   machine.type === "iron-mine" ? "iron" : machine.type === "coal-mine" ? "coal" :
@@ -15,10 +16,11 @@ export function runProduction(world: World): World {
   const campaign = structuredClone(world.campaign);
 
   const recordCycle = (machine: Machine, outputs: [ResourcesType, number][], extraction: boolean) => {
-    const pollution = MACHINE_BASE_POLLUTION[machine.type] * MACHINE_VARIANTS[machine.variant ?? "standard"].pollution;
-    campaign.pollution += pollution;
     const level = campaignLevelAt(machine.x, machine.y);
     const progress = campaign.levels.find(item => item.id === level?.id);
+    const pollution = MACHINE_BASE_POLLUTION[machine.type] * MACHINE_VARIANTS[machine.variant ?? "standard"].pollution *
+      (progress?.status === "finalized" ? FINALIZED_ISLAND_EMISSION_RATIO : 1);
+    campaign.pollution += pollution;
     if (progress) progress.pollution += pollution;
     for (const [resource, amount] of outputs) {
       const statistics = extraction ? campaign.statistics.extracted : campaign.statistics.produced;

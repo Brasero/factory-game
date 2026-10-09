@@ -443,3 +443,66 @@ button.destroyBtn {
 }
 .contract-card, .depot-assignment { border-top: 1px solid #405568; padding: 14px 0; }
 .contract-distinction { display: block; color: #79e8c2; margin-top: 10px; }
+
+// Carnets industriels : même métal, rivets et bords francs que le HUD de construction.
+.contracts-panel, .campaign-overview {
+  z-index: 130;
+  font-family: ui-monospace, "Courier New", monospace;
+  > button { border: 2px solid #657989; border-radius: 2px; background: #182838; color: #e8f0f5; box-shadow: 3px 3px 0 #0a1119; }
+  > section {
+    box-sizing: border-box; width: min(620px, calc(100vw - 36px)); margin-top: 10px; padding: 24px;
+    max-height: calc(100dvh - var(--campaign-actions-top, 180px) - 130px); overflow: auto;
+    color: #e8f0f5; border: 3px solid #657989; border-radius: 2px; outline: 2px solid #0a1119;
+    background: linear-gradient(135deg, #ffffff08 25%, transparent 25%) 0 0 / 8px 8px, #111c28;
+    box-shadow: 7px 7px 0 #050a0fb8, inset 0 0 0 2px #253746;
+  }
+  h4 { margin: 28px 0 16px; padding: 10px 0; border-top: 2px solid #526777; color: #ffd166; letter-spacing: .06em; font-size: 13px; text-transform: uppercase; }
+  p { font-size: 13px; line-height: 1.7; margin: 12px 0; }
+  small { display: block; font-size: 12px; line-height: 1.7; color: #bacddc; }
+  button, select { font: inherit; font-size: 12px; border-radius: 2px; }
+  .factory-panel-heading { padding: 0 0 16px; border-bottom: 2px solid #526777; h3 { margin: 12px 0 0; font-size: 18px; line-height: 1.5; } .menu-kicker { font-size: 11px; color: #ffd166; } }
+  .contract-card, .depot-assignment, .island-challenge {
+    border: 1px solid #405568; border-left: 3px solid #65dfff; background: #182838; padding: 18px; margin: 16px 0;
+    strong { display: block; font-size: 14px; line-height: 1.5; color: #f3f8fc; }
+    p { margin: 14px 0; }
+    button { margin-top: 14px; }
+  }
+  .contract-card ul { list-style: none; padding: 12px; margin: 16px 0; background: #0c1721; li { padding: 5px 0; font-size: 13px; } }
+  .contract-reward, .challenge-reward { display: block; margin: 14px 0; color: #79e8c2; font-weight: bold; font-size: 12px; line-height: 1.6; }
+  .contract-history { margin: 28px 0; padding: 16px; border: 1px solid #526777; background: #0c1721; summary { cursor: pointer; color: #79e8c2; font-weight: bold; padding: 4px; } }
+  .production-table { overflow-x: auto; margin: 18px 0; table { font-size: 12px; } td, th { padding: 12px 10px; line-height: 1.6; } caption { padding-bottom: 12px; text-align: left; color: #bacddc; } }
+  label { line-height: 1.7; font-size: 12px; }
+}
+.tunnel-panel { p, small { font-size: 12px; line-height: 1.6; } label { display: grid; gap: 12px; margin: 18px 0; } select { width: 100%; padding: 10px; background: #182838; color: #e8f0f5; border: 1px solid #607b8e; } }
+.construction-material { position: relative; }
+.construction-material:has(.material-gain) { padding-top: 27px; }
+.material-gain { position: absolute; top: 2px; right: 3px; z-index: 2; background: #163e32; color: #a8ffe0; border: 2px solid #79e8c2; padding: 3px 7px; font: bold 11px ui-monospace, monospace; white-space: nowrap; }
+.reward-notifications {
+  position: fixed; bottom: 125px; right: 20px; z-index: 650; display: grid; gap: 12px;
+  width: min(380px, calc(100vw - 40px)); max-height: 55vh; overflow-y: auto; pointer-events: none;
+}
+.reward-notice {
+  position: relative; display: grid; gap: 10px; padding: 18px 38px 18px 18px; color: #e8f0f5;
+  background: #152d2b; border: 3px solid #79e8c2; box-shadow: 5px 5px 0 #050a0fb8; font: 12px/1.6 ui-monospace, monospace;
+  .menu-kicker { color: #ffd166; font-size: 10px; } strong { font-size: 15px; } b { color: #a8ffe0; }
+  button { pointer-events: auto; position: absolute; right: 8px; top: 8px; background: #253d50; border: 1px solid #607b8e; color: white; cursor: pointer; font-size: 18px; }
+}
+.objective-group { min-width: 0; .objective-detail { padding: 6px 0 0; line-height: 1.5; } }
+.factory-panel-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; button { flex: 1; padding: 10px; background: #182838; color: #bacddc; border: 2px solid #405568; cursor: pointer; &[aria-pressed="true"] { border-color: #ffd166; color: #ffd166; } } }
+.production-summary { margin: 28px 0; padding: 16px; border: 1px solid #526777; background: #0c1721; summary { color: #ffd166; cursor: pointer; font-size: 13px; } }
+.factory-panel-tabs { position: sticky; top: -24px; z-index: 1; background: #111c28; padding: 8px 0; }
+
+.tunnel-panel .smart-splitter-ports label { margin: 0; gap: 5px; }
+
+.finalization-benefits {
+  display: grid; gap: 10px; margin: 18px 0; padding: 16px;
+  background: #152d2b; border: 2px solid #79e8c2; color: #a8ffe0;
+  small { color: #bacddc; line-height: 1.6; }
+}
+.finalization-bonus { display: block; color: #79e8c2; font-size: 11px; line-height: 1.6; }
+.finalization-result {
+  width: min(680px, 100%); padding: 24px; font-size: 14px;
+  .level-score { margin: 16px 0; }
+  .finalization-benefits { font-size: 13px; line-height: 1.5; small { font-size: 12px; } }
+  .level-result-actions { margin-top: 16px; }
+}

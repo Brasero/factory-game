@@ -17,7 +17,7 @@ export type MachineRecipe = {
 
 export const RECIPES: Record<RecipeId, MachineRecipe> = {
   "iron-smelting": {id: "iron-smelting", name: "Lingot de fer", inputs: {iron: 1}, outputs: {ironPlate: 1}, duration: 20},
-  "steel-smelting": {id: "steel-smelting", name: "Acier", inputs: {ironPlate: 1, coal: 1}, outputs: {steel: 1}, duration: 30},
+  "steel-smelting": {id: "steel-smelting", name: "Lingot d’acier", inputs: {ironPlate: 1, coal: 1}, outputs: {steel: 1}, duration: 30},
   "copper-wire": {id: "copper-wire", name: "Fil de cuivre", inputs: {copper: 1}, outputs: {copperWire: 2}, duration: 18},
   "circuit-assembly": {id: "circuit-assembly", name: "Circuit", inputs: {ironPlate: 1, copperWire: 2}, outputs: {circuit: 1}, duration: 35},
   "uranium-cell": {id: "uranium-cell", name: "Cellule d’uranium", inputs: {uranium: 2, steel: 1}, outputs: {uraniumCell: 1}, duration: 45},

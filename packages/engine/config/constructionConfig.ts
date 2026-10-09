@@ -3,6 +3,8 @@ import type {MachineVariant} from "@engine/models/Machine";
 
 export const INITIAL_CONSTRUCTION_MATERIALS = 150;
 export const LEVEL_CONSTRUCTION_REWARD = 50;
+export const ISLAND_FINALIZATION_REWARD = 30;
+export const FINALIZED_ISLAND_EMISSION_RATIO = 0.9;
 export const CONSTRUCTION_REFUND_RATIO = 0.75;
 
 const BASE_COSTS: Partial<Record<SelectedItem, number>> = {

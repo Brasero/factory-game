@@ -1,7 +1,7 @@
 import type {Machine} from "@engine/models/Machine";
 import {machineIdleReason} from "@engine/systems/MachineStatus";
 
-export const resourceLabels: Record<string, string> = {iron: "fer", coal: "charbon", water: "eau", ironPlate: "lingots", steel: "acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits", uranium: "uranium", uraniumCell: "cellules", processingUnit: "unités de calcul", automationCore: "cœurs"};
+export const resourceLabels: Record<string, string> = {iron: "fer", coal: "charbon", water: "eau", ironPlate: "lingots de fer", steel: "lingots d’acier", copper: "cuivre", copperWire: "fils de cuivre", circuit: "circuits", uranium: "uranium", uraniumCell: "cellules", processingUnit: "unités de calcul", automationCore: "cœurs"};
 export const machineLabels: Record<string, string> = {"iron-mine": "Mineur", "coal-mine": "Mineur", "copper-mine": "Mineur", "uranium-mine": "Mineur", "water-pump": "Pompe à eau", "iron-smelter": "Fonderie", assembler: "Machine de production", "advanced-assembler": "Assembleuse avancée", boiler: "Boiler", recycler: "Recycleur"};
 
 export function productionAdvice(machine: Machine, pollution: number): string {

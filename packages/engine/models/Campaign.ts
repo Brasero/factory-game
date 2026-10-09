@@ -20,6 +20,7 @@ export type LevelProgress = {
   status: LevelStatus;
   completedAt?: number;
   finalizedAt?: number;
+  finalizationReward?: number;
   pollution: number;
   exports?: Partial<Resources>;
   objectiveProgress?: ObjectiveProgress;
@@ -38,6 +39,7 @@ export type CampaignStatistics = {
 
 export type CampaignState = {
   contracts?: Record<string, ContractProgress>;
+  nextDepotNumber?: number;
   activeLevelId: string;
   constructionMaterials: number;
   pollution: number;

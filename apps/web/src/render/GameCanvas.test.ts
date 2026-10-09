@@ -5,7 +5,11 @@ import {createRoot, type Root} from "react-dom/client";
 import {Provider} from "react-redux";
 import store from "@web/store/store";
 import {setSelectedItem, setToolMode} from "@web/store/controlSlice";
-import {setWorldSnapshot} from "@web/game/worldStore";
+import {requestCameraFocus} from "@web/game/cameraNavigation";
+import {CAMPAIGN_LEVELS} from "@engine/config/campaignConfig";
+import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
+import {createTestWorld} from "@engine/test/createTestWorld";
+import {getWorldSnapshot, setWorldSnapshot} from "@web/game/worldStore";
 import {GameCanvas} from "./GameCanvas";
 import {render} from "./CanvasRenderer";
 import {drawPreviewPipes} from "./utils/pipe";
@@ -19,7 +23,7 @@ vi.mock("./utils/pipe", () => ({drawPreviewPipes: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), destroyEntities: vi.fn(() => false), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
-  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn(), setSmartSplitterFilter: vi.fn()
+  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn(), setSmartSplitterFilter: vi.fn(), activateLevel: vi.fn(() => true), setTunnelFilter: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
@@ -235,4 +239,54 @@ describe("Canvas interactions (DOM)", () => {
     expect(canvas.width).toBe(800); expect(canvas.height).toBe(600);
     expect(render).toHaveBeenCalled();
   });
+  it("keeps placement and hover aligned on a CSS-scaled canvas after zoom", () => {
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({left: 40, top: 60, width: 320, height: 240} as DOMRect);
+    act(() => store.dispatch(setSelectedItem("storage")));
+    const wheel = new MouseEvent("wheel", {clientX: 80, clientY: 116});
+    Object.defineProperty(wheel, "deltaY", {value: -1});
+    act(() => canvas.dispatchEvent(wheel)); frame();
+    // CSS pointer (80,116) corresponds to backing point (80,112), the zoom anchor.
+    expect(vi.mocked(render).mock.lastCall?.[3]).toMatchObject({x: 2, y: 3});
+    mouse(canvas, "click", 80, 116);
+    expect(controller.placeStorage).toHaveBeenLastCalledWith(2, 3);
+  });
+
+  it("recenters the same selected island at the retained zoom after panning", () => {
+    act(() => setWorldSnapshot(buildWorldSnapshot(createTestWorld())));
+    const wheel = new MouseEvent("wheel", {clientX: 320, clientY: 240});
+    Object.defineProperty(wheel, "deltaY", {value: -1});
+    act(() => canvas.dispatchEvent(wheel));
+    mouse(canvas, "mousedown", 100, 100, 4, 1);
+    mouse(canvas, "mousemove", 164, 132, 4, 1);
+    mouse(canvas, "mouseup", 164, 132, 0, 1);
+    act(() => requestCameraFocus()); frame();
+    const c = vi.mocked(render).mock.lastCall![2]!;
+    expect(c.scale).toBeCloseTo(1.1);
+    expect(c.x + CAMPAIGN_LEVELS[0].center.x * 32 * c.scale).toBeCloseTo(320);
+    expect(c.y + CAMPAIGN_LEVELS[0].center.y * 32 * c.scale).toBeCloseTo(240);
+  });
+
+  it("synchronizes the HUD island while panning without snapping the camera", () => {
+    act(() => setWorldSnapshot(buildWorldSnapshot(createTestWorld())));
+    vi.mocked(controller.activateLevel).mockImplementation((levelId) => {
+      const current = getWorldSnapshot();
+      setWorldSnapshot({...current, campaign: {...current.campaign, activeLevelId: levelId}});
+      return true;
+    });
+    mouse(canvas, "mousedown", 100, 100, 4, 1);
+    mouse(canvas, "mousemove", 100 - 75 * 32, 100, 4, 1);
+    mouse(canvas, "mouseup", 100 - 75 * 32, 100, 0, 1);
+    frame();
+    expect(controller.activateLevel).toHaveBeenLastCalledWith("level-2", false);
+    expect(getWorldSnapshot().campaign.activeLevelId).toBe("level-2");
+    const c = vi.mocked(render).mock.lastCall![2]!;
+    expect(c.x + 120 * 32).toBeCloseTo(320);
+    mouse(canvas, "mousedown", 100, 100, 4, 1);
+    mouse(canvas, "mousemove", 140, 100, 4, 1);
+    mouse(canvas, "mouseup", 140, 100, 0, 1);
+    frame();
+    expect(c.x + 120 * 32).toBeCloseTo(360);
+    vi.mocked(controller.activateLevel).mockImplementation(() => true);
+  });
+
 });
