@@ -105,6 +105,29 @@ Décisions de première version : trois recettes (fer refroidi à l’eau, acier
 
 Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **310 tests réussis** ; deux benchmarks opt-in exclus. Inspection visuelle des recettes, des réglages de régulation et des bénéfices annoncés des restaurations sur une scène isolée, sans modifier la sauvegarde du joueur. Essais joueurs du lot 3 : [ ] à recueillir, notamment sur l’équilibre des alternatives, les réserves et les bénéfices écologiques.
 
+## Propositions futures — À arbitrer
+
+Propositions ajoutées le 9 octobre 2026. Elles ne constituent pas encore des lots approuvés : leur sélection et leur ordre seront décidés après les essais du lot 3. Les ampleurs sont des estimations relatives, à préciser avant implémentation. Certaines prolongent les diagnostics, défis et contrats existants ; leur périmètre devra éviter les doublons.
+
+| N° | Proposition | Contenu envisagé | Intérêt pour le joueur | Ampleur estimée | Statut |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Statistiques de production | Quantités produites et consommées par minute, évolution de la pollution et machines bloquées. | Comprendre les déséquilibres et mesurer les effets d’une optimisation. | Moyenne | À arbitrer |
+| 2 | Copier une configuration de machine | Reproduire une recette, des filtres, une priorité et un débit sur une entité compatible. | Réduire les manipulations répétitives lors de l’agrandissement d’une usine. | Petite | À arbitrer |
+| 3 | Plans de construction | Sélectionner un groupe de machines et le reproduire, avec rotation et aperçu du coût. | Construire des modules réutilisables et faciliter les grandes installations. | Grande | À arbitrer |
+| 4 | Spécialisation des îles | Choisir un bonus accompagné d’une contrainte, par exemple une métallurgie accélérée contre davantage de pollution. | Donner une identité à chaque île et encourager les échanges entre elles. | Moyenne | À arbitrer |
+| 5 | Contrats de débit régulier | Fournir une quantité par minute pendant une durée donnée, sans interruption prolongée. | Récompenser une chaîne stable, en complément des livraisons ponctuelles. | Moyenne | À arbitrer |
+| 6 | Contrats entre plusieurs îles | Livrer différents produits à plusieurs destinations dans un même contrat. | Renforcer l’intérêt des tunnels et de l’organisation du réseau global. | Moyenne | À arbitrer |
+| 7 | Sous-produits industriels | Certaines recettes alternatives génèrent des résidus réutilisables ou recyclables. | Créer des boucles de production et de nouveaux compromis écologiques. | Grande | À arbitrer |
+| 8 | Deuxième usage des matériaux existants | Ajouter quelques produits intermédiaires et contrats utilisant les ressources actuellement peu sollicitées. | Diversifier les chaînes sans multiplier immédiatement les machines. | Moyenne | À arbitrer |
+| 9 | Aménagements écologiques visibles | Végétation restaurée ou berges assainies après certains contrats. | Rendre les progrès écologiques perceptibles directement sur la carte. | Moyenne | À arbitrer |
+| 10 | Objectifs de maîtrise par île | Objectifs facultatifs : terminer avec peu de machines, une pollution limitée ou une bonne régularité de production. | Prolonger l’intérêt des six niveaux avec des distinctions. | Petite à moyenne | À arbitrer |
+| 11 | Mode libre après la campagne | Poursuivre l’usine, recevoir des contrats supplémentaires et suivre des records personnels. | Donner une raison de conserver et perfectionner sa partie terminée. | Moyenne | À arbitrer |
+| 12 | Parties personnalisées | Graine de carte, taille des îles, abondance des ressources et difficulté écologique. | Renforcer la rejouabilité et permettre de partager un même défi. | Moyenne à grande | À arbitrer |
+
+Ordre de priorité proposé, non validé : **1 → 2 → 5 → 4 → 9**. Apporter d’abord du confort et de la lisibilité, puis de nouveaux objectifs et une identité plus forte aux îles. Les sous-produits et les plans de construction demandent un lot plus conséquent, notamment pour l’équilibrage et les interactions.
+
+Pour chaque proposition retenue : préciser le périmètre, les interactions avec les mécaniques existantes, les règles de sauvegarde, les critères de validation et les retours joueurs attendus avant de l’intégrer à un lot.
+
 ## Suivi des livraisons
 
 | Lot | État | Preuves / observations |
