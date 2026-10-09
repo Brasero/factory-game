@@ -14,7 +14,8 @@ type StoredEntity = Storage | Tunnel;
 function available(world: World, entity: StoredEntity, resource: ResourcesType, side: DirectionType): number {
   if (entity.entityType === "tunnel" && !tunnelAllowsOutput(entity, side, resource)) return 0;
   const reserved = entity.entityType === "storage" && entity.kind === "shipping-depot" ? depotReserved(world, entity, resource) : 0;
-  return (entity.stored[resource] ?? 0) - reserved;
+  const reserve = entity.entityType === "storage" && entity.kind !== "shipping-depot" ? entity.reserveThreshold ?? 0 : 0;
+  return Math.max(0, (entity.stored[resource] ?? 0) - Math.max(reserved, reserve));
 }
 
 function firstStoredResource(world: World, entity: StoredEntity, side: DirectionType): ResourcesType | undefined {
@@ -31,7 +32,7 @@ export function runStorageOutputs(world: World): World {
   const conveyorsByPosition = new Map(conveyors.map((conveyor, index) => [positionKey(conveyor), index]));
 
   const liveWorld = {...world, storages};
-  for (const storage of [...storages, ...tunnels]) {
+  for (const storage of [...storages, ...tunnels].sort((a, b) => a.y - b.y || a.x - b.x || a.id.localeCompare(b.id))) {
     for (const direction of directions) {
       const pos = nextPosition(storage, direction);
       const machineIndex = machinesByPosition.get(positionKey(pos));

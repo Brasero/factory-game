@@ -23,7 +23,8 @@ export function completedRewards(campaign: CampaignState): RewardNotice[] {
   for (const contract of CONTRACTS) {
     const progress = campaign.contracts?.[contract.id];
     if (progress?.status === "completed") rewards.push({id: `contract:${contract.id}:${progress.endedAt}`, kind: "CONTRAT LIVRÉ", title: contract.name,
-      detail: `Distinction obtenue : ${contract.distinction}`, reward: contract.reward});
+      detail: contract.restoration ? `Absorption permanente : +${(contract.restoration.absorptionBonus * 10).toLocaleString("fr-FR")} / s · ${contract.distinction}`
+        : `Distinction obtenue : ${contract.distinction}`, reward: contract.reward});
   }
   return rewards;
 }

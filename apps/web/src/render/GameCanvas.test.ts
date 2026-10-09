@@ -16,6 +16,7 @@ import {drawPreviewPipes} from "./utils/pipe";
 import * as controller from "@web/game/GameController";
 import {emptyResources} from "@engine/models/Resources";
 import {createTestCampaign} from "@engine/test/createTestWorld";
+import type {WorldSnapshot} from "@engine/api/types";
 
 vi.mock("./CanvasRenderer", () => ({render: vi.fn()}));
 vi.mock("./utils/conveyor", () => ({drawPreviewConveyor: vi.fn()}));
@@ -23,7 +24,7 @@ vi.mock("./utils/pipe", () => ({drawPreviewPipes: vi.fn()}));
 vi.mock("@web/game/GameController", () => ({
   canPlaceAt: vi.fn(() => true), destroyEntity: vi.fn(), destroyEntities: vi.fn(() => false), placeStorage: vi.fn(),
   placeConveyor: vi.fn(), placeMiner: vi.fn(), placeCoalMine: vi.fn(), placeIronMine: vi.fn(), placeIronSmelter: vi.fn(),
-  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn(), setSmartSplitterFilter: vi.fn(), activateLevel: vi.fn(() => true), setTunnelFilter: vi.fn()
+  placeWaterPump: vi.fn(), placeMachine: vi.fn(), placeConveyorLine: vi.fn(), placePipeLine: vi.fn(), setSmartSplitterFilter: vi.fn(), activateLevel: vi.fn(() => true), setTunnelFilter: vi.fn(), setConveyorRegulation: vi.fn(), setStorageReserve: vi.fn()
 }));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 let root: Root;
@@ -52,6 +53,21 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.useRealTimers(); });
 
 describe("Canvas interactions (DOM)", () => {
+  it("opens regulation for an ordinary belt and reserve settings for a chest without a building tool", () => {
+    const camera = vi.mocked(render).mock.lastCall![2]!;
+    const x = Math.floor((100 - camera.x) / (32 * camera.scale));
+    const y = Math.floor((100 - camera.y) / (32 * camera.scale));
+    const snapshot: WorldSnapshot = world();
+    snapshot.conveyors = [{id: "regulated", entityType: "conveyor", type: "conveyor", x, y,
+      direction: "right", speed: 0.2, capacity: 3, carrying: []}];
+    snapshot.storages = [{id: "reserve", entityType: "storage", x: x + 2, y, capacity: 100, stored: {}}];
+    act(() => setWorldSnapshot(snapshot));
+    mouse(canvas, "click", camera.x + (x + 0.5) * 32 * camera.scale, camera.y + (y + 0.5) * 32 * camera.scale);
+    expect(host.querySelector('[aria-label="Limite de sortie"]')).toBeTruthy();
+    mouse(canvas, "click", camera.x + (x + 2.5) * 32 * camera.scale, camera.y + (y + 0.5) * 32 * camera.scale);
+    expect(host.querySelector('[aria-label="Réserve minimale par ressource"]')).toBeTruthy();
+    expect(host.querySelector('[aria-label="Limite de sortie"]')).toBeNull();
+  });
   it("keeps the animation loop alive through ticks and tool changes", () => {
     const cancel = vi.spyOn(window, "cancelAnimationFrame");
     act(() => setWorldSnapshot(world(1)));

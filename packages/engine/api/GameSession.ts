@@ -55,6 +55,10 @@ export class GameSession {
         return this.engine.setMachinePaused(command.machineId, command.paused);
       case "set-smart-splitter-filter":
         return this.engine.setSmartSplitterFilter(command.splitterId, command.port, command.filter);
+      case "set-conveyor-regulation":
+        return this.engine.setConveyorRegulation(command.conveyorId, command.outputRate, command.priorityPort);
+      case "set-storage-reserve":
+        return this.engine.setStorageReserve(command.storageId, command.reserve);
       case "set-tunnel-filter": return this.engine.setTunnelFilter(command.tunnelId, command.side, command.filter);
       case "accept-contract": return this.engine.acceptContract(command.contractId);
       case "cancel-contract": return this.engine.cancelContract(command.contractId);

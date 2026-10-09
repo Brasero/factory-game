@@ -93,7 +93,7 @@ describe("GameEngine", () => {
     expect(stored + carried + (world.machines[0].buffer.iron ?? 0)).toBe(10);
   });
 
-  it("changes a machine recipe and clears incompatible input buffers", () => {
+  it("changes a machine recipe without losing incompatible input buffers", () => {
     engine.placeMachine(0, 0, "iron-smelter");
     const world = engine.getWorld();
     world.campaign.levels[1].status = "active";
@@ -104,7 +104,7 @@ describe("GameEngine", () => {
     expect(engine.selectMachineRecipe(world.machines[0].id, "iron-smelting")).toBe(true);
     expect(engine.getWorld().machines[0]).toMatchObject({
       recipeId: "iron-smelting",
-      buffer: {ironPlate: 0, coal: 0, steel: 2},
+      buffer: {ironPlate: 4, coal: 3, steel: 2},
       progress: 0,
       active: false
     });

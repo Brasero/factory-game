@@ -4,7 +4,8 @@ import type {ResourcesType} from "@engine/models/Resources";
 import {RESOURCE_TYPES} from "@engine/models/Resources";
 import {MACHINE_BASE_POLLUTION, MACHINE_VARIANTS} from "@engine/config/machineConfig";
 import {recipeFor, recipeInputs, recipeOutputs} from "@engine/config/recipeConfig";
-import {campaignLevelAt, NATURAL_POLLUTION_RECOVERY} from "@engine/config/campaignConfig";
+import {campaignLevelAt} from "@engine/config/campaignConfig";
+import {naturalAbsorption} from "@engine/config/ecologyConfig";
 import {FINALIZED_ISLAND_EMISSION_RATIO} from "@engine/config/constructionConfig";
 
 const extractorResource = (machine: Machine): ResourcesType | undefined =>
@@ -19,6 +20,7 @@ export function runProduction(world: World): World {
     const level = campaignLevelAt(machine.x, machine.y);
     const progress = campaign.levels.find(item => item.id === level?.id);
     const pollution = MACHINE_BASE_POLLUTION[machine.type] * MACHINE_VARIANTS[machine.variant ?? "standard"].pollution *
+      (recipeFor(machine)?.pollutionMultiplier ?? 1) *
       (progress?.status === "finalized" ? FINALIZED_ISLAND_EMISSION_RATIO : 1);
     campaign.pollution += pollution;
     if (progress) progress.pollution += pollution;
@@ -72,6 +74,6 @@ export function runProduction(world: World): World {
   });
 
   if (campaign.pollution >= campaign.pollutionLimit) campaign.status = "game-over";
-  else campaign.pollution = Math.max(0, campaign.pollution - NATURAL_POLLUTION_RECOVERY);
+  else campaign.pollution = Math.max(0, campaign.pollution - naturalAbsorption(campaign));
   return {...world, machines, campaign};
 }

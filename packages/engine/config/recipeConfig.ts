@@ -2,7 +2,8 @@ import type {Machine, MachineType} from "@engine/models/Machine";
 import type {ResourcesType} from "@engine/models/Resources";
 
 export type RecipeId = "iron-smelting" | "steel-smelting" | "copper-wire" | "circuit-assembly" |
-  "uranium-cell" | "processing-unit" | "automation-core" | "water-purification" | "recycling";
+  "uranium-cell" | "processing-unit" | "automation-core" | "water-purification" | "recycling" |
+  "washed-iron" | "direct-steel" | "efficient-wire";
 
 export type MachineRecipe = {
   id: RecipeId;
@@ -10,12 +11,20 @@ export type MachineRecipe = {
   inputs: Partial<Record<ResourcesType, number>>;
   outputs: Partial<Record<ResourcesType, number>>;
   duration: number;
+  pollutionMultiplier?: number;
+  tradeoff?: string;
   pollutionReduction?: number;
   acceptsAnyResource?: boolean;
   constructionMaterials?: number;
 };
 
 export const RECIPES: Record<RecipeId, MachineRecipe> = {
+  "washed-iron": {id: "washed-iron", name: "Fer refroidi à l’eau", inputs: {iron: 1, water: 2}, outputs: {ironPlate: 1}, duration: 30,
+    pollutionMultiplier: 0.4, tradeoff: "Moins d’émissions, mais cycle plus lent et arrivée d’eau nécessaire."},
+  "direct-steel": {id: "direct-steel", name: "Acier direct", inputs: {iron: 2, coal: 2}, outputs: {steel: 1}, duration: 40,
+    pollutionMultiplier: 1.6, tradeoff: "Évite la fabrication de lingots de fer, mais consomme davantage de minerai et de charbon."},
+  "efficient-wire": {id: "efficient-wire", name: "Étirage économe", inputs: {copper: 1}, outputs: {copperWire: 3}, duration: 36,
+    pollutionMultiplier: 1.5, tradeoff: "Plus de fils par minerai, mais débit plus faible et davantage d’émissions par cycle."},
   "iron-smelting": {id: "iron-smelting", name: "Lingot de fer", inputs: {iron: 1}, outputs: {ironPlate: 1}, duration: 20},
   "steel-smelting": {id: "steel-smelting", name: "Lingot d’acier", inputs: {ironPlate: 1, coal: 1}, outputs: {steel: 1}, duration: 30},
   "copper-wire": {id: "copper-wire", name: "Fil de cuivre", inputs: {copper: 1}, outputs: {copperWire: 2}, duration: 18},
@@ -28,10 +37,10 @@ export const RECIPES: Record<RecipeId, MachineRecipe> = {
 };
 
 export const MACHINE_RECIPE_OPTIONS: Partial<Record<MachineType, RecipeId[]>> = {
-  "iron-smelter": ["iron-smelting", "steel-smelting"],
-  "steel-smelter": ["steel-smelting", "iron-smelting"],
-  "wire-mill": ["copper-wire"],
-  assembler: ["copper-wire", "circuit-assembly", "uranium-cell", "processing-unit"],
+  "iron-smelter": ["iron-smelting", "steel-smelting", "washed-iron", "direct-steel"],
+  "steel-smelter": ["steel-smelting", "iron-smelting", "washed-iron", "direct-steel"],
+  "wire-mill": ["copper-wire", "efficient-wire"],
+  assembler: ["copper-wire", "circuit-assembly", "uranium-cell", "processing-unit", "efficient-wire"],
   "advanced-assembler": ["automation-core"],
   boiler: ["water-purification"],
   recycler: ["recycling"]

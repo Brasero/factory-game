@@ -1,6 +1,7 @@
 import {useCameraFocusRevision} from "@web/game/cameraNavigation";
 import {canvasPoint, worldPoint, centerCamera, zoomCamera} from "./utils/camera";
 import {TunnelPanel} from "@web/ui/TunnelPanel";
+import {LogisticsPanel} from "@web/ui/LogisticsPanel";
 import {activateLevel} from "@web/game/GameController";
 import {useEffect, useEffectEvent, useRef, useState} from "react";
 import {useAppSelector, useAppDispatch} from "@web/store/hooks";
@@ -56,6 +57,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
   const [inspectedMachine, setInspectedMachine] = useState<{id: string; left: number; top: number} | null>(null);
   const [inspectedSplitter, setInspectedSplitter] = useState<{id: string; left: number; top: number} | null>(null);
   const [inspectedTunnel, setInspectedTunnel] = useState<{id: string; left: number; top: number} | null>(null);
+  const [inspectedLogistics, setInspectedLogistics] = useState<{id: string; left: number; top: number} | null>(null);
+  const logistics = inspectedLogistics ? [...world.conveyors, ...world.storages].find(item => item.id === inspectedLogistics.id) : undefined;
   const tunnel = inspectedTunnel ? world.tunnels.find(item => item.id === inspectedTunnel.id) : undefined;
   const machine = inspectedMachine ? world.machines.find(item => item.id === inspectedMachine.id) : undefined;
   const smartSplitter = inspectedSplitter ? world.conveyors.find(item => item.id === inspectedSplitter.id && item.type === "smart-splitter") : undefined;
@@ -248,6 +251,8 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
     </div>}
     {tunnel && inspectedTunnel && <TunnelPanel tunnel={tunnel} left={inspectedTunnel.left}
       top={inspectedTunnel.top} onClose={() => setInspectedTunnel(null)} />}
+    {logistics && inspectedLogistics && <LogisticsPanel entity={logistics} left={inspectedLogistics.left}
+      top={inspectedLogistics.top} onClose={() => setInspectedLogistics(null)}/>}
     {machine && inspectedMachine && <MachineRecipePanel machine={machine} left={inspectedMachine.left}
       top={inspectedMachine.top} onClose={() => setInspectedMachine(null)} />}
     {smartSplitter && inspectedSplitter && <SmartSplitterPanel splitter={smartSplitter} left={inspectedSplitter.left}
@@ -315,13 +320,16 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
       setInspectedMachine(null);
       setInspectedSplitter(null);
       setInspectedTunnel(null);
+      setInspectedLogistics(null);
     }}
     onClick={event => {
       if (suppressClick.current) { suppressClick.current = false; return; }
       const {x, y} = cellAt(event.clientX, event.clientY);
+      setInspectedLogistics(null); setInspectedSplitter(null);
       if (currentTool === "destroy") { destroyAt({x, y}); setInspectedMachine(null); return; }
       const clickedTunnel = world.tunnels.find(item => item.x === x && item.y === y && item.type === "input");
       setInspectedTunnel(null);
+      setInspectedLogistics(null);
       if (clickedTunnel) {
         const point = canvasPoint(event.clientX, event.clientY, canvasRef.current!.getBoundingClientRect(), width, height);
         setInspectedTunnel({id: clickedTunnel.id, left: Math.max(12, Math.min(width - 332, point.x + 12)),
@@ -334,7 +342,7 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         const rect = canvasRef.current!.getBoundingClientRect();
         setInspectedMachine({id: clickedMachine.id,
           left: Math.max(12, Math.min(width - 332, canvasPoint(event.clientX, event.clientY, rect, width, height).x + 12)),
-          top: Math.max(12, Math.min(height - 380, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
+          top: Math.max(12, Math.min(height - 580, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
         return;
       }
       setInspectedMachine(null);
@@ -343,10 +351,20 @@ export function GameCanvas({width, height, cellSize}: GameCanvasProps) {
         const rect = canvasRef.current!.getBoundingClientRect();
         setInspectedSplitter({id: clickedSplitter.id,
           left: Math.max(12, Math.min(width - 332, canvasPoint(event.clientX, event.clientY, rect, width, height).x + 12)),
-          top: Math.max(12, Math.min(height - 380, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
+          top: Math.max(12, Math.min(height - 580, canvasPoint(event.clientX, event.clientY, rect, width, height).y + 12))});
         return;
       }
       setInspectedSplitter(null);
+      if (!selectedItem) {
+        const entity = [...world.conveyors, ...world.storages.filter(storage => storage.kind !== "shipping-depot")]
+          .find(item => item.x === x && item.y === y);
+        if (entity) {
+          const point = canvasPoint(event.clientX, event.clientY, canvasRef.current!.getBoundingClientRect(), width, height);
+          setInspectedLogistics({id: entity.id, left: Math.max(12, Math.min(width - 332, point.x + 12)),
+            top: Math.max(12, Math.min(height - 500, point.y + 12))});
+          return;
+        }
+      }
       switch (selectedItem) {
         case "merger":
         case "splitter":

@@ -96,6 +96,8 @@ export type EngineCommand =
   | SetMachinePausedCommand
   | SetSmartSplitterFilterCommand
   | ContinueCampaignCommand
+  | {type: "set-conveyor-regulation"; conveyorId: string; outputRate?: number; priorityPort?: SmartSplitterPort}
+  | {type: "set-storage-reserve"; storageId: string; reserve: number}
   | {type: "set-tunnel-filter"; tunnelId: string; side: DirectionType; filter: TunnelOutputFilter}
   | {type: "accept-contract" | "cancel-contract"; contractId: string}
   | {type: "assign-contract"; depotId: string; contractId?: string};

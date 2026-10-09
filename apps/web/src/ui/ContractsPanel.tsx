@@ -40,7 +40,10 @@ export function ContractsPanel({expanded, onToggle}: {expanded?: boolean; onTogg
             </li>)}</ul>
             <small>{contract.timeLimit === undefined ? "Sans délai" : isActive ? `Temps restant : ${Math.max(0, Math.ceil((progress.deadlineAt! - world.tick) / 10))} s simulées` : `Délai : ${contract.timeLimit / 10} s après acceptation`}</small>
             {contract.rate && <small>Île 2 : ≥ {contract.rate.amount} lingots d’acier exportés / 10 s · Effort : {((progress?.sustained ?? 0) / 10).toFixed(1)} / {contract.rate.duration / 10} s cumulées. Les interruptions suspendent l’effort.</small>}
-            <small className="contract-reward">Récompense : +{contract.reward} matériaux · Distinction : {contract.distinction}</small>
+            <small className="contract-reward">Récompense : {contract.restoration
+              ? `+${(contract.restoration.absorptionBonus * 10).toLocaleString("fr-FR")} absorption / s, définitivement sur ${CAMPAIGN_LEVELS.find(level => level.id === contract.restoration!.levelId)?.name}`
+              : `+${contract.reward} matériaux`} · Distinction : {contract.distinction}</small>
+            {contract.restoration && <small>Livraison consommée une seule fois. Le bonus augmente l’absorption globale ; il ne réduit pas les émissions brutes des défis.</small>}
             {isActive ? <button disabled={!playing} onClick={() => cancelContract(contract.id)}>Annuler et libérer le stock</button>
               : <button disabled={!playing} onClick={() => acceptContract(contract.id)}>{progress ? "Accepter un nouvel essai" : "Accepter"}</button>}
           </article>;
@@ -48,7 +51,7 @@ export function ContractsPanel({expanded, onToggle}: {expanded?: boolean; onTogg
         <details className="contract-history"><summary>Contrats terminés ({available.filter(contract => world.campaign.contracts?.[contract.id]?.status === "completed").length})</summary>
           {available.filter(contract => world.campaign.contracts?.[contract.id]?.status === "completed").map(contract =>
             <article className="contract-card" key={contract.id}><strong>✓ {contract.name}</strong><small>{contract.community}</small>
-              <b className="contract-distinction">{contract.distinction}</b><small>Récompense reçue : +{contract.reward} matériaux</small></article>)}
+              <b className="contract-distinction">{contract.distinction}</b><small>{contract.restoration ? `Restauration active : +${(contract.restoration.absorptionBonus * 10).toLocaleString("fr-FR")} absorption / s` : `Récompense reçue : +${contract.reward} matériaux`}</small></article>)}
         </details>
       </>}
       {view === "depots" && <>

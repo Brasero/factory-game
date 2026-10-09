@@ -17,6 +17,10 @@ export interface Conveyor extends BaseEntity {
   /** Visual/upgrade level. Missing on old saves and routers; level 1 is the fallback. */
   tier?: ConveyorTier;
   routingCursor?: number;
+  /** Units per simulated second; undefined means unlimited. */
+  outputRate?: number;
+  outputCredit?: number;
+  priorityPort?: SmartSplitterPort;
   outputFilters?: Partial<Record<SmartSplitterPort, SmartSplitterFilter>>;
   direction: DirectionType;
   carrying: ResourceCarryingType[];

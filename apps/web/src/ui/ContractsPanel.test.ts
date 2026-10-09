@@ -25,6 +25,22 @@ it("offers only unlocked contracts and explains resource consumption before acce
   act(() => root.unmount()); host.remove(); vi.clearAllMocks();
 });
 
+it("explains restoration delivery costs, water connection and permanent absorption before accepting", () => {
+  setWorldSnapshot(buildWorldSnapshot(createTestWorld()));
+  const host = document.createElement("div"), root = createRoot(host); document.body.append(host);
+  act(() => root.render(createElement(ContractsPanel)));
+  act(() => host.querySelector("button")!.click());
+  const card = [...host.querySelectorAll("article")].find(article => article.textContent?.includes("Restaurer les berges"))!;
+  expect(card.textContent).toContain("20 lingots de fer");
+  expect(card.textContent).toContain("30 eau");
+  expect(card.textContent).toContain("par tuyau");
+  expect(card.textContent).toContain("+0,03 absorption / s");
+  expect(card.textContent).toContain("définitivement");
+  act(() => card.querySelector("button")!.click());
+  expect(acceptContract).toHaveBeenCalledWith("restore-marsh");
+  act(() => root.unmount()); host.remove(); vi.clearAllMocks();
+});
+
 it("shows simulated deadlines and dispatches assignment and cancellation", () => {
   const world = createTestWorld(); world.tick = 300;
   world.campaign.contracts = {bridge: {id: "bridge", status: "active", acceptedAt: 0, deadlineAt: 1800, reserved: {steel: 5}, sustained: 0, attempts: 1}};
@@ -57,7 +73,7 @@ it("archives completed contracts by default and permits shared assignments on fi
   act(() => root.render(createElement(ContractsPanel))); act(() => host.querySelector("button")!.click());
   expect(host.querySelector<HTMLDetailsElement>(".contract-history")!.open).toBe(false);
   expect(host.querySelector(".contract-history summary")!.textContent).toContain("Contrats terminés (1)");
-  expect(host.querySelectorAll(".contract-card").length).toBe(4);
+  expect(host.querySelectorAll(".contract-card").length).toBe(6);
   act(() => [...host.querySelectorAll("button")].find(button => button.textContent?.startsWith("Points d’expédition"))!.click());
   expect(host.textContent).toContain("Point n°1"); expect(host.textContent).toContain("Point n°2");
   const select = host.querySelectorAll("select")[1];

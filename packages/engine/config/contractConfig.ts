@@ -10,6 +10,14 @@ export const CONTRACTS: ContractDefinition[] = [
     distinction: "Livraison ponctuelle", timeLimit: 1800},
   {id: "workshop", name: "Équiper un atelier", community: "La coopérative des artisans", levelId: "level-3",
     description: "Livrer des circuits tout en conservant les exportations d’acier de l’île 2.", requirements: {circuit: 8}, reward: 45,
-    distinction: "Industrie solidaire", rate: {levelId: "level-2", resource: "steel", amount: 2, duration: 100}}
+    distinction: "Industrie solidaire", rate: {levelId: "level-2", resource: "steel", amount: 2, duration: 100}},
+  {id: "restore-marsh", name: "Restaurer les berges", community: "Les gardiens de la première île", levelId: "level-2",
+    description: "Livrer des supports et de l’eau pour restaurer les berges de l’île 1. L’eau arrive par tuyau au point d’expédition.",
+    requirements: {ironPlate: 20, water: 30}, reward: 0, distinction: "Gardien des berges",
+    restoration: {levelId: "level-1", absorptionBonus: 0.003}},
+  {id: "restore-grove", name: "Restaurer le bosquet", community: "Les jardiniers de l’archipel", levelId: "level-3",
+    description: "Livrer des armatures et de l’eau pour restaurer le bosquet de l’île 3. L’eau arrive par tuyau au point d’expédition.",
+    requirements: {steel: 10, water: 40}, reward: 0, distinction: "Gardien du bosquet",
+    restoration: {levelId: "level-3", absorptionBonus: 0.003}}
 ];
 export const contractDefinition = (id: string) => CONTRACTS.find(contract => contract.id === id);

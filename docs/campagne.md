@@ -34,7 +34,7 @@ Les objectifs simples historiques restent fondés sur les statistiques cumulativ
 
 ## Pollution et recettes
 
-Une machine ne pollue que lorsqu’elle termine un cycle réel. Une machine inactive, saturée ou privée d’ingrédients ne pollue pas. La nature absorbe 0,02 point par tick. À 900 points de pollution globale, la partie se termine. La pollution attribuée à chaque île mesure les émissions brutes ; seule la jauge globale bénéficie de l’absorption et de la dépollution.
+Une machine ne pollue que lorsqu’elle termine un cycle réel. Une machine inactive, saturée ou privée d’ingrédients ne pollue pas. La nature absorbe initialement 0,02 point par tick ; les restaurations facultatives peuvent porter ce total à 0,026. À 900 points de pollution globale, la partie se termine. La pollution attribuée à chaque île mesure les émissions brutes ; seule la jauge globale bénéficie de l’absorption et de la dépollution.
 
 Le boiler, débloqué à l’île 2, reçoit l’eau par tuyau. Sa recette est sélectionnée à la pose : une unité d’eau par cycle de 30 unités de progression retire désormais **5 points** de pollution globale, contre 4 auparavant. Il s’arrête à pollution nulle. Le recycleur reçoit également sa recette automatiquement. La fonderie et les assembleuses demandent toujours un choix explicite.
 
@@ -92,3 +92,14 @@ Cliquer sur un **tunnel d’entrée** ouvre quatre filtres indépendants : haut,
 Les contrats séparent maintenant **Commandes** et **Points d’expédition**. Leur historique livré reste fermé par défaut. Les défis et le bilan de production utilisent le même habillage industriel que le HUD ; le tableau de l’archipel est repliable. Les panneaux ne s’ouvrent pas simultanément. Une réussite affiche pendant huit secondes le nom, la récompense et la distinction éventuelle ; le compteur de construction montre le total des gains récents. Les réussites simultanées restent distinctes, sans répétition au chargement ni confusion avec les remboursements de démolition.
 
 La caméra emploie les mêmes coordonnées pour le rendu, le zoom, le survol et les clics : client → taille réelle du Canvas → inverse translation/zoom → cases du monde. Le zoom conserve la position sous le pointeur et actualise le survol. Un bouton d’île recentre toujours, même si l’île est déjà sélectionnée, en conservant le zoom. Le centre de la vue met à jour l’île du HUD pendant un déplacement ; au-dessus de la mer ou d’une île verrouillée, la dernière île accessible reste sélectionnée. Cette mise à jour ne déclenche pas de recentrage. Le clic molette maintenu est expliqué dans le tutoriel et rappelé dans le menu de pause.
+
+
+## Stratégies supplémentaires — lot 3
+
+Les îles 2 et 3 débloquent trois recettes alternatives dans les machines existantes : fer refroidi à l’eau, acier direct et étirage économe. Le panneau compare les ingrédients, le rendement, le débit et les émissions. Changer de recette remet le cycle à zéro sans supprimer les stocks ; les ingrédients inutilisés attendent leur recette.
+
+Sans outil sélectionné, cliquer sur un tapis ouvre le limiteur (paliers de 0,1 à 10 unités/s simulées), et cliquer sur un coffre règle une réserve minimale par ressource. Les splitters ordinaires et intelligents disposent d’une sortie prioritaire avec relais en cas de saturation ; leurs filtres et jonctions explicites restent respectés. Une île finalisée verrouille ces réglages.
+
+Deux contrats facultatifs restaurent les berges et le bosquet, avec livraison de solides par tapis et d’eau par tuyau aux points d’expédition. Chaque réussite apporte un bonus unique de +0,003 absorption/tick. Le HUD et le bilan montrent les contributions des îles, dont le total initial reste inchangé. L’annulation conserve l’eau, récupérable par un tuyau sortant. Les budgets des défis suivent toujours les émissions brutes, indépendamment de cette absorption.
+
+Voir [les règles et compromis du lot 3](strategies.md) pour les valeurs, réservations, sauvegardes et critères de validation.

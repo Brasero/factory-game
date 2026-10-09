@@ -4,7 +4,7 @@
 
 Conserver le cœur du jeu : construire, automatiser, observer les flux et optimiser un archipel persistant. Diversifier les problèmes à résoudre avant de multiplier les machines. Les anciennes îles continuent à alimenter les suivantes. Les nouvelles mécaniques doivent rester lisibles et accepter plusieurs solutions.
 
-Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé et vérifié. Chaque lot doit mentionner sa validation et les observations des essais joueurs. Les lots 0, 1 et 2 sont actifs ; leurs chiffres restent à équilibrer avec les essais joueurs. Les lots suivants sont des propositions.
+Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé et vérifié. Chaque lot doit mentionner sa validation et les observations des essais joueurs. Les lots 0 à 3 sont actifs ; leurs chiffres restent à équilibrer avec les essais joueurs.
 
 ## Lot 0 — Peaufiner l’existant
 
@@ -75,31 +75,35 @@ Essais joueurs du lot 2 : [x] intérêt des contrats et défis confirmé le 9 oc
 
 ### 3.1 Recettes alternatives
 
-- [ ] Définir deux ou trois alternatives seulement pour une première version.
-- [ ] Explorer matière supplémentaire contre moins de machines, eau contre émissions réduites, valorisation d’un surplus, lenteur contre rendement matière.
-- [ ] Chaque alternative doit changer un choix de réseau ou d’implantation ; éviter une recette supérieure dans tous les cas.
-- [ ] Comparer ingrédients, rendement, cadence et pollution dans le panneau existant.
-- [ ] Déblocages, conservation, changement de recette et sauvegarde testés.
+- [x] Définir deux ou trois alternatives seulement pour une première version.
+- [x] Explorer matière supplémentaire contre moins de machines, eau contre émissions réduites, valorisation d’un surplus, lenteur contre rendement matière.
+- [x] Chaque alternative doit changer un choix de réseau ou d’implantation ; éviter une recette supérieure dans tous les cas.
+- [x] Comparer ingrédients, rendement, cadence et pollution dans le panneau existant.
+- [x] Déblocages, conservation, changement de recette et sauvegarde testés.
 
 ### 3.2 Outils de régulation
 
-- [ ] Limiteur de débit pour réserver une part de production.
-- [ ] Stockage avec seuil de sortie pour constituer une réserve.
-- [ ] Priorités configurables pour servir une chaîne essentielle avant une commande secondaire.
-- [ ] Définir unités, plages, famine éventuelle et comportement des routeurs avant implémentation.
-- [ ] Donner accès aux outils essentiels dans la campagne principale.
+- [x] Limiteur de débit pour réserver une part de production.
+- [x] Stockage avec seuil de sortie pour constituer une réserve.
+- [x] Priorités configurables pour servir une chaîne essentielle avant une commande secondaire.
+- [x] Définir unités, plages, famine éventuelle et comportement des routeurs avant implémentation.
+- [x] Donner accès aux outils essentiels dans la campagne principale.
 
 Critères : déterminisme, conservation, saturation, transferts partiels, modifications de réseau et reprise après sauvegarde ; aucune jonction implicite.
 
 ### 3.3 Écologie et restauration
 
-- [ ] Configurer des différences d’absorption naturelle et d’espace entre îles.
-- [ ] Mesurer les défis écologiques sur les émissions brutes pendant leur réalisation, distinctes de la pollution globale courante.
-- [ ] Introduire des demandes facultatives de restauration alimentées en matériaux/eau.
-- [ ] Définir leurs bénéfices durables et empêcher une récupération gratuite ou infinie.
-- [ ] Afficher les conséquences avant les décisions ; conserver une tension anticipable sans destruction aléatoire d’usines.
+- [x] Configurer des différences d’absorption naturelle et d’espace entre îles.
+- [x] Mesurer les défis écologiques sur les émissions brutes pendant leur réalisation, distinctes de la pollution globale courante.
+- [x] Introduire des demandes facultatives de restauration alimentées en matériaux/eau.
+- [x] Définir leurs bénéfices durables et empêcher une récupération gratuite ou infinie.
+- [x] Afficher les conséquences avant les décisions ; conserver une tension anticipable sans destruction aléatoire d’usines.
 
 Critères : bilan global cohérent, absorption sans double comptage, budgets indépendants de la dépollution, pause et sauvegarde. Essais joueurs : variantes écologiques et dépollution offrent des usages complémentaires.
+
+Décisions de première version : trois recettes (fer refroidi à l’eau, acier direct, étirage économe), régulation dans les tapis/coffres/splitters existants, deux contrats de restauration consommant solides et eau. Le limiteur propose des paliers de 0,1 à 10 unités/s simulées ; les priorités sont strictes avec relais en cas de saturation. Les différences de terrain du lot 1 restent en place. L’absorption initiale globale reste 0,02/tick, avec deux bonus uniques de 0,003/tick. Voir [les règles détaillées](strategies.md).
+
+Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **310 tests réussis** ; deux benchmarks opt-in exclus. Inspection visuelle des recettes, des réglages de régulation et des bénéfices annoncés des restaurations sur une scène isolée, sans modifier la sauvegarde du joueur. Essais joueurs du lot 3 : [ ] à recueillir, notamment sur l’équilibre des alternatives, les réserves et les bénéfices écologiques.
 
 ## Suivi des livraisons
 
@@ -108,7 +112,7 @@ Critères : bilan global cohérent, absorption sans double comptage, budgets ind
 | 0 — Finition | Validé, retour joueur positif sur la fluidité | Node 22 : lint, 220 tests (dont ordre mélangé, graine 42) et build réussis ; contrôle visuel des masques/zooms et comparaison locale du rendu |
 | 1 — Campagne | Implémenté et vérifié ; premier parcours joueur positif | Node 22 : check et ordre mélangé (graine 42), 233 tests réussis ; contrôle visuel du bilan et des six îles ; voir campagne.md |
 | 2 — Contrats | Implémenté et vérifié ; premier parcours joueur positif | Quatre commandes, points d’expédition, réservations et restitution, délai simulé et distinctions ; Node 22 : check + graine 42, 253 tests ; inspection du panneau et des affectations |
-| 3 — Stratégies | À faire | Après essais des contrats |
+| 3 — Stratégies | Implémenté et vérifié ; essais joueurs à faire | Trois recettes, régulation des tapis/coffres/splitters, deux restaurations ; check + graine 42, 310 tests ; inspection visuelle ; voir strategies.md |
 
 Pour chaque livraison : préciser fichiers modifiés, validation automatisée, inspection visuelle, retours joueurs et décisions d’équilibrage. Ne cocher une mécanique que lorsqu’elle est implémentée et vérifiée ; conserver les essais joueurs comme étape distincte.
 
@@ -147,7 +151,7 @@ Validation : Node 22, `npm run check` et tests mélangés (graine 42), 237 tests
 - [x] 11. Synchronisation du HUD avec l’île au centre de la vue lors des déplacements, sans recentrage automatique.
 - [x] 12. Clic molette maintenu expliqué dans le tutoriel et le menu de pause.
 
-Décision : conserver les cadences et l’équilibre pollution/dépollution validés par ce premier essai. Le lot 3 reste à faire ; ces corrections passent avant son démarrage.
+Décision : conserver les cadences et l’équilibre pollution/dépollution validés par ce premier essai. Ces corrections précèdent le démarrage du lot 3.
 
 Validation : Node 22, `npm run check` (lint, **273 tests**, build) et tests mélangés avec graine 42 ; deux benchmarks opt-in exclus. Inspection visuelle des rubriques, des points numérotés, du tunnel filtré, des défis et du gain de matériaux sur une scène isolée ; sauvegarde de campagne préservée.
 

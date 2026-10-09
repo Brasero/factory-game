@@ -8,6 +8,8 @@ export interface Storage extends BaseEntity {
   contractId?: string;
   depotNumber?: number;
   capacity: number;
+  /** Minimum inventory retained for each resource. */
+  reserveThreshold?: number;
   stored: Partial<Record<ResourcesType, number>>;
 }
 

@@ -2,6 +2,7 @@ import type {World} from "@engine/models/World";
 import type {DirectionType} from "@engine/models/Conveyor";
 import {machineInputSpace} from "@engine/config/recipeConfig";
 import {machineFootprintCells, machineOutputPosition} from "@engine/config/machineFootprint";
+import {depotDemand, depotReserved} from "./ContractSystem";
 
 const DELTA: Record<DirectionType, {x: number; y: number}> = {
   up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0}
@@ -12,6 +13,9 @@ const key = (x: number, y: number) => `${x},${y}`;
 export function runPipes(world: World): World {
   const pipes = world.pipes.map(pipe => ({...pipe}));
   const machines = world.machines.map(machine => ({...machine, buffer: {...machine.buffer}}));
+  const storages = world.storages.map(storage => ({...storage, stored: {...storage.stored}}));
+  const storageAt = new Map(storages.map(storage => [key(storage.x, storage.y), storage]));
+  const liveWorld = {...world, storages};
   const pipeAt = new Map(pipes.map((pipe, index) => [key(pipe.x, pipe.y), index]));
   const machineAt = new Map(machines.flatMap(machine => machineFootprintCells(machine)
     .map(cell => [key(cell.x, cell.y), machine] as const)));
@@ -29,6 +33,20 @@ export function runPipes(world: World): World {
     machines[machineIndex].buffer.water = (machine.buffer.water ?? 0) - moved;
   });
 
+  for (const storage of [...storages].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    for (const delta of Object.values(DELTA)) {
+      const index = pipeAt.get(key(storage.x + delta.x, storage.y + delta.y));
+      if (index === undefined || available[index] <= 0) continue;
+      const pipe = pipes[index], output = DELTA[pipe.direction];
+      if (pipe.x + output.x === storage.x && pipe.y + output.y === storage.y) continue;
+      const reserve = storage.kind === "shipping-depot" ? depotReserved(liveWorld, storage, "water") : storage.reserveThreshold ?? 0;
+      const moved = Math.min(1, available[index], Math.max(0, (storage.stored.water ?? 0) - reserve));
+      if (moved <= 0) continue;
+      storage.stored.water = (storage.stored.water ?? 0) - moved;
+      arrivals[index] += moved; available[index] -= moved;
+    }
+  }
+
   pipes.forEach((pipe, index) => {
     if (pipe.water <= 0) return;
     const delta = DELTA[pipe.direction];
@@ -42,6 +60,15 @@ export function runPipes(world: World): World {
       return;
     }
     const targetMachine = machineAt.get(key(tx, ty));
+    const storage = storageAt.get(key(tx, ty));
+    if (storage) {
+      const used = Object.values(storage.stored).reduce((sum, amount) => sum + (amount ?? 0), 0);
+      const demand = storage.kind === "shipping-depot" ? depotDemand(liveWorld, storage, "water") - (storage.stored.water ?? 0) : Infinity;
+      const moved = Math.min(pipe.water, Math.max(0, storage.capacity - used), Math.max(0, demand), 1);
+      pipes[index].water -= moved;
+      storage.stored.water = (storage.stored.water ?? 0) + moved;
+      return;
+    }
     if (!targetMachine) return;
     const output = machineOutputPosition(targetMachine);
     if (pipe.x === output.x && pipe.y === output.y) return;
@@ -51,5 +78,5 @@ export function runPipes(world: World): World {
     targetMachine.buffer.water = (targetMachine.buffer.water ?? 0) + moved;
   });
   pipes.forEach((pipe, index) => { pipe.water += arrivals[index]; });
-  return {...world, pipes, machines};
+  return {...world, pipes, machines, storages};
 }

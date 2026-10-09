@@ -18,6 +18,7 @@ function smelterWorld(buffer: Partial<Machine["buffer"]>): World {
 
 it.each(["eco", "standard", "industrial"] as const)("reduces only finalized island emissions for %s without changing production", variant => {
   const active = smelterWorld({iron: 10});
+  active.machines[0].x = 45; active.machines[0].y = 55;
   active.machines[0].variant = variant;
   active.machines[0].progress = 19;
   active.machines.push({...active.machines[0], id: "other-island", x: 120, y: 55, buffer: {iron: 10}});

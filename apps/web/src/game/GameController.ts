@@ -96,6 +96,18 @@ export function setSmartSplitterFilter(splitterId: string, port: SmartSplitterPo
     return success;
 }
 
+export function setConveyorRegulation(conveyorId: string, outputRate?: number, priorityPort?: SmartSplitterPort) {
+    const success = session.dispatch({type: "set-conveyor-regulation", conveyorId, outputRate, priorityPort});
+    if (success) updateWorld();
+    return success;
+}
+
+export function setStorageReserve(storageId: string, reserve: number) {
+    const success = session.dispatch({type: "set-storage-reserve", storageId, reserve});
+    if (success) updateWorld();
+    return success;
+}
+
 export function placeConveyorLine(
   line: {x: number, y: number, direction: DirectionType}[]
 ) {

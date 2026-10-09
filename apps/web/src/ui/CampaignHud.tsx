@@ -8,6 +8,7 @@ import {assetManager} from "@web/render/manager/AssetManager";
 import type {ResourcesType} from "@engine/models/Resources";
 
 import {CampaignOverview} from "./CampaignOverview";
+import {naturalAbsorption, islandAbsorption} from "@engine/config/ecologyConfig";
 import {ISLAND_FINALIZATION_REWARD} from "@engine/config/constructionConfig";
 
 const resourceNames: Record<string, string> = {
@@ -76,7 +77,7 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
     <div className="reward-notifications" aria-live="polite" aria-atomic="false">
       {notices.map(notice => <article key={notice.id} className="reward-notice">
         <span className="menu-kicker">{notice.kind}</span><strong>{notice.title}</strong>
-        <span>{notice.detail}</span><b>+{notice.reward} matériaux de construction</b>
+        <span>{notice.detail}</span>{notice.reward > 0 && <b>+{notice.reward} matériaux de construction</b>}
         <button aria-label={`Masquer : ${notice.title}`} onClick={() => dismiss(notice.id)}>×</button>
       </article>)}
     </div>
@@ -110,7 +111,8 @@ export function CampaignHud({onRestart, onContinue, onMainMenu}: {
         <span>Pollution globale</span>
         <strong>{Math.floor(campaign.pollution)} / {campaign.pollutionLimit}</strong>
         <div><i style={{width: `${pollutionRatio * 100}%`}} /></div>
-        <small>Absorption naturelle : −0,02 par tick</small>
+        <small>Absorption naturelle : −{naturalAbsorption(campaign).toLocaleString("fr-FR", {maximumFractionDigits: 3})} par tick</small>
+        <small>Cette île : −{islandAbsorption(campaign, definition.id).toLocaleString("fr-FR", {maximumFractionDigits: 3})} par tick</small>
       </div>
       <div className="campaign-resources" aria-label="Ressources stockées">
         <div className="campaign-resource construction-material" data-tutorial="construction-materials"

@@ -2,6 +2,9 @@
 import {act, createElement} from "react";
 import {createRoot} from "react-dom/client";
 import {afterEach, expect, it, vi} from "vitest";
+import {setWorldSnapshot} from "@web/game/worldStore";
+import {buildWorldSnapshot} from "@engine/api/worldSnapshot";
+import {createTestWorld} from "@engine/test/createTestWorld";
 import {SmartSplitterPanel} from "./SmartSplitterPanel";
 import {setSmartSplitterFilter} from "@web/game/GameController";
 
@@ -13,6 +16,7 @@ let root: ReturnType<typeof createRoot> | undefined;
 afterEach(() => { if (root) act(() => root!.unmount()); host?.remove(); });
 
 it("configures explicit and unfiltered smart splitter outputs", () => {
+  setWorldSnapshot(buildWorldSnapshot(createTestWorld()));
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -20,7 +24,7 @@ it("configures explicit and unfiltered smart splitter outputs", () => {
     direction: "right" as const, carrying: [], speed: 0.2, capacity: 3, outputFilters: {forward: "iron" as const}};
   act(() => root!.render(createElement(SmartSplitterPanel, {splitter, left: 0, top: 0, onClose: vi.fn()})));
   const selects = [...host.querySelectorAll("select")];
-  expect(selects).toHaveLength(3);
+  expect(selects).toHaveLength(5);
   expect(selects[1].value).toBe("iron");
   act(() => {
     selects[0].value = "unfiltered";

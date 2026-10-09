@@ -6,7 +6,7 @@ import {MachineRecipePanel} from "./MachineRecipePanel";
 import {setWorldSnapshot} from "@web/game/worldStore";
 import {GameEngine} from "@engine/core/GameEngine";
 import {createTestWorld} from "@engine/test/createTestWorld";
-import {setMachinePaused} from "@web/game/GameController";
+import {setMachinePaused, selectMachineRecipe} from "@web/game/GameController";
 
 vi.mock("@web/game/GameController", () => ({selectMachineRecipe: vi.fn(), setMachinePaused: vi.fn()}));
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
@@ -33,6 +33,12 @@ describe("Machine recipe panel", () => {
     expect(host.textContent).toContain("Lingot de fer1 Minerai de fer → 1 Lingot de fer2.0 s / cycle");
     expect(host.textContent).toContain("Lingot d’acier1 Lingot de fer + 1 Charbon → 1 Lingot d’acier3.0 s / cycle");
     expect(host.textContent).toContain("Mettre en pause");
+    expect(host.textContent).toContain("Fer refroidi à l’eau");
+    expect(host.textContent).toContain("Émissions : 0.80 / cycle");
+    expect(host.textContent).toContain("Acier direct");
+    const alternative = [...host.querySelectorAll("button")].find(button => button.textContent?.includes("Fer refroidi à l’eau"))!;
+    act(() => alternative.click());
+    expect(selectMachineRecipe).toHaveBeenCalledWith(snapshot.machines[0].id, "washed-iron");
     const pause = [...host.querySelectorAll("button")].find(button => button.textContent?.includes("Mettre en pause"))!;
     act(() => pause.click());
     expect(setMachinePaused).toHaveBeenCalledWith(snapshot.machines[0].id, true);

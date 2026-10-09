@@ -21,11 +21,12 @@ import type {MachineVariant} from "@engine/models/Machine";
 import type {Conveyor, DirectionType, SmartSplitterFilter, SmartSplitterPort} from "@engine/models/Conveyor.ts";
 import type {EntityManagerType} from "@engine/core/manager/EntityManager.type.ts";
 import {entityManager} from "@engine/core/manager/EntityManager.ts";
-import {MACHINE_RECIPE_OPTIONS, RECIPES, recipeInputs, type RecipeId} from "@engine/config/recipeConfig";
+import {MACHINE_RECIPE_OPTIONS, type RecipeId} from "@engine/config/recipeConfig";
 import {runPipes} from "@engine/systems/PipeSystem";
 import type {Position} from "@engine/models/Position";
 import {CONSTRUCTION_REFUND_RATIO, ISLAND_FINALIZATION_REWARD, constructionCost} from "@engine/config/constructionConfig";
 import {machineFootprintCells, machineOccupies} from "@engine/config/machineFootprint";
+import {LOGISTICS_OUTPUT_RATES} from "@engine/config/logisticsConfig";
 
 export class GameEngine {
     private network?: NetworkTopology;
@@ -183,6 +184,8 @@ export class GameEngine {
         const index = this.#world.conveyors.findIndex(conveyor => conveyor.id === id && conveyor.type === "smart-splitter");
         if (index < 0) return false;
         const splitter = this.#world.conveyors[index];
+        if (!this.canConfigure(splitter) || !["left", "forward", "right"].includes(port) ||
+            (filter !== "any" && filter !== "unfiltered" && (!RESOURCE_TYPES.includes(filter) || filter === "water"))) return false;
         this.#world.conveyors[index] = {...splitter, outputFilters: {...splitter.outputFilters, [port]: filter}};
         return true;
     }
@@ -351,6 +354,7 @@ export class GameEngine {
         const index = this.#world.machines.findIndex(machine => machine.id === machineId);
         if (index < 0) return false;
         const machine = this.#world.machines[index];
+        if (!this.canConfigure(machine)) return false;
         if (!MACHINE_RECIPE_OPTIONS[machine.type]?.includes(recipeId)) return false;
         const recipeUnlocked = CAMPAIGN_LEVELS.some(level =>
             this.#world.campaign.levels.find(progress => progress.id === level.id)?.status !== "locked" &&
@@ -358,12 +362,7 @@ export class GameEngine {
         if (!recipeUnlocked) return false;
         if (machine.recipeId === recipeId) return true;
 
-        const previousInputs = new Set(recipeInputs(machine).map(([resource]) => resource));
-        const nextInputs = new Set(Object.keys(RECIPES[recipeId].inputs));
         const buffer = {...machine.buffer};
-        for (const resource of previousInputs) {
-            if (!nextInputs.has(resource)) buffer[resource] = 0;
-        }
         this.#world.machines[index] = {...machine, recipeId, buffer, progress: 0, active: false};
         return true;
     }
@@ -373,6 +372,31 @@ export class GameEngine {
         if (index < 0) return false;
         const machine = this.#world.machines[index];
         this.#world.machines[index] = {...machine, paused, active: paused ? false : machine.active};
+        return true;
+    }
+
+    private canConfigure(position: Position): boolean {
+        const id = campaignLevelAt(position.x, position.y)?.id ?? this.#world.campaign.activeLevelId;
+        const level = this.#world.campaign.levels.find(item => item.id === id);
+        return this.#world.campaign.status === "playing" && !!level && level.status !== "locked" && level.status !== "finalized";
+    }
+
+    setConveyorRegulation(id: string, outputRate?: number, priorityPort?: SmartSplitterPort): boolean {
+        const belt = this.#world.conveyors.find(item => item.id === id);
+        if (!belt || !this.canConfigure(belt) ||
+            (outputRate !== undefined && !LOGISTICS_OUTPUT_RATES.includes(outputRate)) ||
+            (priorityPort !== undefined && (!["left", "forward", "right"].includes(priorityPort) ||
+                (belt.type !== "splitter" && belt.type !== "smart-splitter")))) return false;
+        if (belt.outputRate !== outputRate) belt.outputCredit = 0;
+        belt.outputRate = outputRate;
+        belt.priorityPort = priorityPort;
+        return true;
+    }
+
+    setStorageReserve(id: string, reserve: number): boolean {
+        const storage = this.#world.storages.find(item => item.id === id && item.kind !== "shipping-depot");
+        if (!storage || !this.canConfigure(storage) || !Number.isInteger(reserve) || reserve < 0 || reserve > storage.capacity) return false;
+        storage.reserveThreshold = reserve;
         return true;
     }
 }

@@ -5,6 +5,7 @@ import type {WorldSnapshot} from "@engine/api/types";
 import {machineIdleReason} from "@engine/systems/MachineStatus";
 import {campaignLevelAt} from "@engine/config/campaignConfig";
 
+import {islandAbsorption} from "@engine/config/ecologyConfig";
 import {resourceLabels} from "./productionFeedback";
 
 export function CampaignOverview({world, expanded, onToggle}: {world: WorldSnapshot; expanded?: boolean; onToggle?: () => void}) {
@@ -64,12 +65,13 @@ export function CampaignOverview({world, expanded, onToggle}: {world: WorldSnaps
             {challenge.objective.emissionBudget !== undefined && ` · Émissions : ${Math.floor(active.pollution - (state?.emissions ?? active.pollution))} / ${challenge.objective.emissionBudget} · Essai ${(state?.attempts ?? 0) + 1}`}</small></div>;
       })}
       <details className="production-summary"><summary>Bilan de l’archipel</summary>
-      <div className="production-table"><table><caption>Mesures sur les 10 dernières secondes simulées</caption><thead><tr><th>Île</th><th>Exportations</th><th>Débit</th><th>Émissions</th><th>Arrêts</th></tr></thead><tbody>
+      <div className="production-table"><table><caption>Mesures sur les 10 dernières secondes simulées</caption><thead><tr><th>Île</th><th>Exportations</th><th>Débit</th><th>Émissions</th><th>Absorption / s</th><th>Arrêts</th></tr></thead><tbody>
         {world.campaign.levels.filter(level => level.status !== "locked").map(level => <tr key={level.id}>
           <td>{CAMPAIGN_LEVELS.find(item => item.id === level.id)?.name}</td>
           <td>{Object.values(level.exports ?? {}).reduce((sum, value) => sum + (value ?? 0), 0)}</td>
           <td>{Object.entries(level.telemetry?.rates ?? {}).filter(([, value]) => value).map(([resource, value]) => `${resourceLabels[resource]} : ${((value ?? 0) / 10).toFixed(2)}/s`).join(", ") || "0/s"}</td>
           <td>{level.pollution.toFixed(1)}</td>
+          <td>{(islandAbsorption(world.campaign, level.id) * 10).toLocaleString("fr-FR", {maximumFractionDigits: 3})}</td>
           <td>{world.machines.filter(machine => campaignLevelAt(machine.x, machine.y)?.id === level.id && machineIdleReason(machine, world.campaign.pollution)).length}</td>
         </tr>)}
       </tbody></table></div></details>

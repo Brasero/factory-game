@@ -10,6 +10,7 @@ export type ContractDefinition = {
   reward: number;
   distinction: string;
   timeLimit?: number;
+  restoration?: {levelId: string; absorptionBonus: number};
   rate?: {levelId: string; resource: ResourcesType; amount: number; duration: number};
 };
 export type ContractProgress = {

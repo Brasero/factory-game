@@ -277,3 +277,14 @@ La finalisation verse une prime unique de 30 matériaux, enregistrée dans `fina
 Le dialogue présente le gain et les conséquences avant validation. Une notification de mise en service affiche le gain pendant huit secondes ; le HUD conserve le rappel du bonus et le tutoriel explique le choix. Le dialogue peut défiler lorsque sa hauteur dépasse l’écran.
 
 Validation Node 22 : `npm run check` et tests mélangés avec graine 42, **283 tests réussis** ; deux benchmarks opt-in exclus. Scénarios : prime unique et sauvegarde, anciennes finalisations, émissions des trois variantes, autre île inchangée, production identique, dépollution préservée et notification unique. Contrôle visuel du dialogue de confirmation.
+
+
+## Lot 3 — Stratégies et restauration — 9 octobre 2026
+
+Trois alternatives enrichissent les recettes existantes avec un facteur d’émissions, des déblocages de campagne et un compromis affiché. Le changement conserve les buffers et remet le cycle à zéro. Les réglages de recette et de logistique refusent désormais les modifications d’une île finalisée, conformément au verrouillage annoncé.
+
+Le limiteur utilise un crédit fractionnaire par tapis, partagé entre ses paquets et sorties. Les sorties restent en deux phases ; le plafond est appliqué avant les réservations et les transferts partiels. Les splitters gardent leur répartition circulaire par défaut et peuvent privilégier un port compatible, avec relais si celui-ci est saturé. Les coffres protègent un seuil par ressource sur toutes leurs sorties. Les nouveaux paramètres et crédits sont sauvegardés dans les entités existantes ; les anciennes parties conservent les comportements par défaut.
+
+Les points d’expédition acceptent l’eau par tuyau selon la demande globale de leur contrat. Les sorties liquides protègent les réservations puis restituent l’eau libérée ; les arrivées ne sont pas disponibles au départ du même passage de tuyaux. Les restaurations sont des contrats uniques dont le statut terminé constitue l’unique source du bonus durable. Les contributions des six îles totalisent toujours 0,02/tick avant restauration, avec une seule soustraction globale ; les émissions historiques et les budgets restent indépendants.
+
+Règles et valeurs : [strategies.md](strategies.md). Validation Node 22 : `npm run check`, puis tests mélangés avec graine 42, **310 tests réussis** ; deux benchmarks opt-in exclus. Les nouveaux scénarios couvrent les faibles débits, la saturation, le crédit commun, les transferts partiels et en deux phases, les priorités/filtrages, la réserve, les commandes invalides, la rotation en réseau caché, les sauvegardes, les alternatives et leurs stocks, les livraisons/restaurations distribuées et l’absorption sans double comptage. Contrôle visuel des comparaisons, contrôles et contrats sur une scène isolée.

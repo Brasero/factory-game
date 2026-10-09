@@ -1,6 +1,8 @@
 import type {Conveyor, ResourcesType, SmartSplitterFilter, SmartSplitterPort} from "@engine/api/types";
 import {RESOURCE_TYPES} from "@engine/models/Resources";
 import {setSmartSplitterFilter} from "@web/game/GameController";
+import {ConveyorRegulationControls} from "./LogisticsPanel";
+import {useLogisticsLocked} from "./useLogisticsLocked";
 
 const resourceNames: Record<ResourcesType, string> = {
   iron: "Minerai de fer", coal: "Charbon", water: "Eau", ironPlate: "Lingot de fer",
@@ -17,7 +19,8 @@ const ports: Array<{id: SmartSplitterPort; label: string; arrow: string}> = [
 export function SmartSplitterPanel({splitter, left, top, onClose}: {
   splitter: Conveyor; left: number; top: number; onClose: () => void;
 }) {
-  return <section className="machine-recipe-panel smart-splitter-panel" style={{left, top}}
+  const locked = useLogisticsLocked(splitter);
+  return <section className="machine-recipe-panel smart-splitter-panel" style={{left, top, maxHeight: `calc(100dvh - ${top}px - 24px)`}}
     role="dialog" aria-label="Configuration du splitter intelligent">
     <header>
       <div><span>Routeur</span><strong>Splitter intelligent</strong></div>
@@ -27,7 +30,7 @@ export function SmartSplitterPanel({splitter, left, top, onClose}: {
     <div className="smart-splitter-ports">
       {ports.map(port => <label key={port.id}>
         <span><b>{port.arrow}</b>{port.label}</span>
-        <select value={splitter.outputFilters?.[port.id] ?? "any"}
+        <select disabled={locked} value={splitter.outputFilters?.[port.id] ?? "any"}
           onChange={event => setSmartSplitterFilter(splitter.id, port.id, event.target.value as SmartSplitterFilter)}>
           <option value="any">Toutes les ressources</option>
           <option value="unfiltered">Toute ressource non filtrée</option>
@@ -36,5 +39,6 @@ export function SmartSplitterPanel({splitter, left, top, onClose}: {
         </select>
       </label>)}
     </div>
+    <ConveyorRegulationControls conveyor={splitter}/>
   </section>;
 }
